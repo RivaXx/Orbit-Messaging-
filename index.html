@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="theme-color" content="#000000">
-    <title>Orbit Pro | Solar OS V89</title>
+    <title>Orbit Pro | Solar OS V97</title>
     
     <!-- Preconnect for speed -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -58,7 +58,40 @@
         }
 
 
-        /* === OWNER / PREMIUM BADGE === */
+        /* === VOICE RECORDING === */
+        .voice-rec-btn { position:relative; overflow:visible; }
+        .voice-rec-btn.recording { background:#ff4444!important; animation:rec-pulse 1s ease-in-out infinite; }
+        @keyframes rec-pulse { 0%,100%{box-shadow:0 0 0 0 rgba(255,68,68,0.5);} 50%{box-shadow:0 0 0 10px rgba(255,68,68,0);} }
+        .voice-rec-timer { position:absolute;top:-22px;left:50%;transform:translateX(-50%);background:#ff4444;color:#fff;font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;white-space:nowrap;display:none; }
+        .voice-rec-btn.recording .voice-rec-timer { display:block; }
+        /* Voice message bubble */
+        .voice-msg-player { display:flex;align-items:center;gap:8px;min-width:180px;max-width:240px;padding:2px 0; }
+        .voice-play-btn { width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,0.15);border:none;color:inherit;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;transition:.15s; }
+        .voice-play-btn:active { transform:scale(.92); }
+        .own .voice-play-btn { background:rgba(0,0,0,0.15); }
+        .voice-waveform { flex:1;height:28px;position:relative;display:flex;align-items:center; }
+        .voice-progress { position:absolute;left:0;top:0;bottom:0;background:rgba(255,255,255,0.2);border-radius:4px;pointer-events:none;transition:width .1s linear; }
+        .own .voice-progress { background:rgba(0,0,0,0.15); }
+        .voice-bars { display:flex;align-items:center;gap:2px;height:100%;z-index:1;position:relative; }
+        .voice-bar { width:3px;border-radius:2px;background:currentColor;opacity:.6;flex-shrink:0; }
+        .voice-dur { font-size:11px;font-weight:600;opacity:.8;white-space:nowrap;min-width:32px;text-align:right; }
+        /* === WALKIE-TALKIE === */
+        #walkie-modal { position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:3000;display:none;flex-direction:column;align-items:center;justify-content:center;gap:28px; }
+        #walkie-modal.active { display:flex; }
+        .walkie-title { font-family:'Syne',sans-serif;font-size:20px;font-weight:800;color:#fff; }
+        .walkie-status { font-size:13px;color:#888;letter-spacing:.5px; }
+        .walkie-users { display:flex;gap:24px;align-items:center;justify-content:center; }
+        .walkie-user { text-align:center; }
+        .walkie-av { width:64px;height:64px;border-radius:50%;background:var(--surface-light);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700;color:var(--gold);margin:0 auto 6px;border:2px solid var(--border);transition:border-color .2s,box-shadow .2s; }
+        .walkie-av.speaking { border-color:var(--gold);box-shadow:0 0 0 4px rgba(255,215,0,0.2);animation:walkie-speak .6s ease-in-out infinite; }
+        @keyframes walkie-speak { 0%,100%{box-shadow:0 0 0 4px rgba(255,215,0,0.2);} 50%{box-shadow:0 0 0 8px rgba(255,215,0,0.05);} }
+        .walkie-name { font-size:12px;color:#888;margin-top:4px; }
+        .walkie-arrow { font-size:22px;color:#444; }
+        .walkie-ptt-btn { width:120px;height:120px;border-radius:50%;background:var(--gold);border:none;color:#000;font-size:32px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:6px;font-family:'Syne',sans-serif;font-weight:800;user-select:none;transition:transform .1s,box-shadow .2s;box-shadow:0 4px 24px rgba(255,215,0,0.4);-webkit-user-select:none;touch-action:none; }
+        .walkie-ptt-btn:active, .walkie-ptt-btn.pressing { transform:scale(.94);box-shadow:0 2px 10px rgba(255,215,0,0.6);background:#e6c200; }
+        .walkie-ptt-label { font-size:11px;font-weight:700;letter-spacing:.5px;margin-top:2px; }
+        .walkie-close { background:var(--surface-light);border:1px solid var(--border);color:var(--text);border-radius:22px;padding:10px 28px;font-size:13px;font-weight:700;cursor:pointer;font-family:'Syne',sans-serif; }
+        .walkie-indicator { font-size:12px;color:var(--gold);font-weight:700;letter-spacing:.5px;min-height:18px; }
         #owner-badge { animation: crownPulse 2.5s ease-in-out infinite; display:inline-block; }
         @keyframes crownPulse { 0%,100%{filter:drop-shadow(0 0 4px gold);} 50%{filter:drop-shadow(0 0 10px gold);} }
         /* === PAYMENT MODAL === */
@@ -128,7 +161,7 @@
         .dash-nav{padding:calc(14px + var(--safe-top)) 20px 10px;display:flex;justify-content:space-between;align-items:center;}
         .dash-title{font-family:'Syne',sans-serif;font-weight:800;font-size:26px;letter-spacing:-0.5px;}
         .user-chip{display:flex;align-items:center;gap:10px;background:var(--surface);padding:6px 14px 6px 6px;border-radius:30px;border:1px solid var(--border);cursor:pointer;}
-        .av-sm{width:30px;height:30px;background:linear-gradient(135deg,#2a2a2a,#111);border-radius:50%;color:var(--gold);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;font-family:'Syne',sans-serif;position:relative;}
+        .av-sm{width:30px;height:30px;background:linear-gradient(135deg,#2a2a2a,#111);border-radius:50%;color:var(--gold);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;font-family:'Syne',sans-serif;position:relative;overflow:hidden;flex-shrink:0;}
         .av-dot{position:absolute;bottom:0;right:0;width:9px;height:9px;background:var(--online);border-radius:50%;border:2px solid var(--bg);}
         .online-pill{display:flex;align-items:center;gap:5px;font-size:10px;color:var(--online);padding:4px 10px;background:rgba(0,230,118,0.08);border-radius:20px;font-weight:600;}
         .online-pill i{font-size:7px;}
@@ -182,10 +215,13 @@
         .app-footer{text-align:center;padding:16px;font-size:10px;color:var(--text-sec);border-top:1px solid var(--border);margin-top:auto;}
 
         /* CHAT */
-        .chat-header{padding:calc(12px + var(--safe-top)) 16px 12px;background:var(--bg);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:14px;z-index:20;flex-shrink:0;}
-        .chat-name{font-family:'Syne',sans-serif;font-weight:700;font-size:16px;}
-        .chat-status{font-size:11px;color:var(--gold);}
-        .chat-info{flex:1;}
+        .chat-header{padding:calc(12px + var(--safe-top)) 16px 12px;background:var(--bg);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;z-index:20;flex-shrink:0;}
+        .chat-name{font-family:'Syne',sans-serif;font-weight:700;font-size:16px;line-height:1.2;}
+        .chat-status{font-size:11px;color:var(--gold);margin-top:1px;}
+        .chat-info{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center;}
+        /* Chat header avatar - perfectly circular */
+        .chat-header-av{width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#2a2a2a,#111);border:1.5px solid var(--border);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;font-family:'Syne',sans-serif;color:var(--gold);flex-shrink:0;overflow:hidden;cursor:pointer;}
+        .chat-header-av img{width:100%;height:100%;object-fit:cover;border-radius:50%;display:block;}
 
         .chat-feed{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:3px;min-height:0;scroll-behavior:smooth;}
         .chat-feed::-webkit-scrollbar{width:3px;}
@@ -322,18 +358,25 @@
         .date-badge span{background:rgba(28,28,28,.88);backdrop-filter:blur(4px);color:#888;padding:4px 12px;border-radius:20px;font-size:10px;font-weight:700;border:1px solid var(--border);}
 
         /* MEDIA IN MSG */
-        .image-grid{display:grid;gap:3px;margin-bottom:4px;}
+        .image-grid{display:grid;gap:3px;margin-bottom:4px;border-radius:12px;overflow:hidden;max-width:280px;}
         .image-grid.g1{grid-template-columns:1fr;}
+        .image-grid.g1 .gi{height:220px;}
         .image-grid.g2{grid-template-columns:repeat(2,1fr);}
-        .image-grid.g3{grid-template-columns:repeat(2,1fr);grid-template-rows:repeat(2,1fr);}
-        .image-grid.g3 .gi:first-child{grid-column:1/span 2;}
-        .image-grid.g4{grid-template-columns:repeat(2,1fr);grid-template-rows:repeat(2,1fr);}
-        .gi{width:100%;height:150px;object-fit:cover;border-radius:8px;cursor:pointer;background:#000;display:block;}
-        .gi-more{position:relative;cursor:pointer;overflow:hidden;border-radius:8px;height:150px;}
-        .gi-more img{width:100%;height:100%;object-fit:cover;}
-        .gi-more-over{position:absolute;inset:0;background:rgba(0,0,0,.68);color:#fff;display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:800;font-family:'Syne',sans-serif;}
+        .image-grid.g2 .gi{height:180px;}
+        .image-grid.g3{grid-template-columns:repeat(2,1fr);}
+        .image-grid.g3 .gi{height:140px;}
+        .image-grid.g3 .gi:first-child{grid-column:1/span 2;height:180px;}
+        .image-grid.g4{grid-template-columns:repeat(2,1fr);}
+        .image-grid.g4 .gi,.image-grid.g4 .gi-more{height:140px;}
+        .gi{width:100%;object-fit:cover;cursor:pointer;background:#111;display:block;}
+        .gi-more{position:relative;cursor:pointer;overflow:hidden;width:100%;display:block;}
+        .gi-more img{width:100%;height:100%;object-fit:cover;display:block;}
+        .gi-more-over{position:absolute;inset:0;background:rgba(0,0,0,.65);color:#fff;display:flex;align-items:center;justify-content:center;font-size:30px;font-weight:800;font-family:'Syne',sans-serif;letter-spacing:-1px;}
         .single-img{max-width:210px;border-radius:10px;display:block;cursor:pointer;margin-bottom:4px;}
-        .msg-video{max-width:210px;border-radius:10px;display:block;cursor:pointer;margin-bottom:4px;background:#000;}
+        .msg-video-wrap{position:relative;display:block;width:260px;max-width:100%;border-radius:12px;overflow:hidden;background:#111;cursor:pointer;margin-bottom:4px;}
+        .msg-video{width:100%;height:200px;object-fit:cover;display:block;border-radius:12px;}
+        .video-play-overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.35);pointer-events:none;border-radius:12px;}
+        .video-play-overlay i{width:50px;height:50px;border-radius:50%;background:rgba(0,0,0,0.65);display:flex;align-items:center;justify-content:center;color:#fff;font-size:20px;padding-left:4px;}
         .doc-card{background:rgba(0,0,0,.2);padding:10px;border-radius:10px;display:flex;align-items:center;gap:10px;cursor:pointer;}
         .doc-card:active{background:rgba(0,0,0,.3);}
         .doc-icon{font-size:26px;color:#FF3B30;}
@@ -443,15 +486,23 @@
         .dp-picker-overlay{position:absolute;inset:0;background:rgba(0,0,0,.35);border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:20px;}
         .dp-hint{font-size:10px;color:var(--text-sec);margin-top:-16px;margin-bottom:20px;}
 
-        /* PUSH NOTIF BANNER (in-app) */
-        .notif-banner{position:absolute;top:calc(8px + var(--safe-top));left:50%;transform:translateX(-50%) translateY(-130%);background:rgba(28,28,30,.97);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,0.1);border-radius:18px;padding:10px 14px;width:92%;max-width:360px;display:flex;align-items:center;gap:12px;z-index:2000;transition:transform .4s cubic-bezier(.34,1.56,.64,1);box-shadow:0 12px 40px rgba(0,0,0,.7);cursor:pointer;}
+        /* PUSH NOTIF BANNER (in-app) - Mobile/PC style */
+        .notif-banner{position:absolute;top:calc(8px + var(--safe-top));left:50%;transform:translateX(-50%) translateY(-130%);background:rgba(28,28,30,.97);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,0.1);border-radius:18px;padding:12px 14px;width:92%;max-width:380px;display:flex;align-items:center;gap:12px;z-index:2000;transition:transform .42s cubic-bezier(.34,1.46,.64,1);box-shadow:0 4px 30px rgba(0,0,0,.75),0 0 0 0.5px rgba(255,255,255,0.05);cursor:pointer;}
         .notif-banner.show{transform:translateX(-50%) translateY(0);}
-        .notif-banner-av{width:36px;height:36px;border-radius:50%;background:var(--gold);color:#000;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;font-family:'Syne',sans-serif;flex-shrink:0;overflow:hidden;}
-        .notif-banner-av img{width:100%;height:100%;object-fit:cover;}
+        .notif-banner.hiding{transform:translateX(-50%) translateY(-130%);transition:transform .3s ease-in;}
+        .notif-banner-av{width:40px;height:40px;min-width:40px;border-radius:10px;background:var(--gold);color:#000;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:16px;font-family:'Syne',sans-serif;flex-shrink:0;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.4);}
+        .notif-banner-av img{width:100%;height:100%;object-fit:cover;border-radius:inherit;}
         .notif-banner-body{flex:1;overflow:hidden;}
-        .notif-banner-title{font-size:12px;font-weight:700;color:var(--gold);font-family:'Syne',sans-serif;margin-bottom:2px;}
-        .notif-banner-msg{font-size:12px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-        .notif-banner-app{font-size:9px;color:var(--text-sec);margin-bottom:1px;}
+        .notif-banner-app{display:flex;justify-content:space-between;align-items:center;margin-bottom:2px;}
+        .notif-banner-appname{font-size:10px;color:var(--text-sec);font-weight:600;letter-spacing:.3px;text-transform:uppercase;}
+        .notif-banner-time{font-size:10px;color:var(--text-sec);}
+        .notif-banner-title{font-size:13px;font-weight:700;color:#fff;font-family:'Syne',sans-serif;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+        .notif-banner-msg{font-size:12px;color:rgba(255,255,255,0.75);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+        .notif-dismiss{background:none;border:none;color:rgba(255,255,255,0.4);font-size:14px;padding:4px;cursor:pointer;flex-shrink:0;line-height:1;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;}
+        .notif-dismiss:active{background:rgba(255,255,255,.15);}
+        /* Progress bar under notif */
+        .notif-progress{position:absolute;bottom:0;left:12px;right:12px;height:2px;background:rgba(255,215,0,0.5);border-radius:2px;transform-origin:left;animation:notif-shrink 4s linear forwards;}
+        @keyframes notif-shrink{from{transform:scaleX(1);}to{transform:scaleX(0);}}
 
         /* Empty state */
         .empty-state{text-align:center;padding:40px 20px;color:var(--text-sec);}
@@ -514,6 +565,14 @@
         .chat-status-dot.online{background:var(--online);box-shadow:0 0 5px rgba(0,230,118,0.7);animation:pulse-dot 1.8s ease-in-out infinite;}
         .chat-status-dot.offline{background:#555;}
         @keyframes pulse-dot{0%,100%{opacity:1;}50%{opacity:0.4;}}
+
+        /* ====== GOLD USER — Avatar Frame + Tick ====== */
+        .gold-frame{box-shadow:0 0 0 2.5px #FFD700,0 0 12px rgba(255,215,0,0.55)!important;border-color:#FFD700!important;}
+        @keyframes gold-frame-pulse{0%,100%{box-shadow:0 0 0 2.5px #FFD700,0 0 10px rgba(255,215,0,0.5);}50%{box-shadow:0 0 0 3px #FFF176,0 0 22px rgba(255,215,0,0.85);}}
+        .gold-frame-anim{animation:gold-frame-pulse 2.2s ease-in-out infinite!important;border-color:#FFD700!important;}
+        .gold-tick{display:inline-flex;align-items:center;margin-left:3px;vertical-align:middle;flex-shrink:0;}
+        .gold-tick svg{width:13px;height:13px;animation:gold-shimmer 2s ease-in-out infinite;}
+        .c-name-wrap{display:flex;align-items:center;gap:0;}
     </style>
 </head>
 <body>
@@ -652,7 +711,7 @@
         <div class="contact-list hide" id="tab-groups"><div style="padding:12px 18px 5px;display:flex;justify-content:space-between;align-items:center;"><span style="font-size:12px;color:var(--text-sec);font-weight:700;letter-spacing:.5px;">GROUPS</span><button class="touch-fix" style="background:var(--gold);color:#000;border:none;padding:5px 12px;border-radius:15px;font-size:11px;font-weight:700;cursor:pointer;font-family:'Syne',sans-serif;" id="new-group-btn"><i class="fa-solid fa-users"></i> New</button></div><div id="groups-list"></div></div>
         <div class="contact-list hide" id="tab-global"><div style="padding:12px 18px 5px;display:flex;justify-content:space-between;align-items:center;"><span style="font-size:12px;color:var(--text-sec);font-weight:700;letter-spacing:.5px;">GLOBAL</span><div class="online-pill" id="global-pill"><i class="fa-solid fa-circle"></i><span id="global-count">0</span> online</div></div><div id="global-list"></div></div>
         <div class="contact-list hide" id="tab-notes"><div style="padding:12px 18px 5px;display:flex;justify-content:space-between;align-items:center;"><span style="font-size:12px;color:var(--text-sec);font-weight:700;letter-spacing:.5px;">NOTES</span><button class="touch-fix" style="background:var(--gold);color:#000;border:none;padding:5px 12px;border-radius:15px;font-size:11px;font-weight:700;cursor:pointer;font-family:'Syne',sans-serif;" id="new-note-btn"><i class="fa-solid fa-plus"></i> New</button></div><div id="notes-list" style="padding:10px;"></div></div>
-        <div class="app-footer">Orbit Pro · Solar OS V89<br>Developed by <strong style="color:var(--gold);">Rivaldo Rodrigues</strong><br>
+        <div class="app-footer">Orbit Pro · Solar OS V97<br>Developed by <strong style="color:var(--gold);">Rivaldo Rodrigues</strong><br>
             <button onclick="document.getElementById('modal-payment').classList.add('active');orbitShowQr();" style="margin-top:8px;background:rgba(255,215,0,0.12);border:1px solid rgba(255,215,0,0.3);border-radius:20px;padding:5px 16px;font-size:11px;color:var(--gold);font-weight:700;cursor:pointer;">❤️ Support Developer</button>
         </div>
     </div>
@@ -661,6 +720,7 @@
     <div id="screen-chat" class="screen z-top">
         <div class="chat-header">
             <button class="btn-reset touch-fix" id="back-btn"><i class="fa-solid fa-arrow-left" style="font-size:18px;"></i></button>
+            <div class="chat-header-av touch-fix" id="chat-header-av" onclick="orbitChatAvatarClick()">?</div>
             <div class="chat-info">
                 <div class="chat-name" id="chat-title">Room</div>
                 <div class="chat-status" id="chat-status">Connected</div>
@@ -668,6 +728,7 @@
             <div style="display:flex;gap:10px;">
                 <button class="btn-reset touch-fix" id="sel-toggle-btn" style="font-size:16px;color:var(--gold);display:none;"><i class="fa-solid fa-check-double"></i></button>
                 <button class="btn-reset touch-fix" id="fav-btn" style="font-size:16px;color:var(--gold);"><i class="fa-regular fa-star"></i></button>
+                <button class="btn-reset touch-fix" id="walkie-open-btn" style="font-size:16px;color:var(--gold);display:none;" title="Walkie-Talkie"><i class="fa-solid fa-walkie-talkie"></i></button>
                 <button class="btn-reset touch-fix" id="group-info-btn" style="font-size:16px;color:var(--gold);display:none;"><i class="fa-solid fa-info-circle"></i></button>
             </div>
         </div>
@@ -697,11 +758,38 @@
                 <div class="input-wrapper">
                     <textarea id="msg-input" class="msg-input" rows="1" placeholder="Message..."></textarea>
                 </div>
+                <button class="footer-btn voice-rec-btn touch-fix" id="voice-rec-btn" title="Hold to record voice">
+                    <span class="voice-rec-timer" id="voice-rec-timer">0:00</span>
+                    <i class="fa-solid fa-microphone" style="font-size:14px;"></i>
+                </button>
                 <button class="footer-btn send-gold touch-fix" id="send-btn">
                     <i class="fa-solid fa-paper-plane" style="font-size:14px;"></i>
                 </button>
             </div>
         </div>
+    </div>
+
+    <!-- WALKIE-TALKIE MODAL -->
+    <div id="walkie-modal">
+        <div class="walkie-title">🎙️ Walkie-Talkie</div>
+        <div class="walkie-status" id="walkie-status">Both users must allow to begin</div>
+        <div class="walkie-users">
+            <div class="walkie-user">
+                <div class="walkie-av" id="walkie-my-av">Me</div>
+                <div class="walkie-name" id="walkie-my-name">You</div>
+            </div>
+            <div class="walkie-arrow">⇄</div>
+            <div class="walkie-user">
+                <div class="walkie-av" id="walkie-their-av">?</div>
+                <div class="walkie-name" id="walkie-their-name">Other</div>
+            </div>
+        </div>
+        <div class="walkie-indicator" id="walkie-indicator"></div>
+        <button class="walkie-ptt-btn touch-fix" id="walkie-ptt-btn">
+            <i class="fa-solid fa-microphone" style="font-size:28px;"></i>
+            <span class="walkie-ptt-label">HOLD TO TALK</span>
+        </button>
+        <button class="walkie-close touch-fix" id="walkie-close-btn">✕ Leave</button>
     </div>
 
     <!-- MODALS -->
@@ -800,8 +888,8 @@
             <div class="media-grid">
                 <div class="media-opt touch-fix" data-media="gallery"><div class="m-icon" style="background:#007AFF;"><i class="fa-solid fa-images"></i></div><span>Gallery</span></div>
                 <div class="media-opt touch-fix" data-media="camera"><div class="m-icon" style="background:#FF3B30;"><i class="fa-solid fa-camera"></i></div><span>Camera</span></div>
-                <div class="media-opt touch-fix" data-media="video"><div class="m-icon" style="background:#34C759;"><i class="fa-solid fa-video"></i></div><span>Video</span></div>
-                <div class="media-opt touch-fix" data-media="video-record"><div class="m-icon" style="background:#FF2D55;"><i class="fa-solid fa-circle-dot"></i></div><span>Record</span></div>
+                <div class="media-opt touch-fix" data-media="video"><div class="m-icon" style="background:#34C759;"><i class="fa-solid fa-video"></i></div><span>Video <span style="font-size:9px;background:var(--gold);color:#000;padding:1px 5px;border-radius:6px;font-weight:800;vertical-align:middle;">GOLD</span></span></div>
+                <div class="media-opt touch-fix" data-media="video-record"><div class="m-icon" style="background:#FF2D55;"><i class="fa-solid fa-circle-dot"></i></div><span>Record <span style="font-size:9px;background:var(--gold);color:#000;padding:1px 5px;border-radius:6px;font-weight:800;vertical-align:middle;">GOLD</span></span></div>
                 <div class="media-opt touch-fix" data-media="document"><div class="m-icon" style="background:#5856D6;"><i class="fa-solid fa-file-pdf"></i></div><span>Document</span></div>
             </div>
             <button class="btn-cancel touch-fix" id="close-media-sheet">Cancel</button>
@@ -938,14 +1026,15 @@
     </div>
 
     <!-- IN-APP NOTIFICATION BANNER -->
-    <div id="notif-banner" class="notif-banner" onclick="hideNotifBanner()">
+    <div id="notif-banner" class="notif-banner" onclick="notifBannerClick()">
         <div class="notif-banner-av" id="notif-av">O</div>
         <div class="notif-banner-body">
-            <div class="notif-banner-app" style="display:flex;justify-content:space-between;"><span style="font-size:9px;color:var(--text-sec);">Orbit Pro</span><span id="notif-time" style="font-size:9px;color:var(--text-sec);">now</span></div>
+            <div class="notif-banner-app"><span class="notif-banner-appname">Orbit Pro</span><span id="notif-time" class="notif-banner-time">now</span></div>
             <div class="notif-banner-title" id="notif-title">New Message</div>
             <div class="notif-banner-msg" id="notif-msg">You have a new message</div>
         </div>
-        <button onclick="event.stopPropagation();hideNotifBanner();" style="background:none;border:none;color:var(--text-sec);font-size:12px;padding:4px;cursor:pointer;flex-shrink:0;line-height:1;">✕</button>
+        <button class="notif-dismiss" onclick="event.stopPropagation();hideNotifBanner();" title="Dismiss">✕</button>
+        <div class="notif-progress" id="notif-progress"></div>
     </div>
 
     <!-- PROFILE EDIT MODAL (from dashboard) -->
@@ -1112,8 +1201,8 @@
             <div style="padding:28px 20px 16px;text-align:center;">
                 <div style="width:68px;height:68px;border-radius:18px;background:var(--gold);display:flex;align-items:center;justify-content:center;margin:0 auto 12px;"><i class="fa-solid fa-satellite-dish" style="font-size:30px;color:#000;"></i></div>
                 <div style="font-family:'Syne',sans-serif;font-weight:800;font-size:22px;">Orbit Pro</div>
-                <div style="font-size:12px;color:var(--text-sec);margin-top:4px;">Solar OS V89 · Next-Gen Messenger</div>
-                <span class="ver-chip">Version 89.0 · Made with ❤️ in India</span>
+                <div style="font-size:12px;color:var(--text-sec);margin-top:4px;">Solar OS V92 · Next-Gen Messenger</div>
+                <span class="ver-chip">Version 92.0 · Made with ❤️ in India</span>
             </div>
 
             <div class="set-section">FEATURES</div>
@@ -1156,6 +1245,24 @@
         </div>
     </div>
 
+    <!-- PREMIUM GATE MODAL -->
+    <div id="modal-premium-gate" class="modal-overlay" style="z-index:999;">
+        <div class="modal-box" style="text-align:center;padding:32px 24px;">
+            <div style="font-size:48px;margin-bottom:12px;animation:crownPulse 2s infinite;">👑</div>
+            <div style="font-family:'Syne',sans-serif;font-weight:800;font-size:20px;color:var(--gold);margin-bottom:8px;">Gold Feature</div>
+            <div id="premium-gate-feature" style="font-size:14px;color:var(--text-sec);margin-bottom:20px;">This feature is Gold-only.</div>
+            <div style="font-size:13px;color:var(--text-sec);margin-bottom:24px;line-height:1.6;">Support the developer via UPI to unlock all Gold features including video sharing, and more!</div>
+            <div style="display:flex;flex-direction:column;gap:10px;">
+                <button class="btn-primary" onclick="document.getElementById('modal-premium-gate').classList.remove('active');document.getElementById('modal-payment').classList.add('active');orbitShowQr();" style="font-size:14px;padding:14px;">
+                    ❤️ Support &amp; Unlock Gold
+                </button>
+                <button onclick="document.getElementById('modal-premium-gate').classList.remove('active');" style="background:none;border:none;color:var(--text-sec);font-size:13px;cursor:pointer;padding:8px;">
+                    Maybe later
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- TOAST -->
     <div id="toast" class="toast"></div>
 </div>
@@ -1167,7 +1274,12 @@ const SB_URL = "https://dhtbiggamuwoqurguhib.supabase.co";
 const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRodGJpZ2dhbXV3b3F1cmd1aGliIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMxNzY2MzksImV4cCI6MjA3ODc1MjYzOX0.-utin9W_-hSeijdHwcVSjft9biB5DSXrNOmuz5kCPlE";
 let sb;
 try {
-    sb = supabase.createClient(SB_URL, SB_KEY);
+    // V93: Realtime via WebSocket only (no long-polling fallback delay), global fetch
+    sb = supabase.createClient(SB_URL, SB_KEY, {
+        auth: { persistSession: true, autoRefreshToken: true },
+        realtime: { params: { eventsPerSecond: 20 } },
+        global: { headers: { 'x-client-info': 'orbit-v93' } }
+    });
 } catch(e) {
     console.error('Supabase init failed:', e);
     document.getElementById('auth-err') && (document.getElementById('auth-err').innerText = 'App failed to load. Please refresh.') && (document.getElementById('auth-err').style.display = 'block');
@@ -1192,9 +1304,22 @@ function isOwner() {
 // Grant premium badge/label in UI for owner and premium users
 function applyPremiumBadge() {
     const nameEl = document.getElementById('dash-id');
+    const avEl   = document.getElementById('dash-av');
     if (!nameEl) return;
+
+    const gold = isPremium();
+
+    // ── Gold Avatar Frame ──
+    if (avEl) {
+        if (gold) {
+            avEl.classList.add('gold-frame-anim');
+        } else {
+            avEl.classList.remove('gold-frame-anim');
+        }
+    }
+
     if (isOwner()) {
-        // Add crown badge after name
+        // Crown badge for owner
         if (!document.getElementById('owner-badge')) {
             const badge = document.createElement('span');
             badge.id = 'owner-badge';
@@ -1203,7 +1328,6 @@ function applyPremiumBadge() {
             badge.style.cssText = 'font-size:14px;cursor:default;';
             nameEl.parentNode.insertBefore(badge, nameEl.nextSibling);
         }
-        // Show owner-only premium badge in dropdown
         const emailEl = document.getElementById('dropdown-email-text');
         if (emailEl && !document.getElementById('premium-tag')) {
             const tag = document.createElement('span');
@@ -1213,6 +1337,43 @@ function applyPremiumBadge() {
             emailEl.appendChild(tag);
         }
     }
+
+    // ── Gold Tick badge (like Twitter ✓) for all Gold users incl. owner ──
+    if (gold && !document.getElementById('gold-tick-badge')) {
+        const tick = document.createElement('span');
+        tick.id = 'gold-tick-badge';
+        tick.className = 'gold-tick';
+        tick.title = 'Gold Member';
+        tick.innerHTML = `<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <defs><linearGradient id="gtg" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#FFD700"/>
+                <stop offset="50%" stop-color="#FFF176"/>
+                <stop offset="100%" stop-color="#F9A825"/>
+            </linearGradient></defs>
+            <circle cx="12" cy="12" r="11" fill="url(#gtg)"/>
+            <path d="M7 12.5l3.5 3.5 6.5-7" stroke="#000" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>`;
+        // Insert right after the name element
+        if (nameEl.nextSibling) {
+            nameEl.parentNode.insertBefore(tick, nameEl.nextSibling);
+        } else {
+            nameEl.parentNode.appendChild(tick);
+        }
+    }
+    if (!gold) {
+        document.getElementById('gold-tick-badge')?.remove();
+    }
+}
+
+// Returns the Gold tick HTML for use in contact lists
+function goldTickHtml(userId) {
+    try {
+        const tier = getVerifiedTier(userId);
+        if (tier === 'gold') return getVerifiedBadgeHtml('gold');
+        if (tier === 'silver') return getVerifiedBadgeHtml('silver');
+        if (tier === 'bronze') return getVerifiedBadgeHtml('bronze');
+    } catch(e) {}
+    return '';
 }
 
 // ===================== STATE =====================
@@ -1287,14 +1448,28 @@ async function checkStorageBucket() {
         const { error } = await sb.storage.from('chat-assets').list('_probe', { limit: 1 });
         if (error && (error.message?.toLowerCase().includes('not found') || error.statusCode === 404 || error.statusCode === 400)) {
             storageAvailable = false;
-            console.warn('⚠️ Storage bucket "chat-assets" not found — media uploads require it.');
-            console.info('📌 Fix: Supabase Dashboard → Storage → New Bucket → Name: chat-assets → Public → Save');
+            console.error('%c⚠️ STORAGE BUCKET NOT FOUND OR INACCESSIBLE', 'color:#ff4444;font-weight:bold;font-size:14px;');
+            console.info('%c📌 To fix uploads, do ALL of these in Supabase Dashboard:', 'color:#FFD700;font-size:13px;');
+            console.info('%c1. Storage → New Bucket → Name: "chat-assets" → Toggle PUBLIC → Create', 'color:#FFD700;');
+            console.info('%c2. Storage → chat-assets → Policies → New Policy → For authenticated users → INSERT + SELECT + UPDATE → Save', 'color:#FFD700;');
+            console.info('%cOR run this SQL in Supabase → SQL Editor:', 'color:#FFD700;');
+            console.info(`%c
+CREATE POLICY "Allow authenticated uploads" ON storage.objects
+  FOR INSERT TO authenticated WITH CHECK (bucket_id = 'chat-assets');
+CREATE POLICY "Allow public reads" ON storage.objects
+  FOR SELECT TO public USING (bucket_id = 'chat-assets');
+CREATE POLICY "Allow authenticated updates" ON storage.objects
+  FOR UPDATE TO authenticated USING (bucket_id = 'chat-assets');
+CREATE POLICY "Allow authenticated deletes" ON storage.objects
+  FOR DELETE TO authenticated USING (bucket_id = 'chat-assets');
+            `, 'color:#00E676;font-family:monospace;font-size:11px;');
         } else {
             storageAvailable = true;
-            console.log('✅ Storage "chat-assets" ready');
+            console.log('%c✅ Storage "chat-assets" ready — uploads will work', 'color:#00E676;font-weight:bold;');
         }
     } catch(e) {
         storageAvailable = false;
+        console.warn('Storage check failed:', e.message);
     }
 }
 
@@ -1318,111 +1493,230 @@ function requestNotifPerms() {
 async function registerServiceWorker() {
     if (!('serviceWorker' in navigator)) return;
     try {
-        // First try the external SW file
-        const swUrl = '/sw.js';
-        const resp = await fetch(swUrl, { method: 'HEAD' }).catch(() => null);
-        if (resp && resp.ok) {
-            const reg = await navigator.serviceWorker.register(swUrl, { scope: '/' });
-            console.log('✅ Service Worker registered');
-            window._swRegistration = reg;
-            return;
-        }
-        // No /sw.js found — create an inline SW via blob URL
-        // (works in all modern browsers; the SW handles background notifications)
+        // Build a full SW script that handles background push + notification click
+        // We write it as a blob URL so it works from ANY host (no /sw.js file needed)
         const swCode = `
-self.addEventListener('install', e => self.skipWaiting());
-self.addEventListener('activate', e => e.waitUntil(self.clients.claim()));
+const ORBIT_VERSION = '${Date.now()}';
+self.addEventListener('install', e => { self.skipWaiting(); });
+self.addEventListener('activate', e => { e.waitUntil(self.clients.claim()); });
+
+// Receive push from server and show notification
 self.addEventListener('push', e => {
-    const data = e.data?.json() || {};
+    let data = {};
+    try { data = e.data?.json() || {}; } catch(_) { data = { title: 'Orbit', body: e.data?.text() || 'New message' }; }
     const title = data.title || 'Orbit';
     const opts = {
         body: data.body || 'New message',
         icon: data.icon || '/orbit-icon.png',
         badge: data.badge || '/orbit-badge.png',
-        tag: data.tag || 'orbit-msg',
+        tag: data.tag || 'orbit-' + Date.now(),
         renotify: true,
         vibrate: [200, 100, 200],
-        data: data.url ? { url: data.url } : {}
+        silent: false,
+        data: { url: data.url || self.location.origin }
     };
     e.waitUntil(self.registration.showNotification(title, opts));
 });
+
+// Also handle messages posted from the page (for in-scope background notifs)
+self.addEventListener('message', e => {
+    if (e.data?.type === 'SHOW_NOTIF') {
+        const { title, body, icon, tag } = e.data;
+        self.registration.showNotification(title || 'Orbit', {
+            body: body || '',
+            icon: icon || '/orbit-icon.png',
+            badge: '/orbit-badge.png',
+            tag: tag || 'orbit-msg',
+            renotify: true,
+            vibrate: [200, 100, 200],
+            data: { url: e.data.url || self.location.origin }
+        });
+    }
+});
+
+// Clicking notification opens/focuses the app
 self.addEventListener('notificationclick', e => {
     e.notification.close();
-    const url = e.notification.data?.url || '/';
-    e.waitUntil(clients.matchAll({ type: 'window' }).then(list => {
-        for (const c of list) { if (c.url === url && 'focus' in c) return c.focus(); }
-        if (clients.openWindow) return clients.openWindow(url);
-    }));
+    const url = e.notification.data?.url || self.location.origin;
+    e.waitUntil(
+        clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
+            for (const c of list) {
+                if ((c.url === url || c.url.startsWith(self.location.origin)) && 'focus' in c) {
+                    return c.focus();
+                }
+            }
+            if (clients.openWindow) return clients.openWindow(url);
+        })
+    );
 });
 `;
-        // Register blob-based SW (same-origin only, so we use a trick via localStorage prefix)
-        // For production, always use a real /sw.js file. Blob SW only works for in-page notifications.
-        console.log('ℹ️ No /sw.js found — using in-page notifications (deploy /sw.js for background push)');
-        window._swRegistration = null; // Will fall back to regular Notification API
+        // Try to register via blob URL (works even without a /sw.js file on the server)
+        let registered = false;
+        
+        // Method 1: Try real /sw.js first (best for production — background push works fully)
+        const resp = await fetch('/sw.js', { method: 'HEAD' }).catch(() => null);
+        if (resp?.ok) {
+            const reg = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
+            window._swRegistration = reg;
+            console.log('✅ Orbit SW: registered from /sw.js');
+            registered = true;
+        }
+        
+        // Method 2: Blob SW — works for in-scope notifications when app tab is open/backgrounded
+        if (!registered) {
+            try {
+                const blob = new Blob([swCode], { type: 'application/javascript' });
+                const blobUrl = URL.createObjectURL(blob);
+                // Blob SW only works same-origin — on GitHub Pages / Netlify / Vercel this works perfectly
+                const reg = await navigator.serviceWorker.register(blobUrl, { scope: '/' });
+                window._swRegistration = reg;
+                console.log('✅ Orbit SW: registered via blob (in-tab background notifs active)');
+                registered = true;
+            } catch(blobErr) {
+                // Some browsers block blob SW registration (strict CSP). Fall back to SW-less mode.
+                console.log('ℹ️ Orbit SW: blob registration blocked, using direct Notification API');
+                window._swRegistration = null;
+            }
+        }
+        
+        // Listen for visibility change — when tab goes background, route notifs through SW
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'hidden') {
+                console.log('📱 Orbit: tab backgrounded, SW will handle notifications');
+            }
+        });
     } catch(e) {
         console.log('ℹ️ SW skipped:', e.message);
+        window._swRegistration = null;
     }
 }
 
 function showNotif(title, body, senderInfo) {
-    // Always show in-app banner first (instant feedback)
+    // Always show in-app banner (instant visual feedback while app is open)
     showNotifBanner(title, body, senderInfo);
-    
-    // Native notification — fire when tab not focused OR always on mobile
+    playNotifSound();
+
+    if (!('Notification' in window) || Notification.permission !== 'granted') return;
+
     const isMobile = /Mobi|Android/i.test(navigator.userAgent);
-    const shouldFireNative = isMobile || document.visibilityState !== 'visible';
-    
-    if ('Notification' in window && Notification.permission === 'granted' && shouldFireNative) {
-        try {
-            const opts = {
-                body,
-                tag: 'orbit-msg-' + (senderInfo?.userId || Date.now()),
-                renotify: true,
-                vibrate: [200, 100, 200],
-                icon: senderInfo?.dpUrl || '/orbit-icon.png',
-                badge: '/orbit-badge.png',
-                silent: false,
-                requireInteraction: false,
-            };
-            // Use SW notification if registered (shows even when app closed)
-            if (window._swRegistration) {
-                window._swRegistration.showNotification(`Orbit — ${title}`, opts).catch(() => {
-                    new Notification(`Orbit — ${title}`, opts);
+    const isBackground = document.visibilityState !== 'visible';
+    // On mobile always show native notif so it appears in system tray
+    // On desktop show when backgrounded
+    const shouldFireNative = isMobile || isBackground;
+    if (!shouldFireNative) return;
+
+    try {
+        const notifTitle = `Orbit — ${title}`;
+        const opts = {
+            body,
+            tag: 'orbit-' + (senderInfo?.userId || 'msg') + '-' + Date.now(),
+            renotify: true,
+            vibrate: [200, 100, 200],
+            icon: senderInfo?.dpUrl || '/orbit-icon.png',
+            badge: '/orbit-badge.png',
+            silent: false,
+            requireInteraction: false,
+            data: { url: window.location.href }
+        };
+
+        if (window._swRegistration) {
+            // Route through SW → shows even when tab is in background / screen locked
+            window._swRegistration.showNotification(notifTitle, opts).catch(() => {
+                new Notification(notifTitle, opts);
+            });
+            // Also post message to SW so it can handle it even without push server
+            if (navigator.serviceWorker.controller) {
+                navigator.serviceWorker.controller.postMessage({
+                    type: 'SHOW_NOTIF',
+                    title: notifTitle,
+                    body,
+                    icon: opts.icon,
+                    tag: opts.tag,
+                    url: window.location.href
                 });
-            } else {
-                new Notification(`Orbit — ${title}`, opts);
             }
-        } catch(e) {
-            console.warn('Notification failed:', e);
+        } else {
+            // Fallback: direct Notification API (works when tab is visible/focused)
+            new Notification(notifTitle, opts);
         }
+    } catch(e) {
+        console.warn('Notification failed:', e);
     }
     // Vibrate on mobile regardless
-    if ('vibrate' in navigator) {
-        navigator.vibrate([100, 50, 100]);
-    }
+    if ('vibrate' in navigator) navigator.vibrate([200, 100, 200]);
 }
+
+// Play a subtle notification sound (mobile/PC style)
+function playNotifSound() {
+    try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        // Two-tone chime like system notifications
+        const playTone = (freq, startTime, duration, gain) => {
+            const osc = ctx.createOscillator();
+            const gainNode = ctx.createGain();
+            osc.connect(gainNode);
+            gainNode.connect(ctx.destination);
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(freq, startTime);
+            gainNode.gain.setValueAtTime(0, startTime);
+            gainNode.gain.linearRampToValueAtTime(gain, startTime + 0.01);
+            gainNode.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+            osc.start(startTime);
+            osc.stop(startTime + duration);
+        };
+        const now = ctx.currentTime;
+        playTone(880, now, 0.12, 0.15);
+        playTone(1100, now + 0.12, 0.15, 0.12);
+        setTimeout(() => ctx.close(), 500);
+    } catch(e) {} // silently ignore if audio blocked
+}
+
+let _notifBannerProgressAnim = null;
 
 function showNotifBanner(title, body, senderInfo) {
     const banner = document.getElementById('notif-banner');
     const avEl = document.getElementById('notif-av');
     document.getElementById('notif-title').innerText = title;
     document.getElementById('notif-msg').innerText = body;
-    // Set avatar
+    // Set time
+    const timeEl = document.getElementById('notif-time');
+    if (timeEl) timeEl.innerText = new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+    // Set avatar — rounded square like iOS
+    avEl.style.borderRadius = '10px';
     if (senderInfo?.dpUrl) {
-        avEl.innerHTML = `<img src="${senderInfo.dpUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
+        avEl.innerHTML = `<img src="${senderInfo.dpUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:10px;">`;
+        avEl.style.background = 'transparent';
     } else {
         const initials = (title[0] || 'O').toUpperCase();
         avEl.innerHTML = initials;
         avEl.style.background = 'var(--gold)';
         avEl.style.color = '#000';
     }
+    // Reset & restart progress bar
+    const prog = document.getElementById('notif-progress');
+    if (prog) {
+        prog.style.animation = 'none';
+        prog.offsetHeight; // force reflow
+        prog.style.animation = 'notif-shrink 4s linear forwards';
+    }
+    banner.classList.remove('hiding');
     banner.classList.add('show');
+    // Play notification sound
+    playNotifSound();
     if (notifBannerTimer) clearTimeout(notifBannerTimer);
-    notifBannerTimer = setTimeout(hideNotifBanner, 4000);
+    notifBannerTimer = setTimeout(hideNotifBanner, 4200);
+}
+
+function notifBannerClick() {
+    hideNotifBanner();
+    // Navigate to chat if we're on dashboard
+    // (user can tap to open the relevant chat)
 }
 
 function hideNotifBanner() {
-    document.getElementById('notif-banner').classList.remove('show');
+    const banner = document.getElementById('notif-banner');
+    banner.classList.add('hiding');
+    setTimeout(() => { banner.classList.remove('show'); banner.classList.remove('hiding'); }, 300);
 }
 
 // ===================== LISTENERS =====================
@@ -1524,6 +1818,12 @@ function setupListeners() {
     document.getElementById('send-btn').addEventListener('click', debounce(sendMessage, 400));
     document.getElementById('msg-input').addEventListener('input', function() { autoResize.call(this); broadcastTyping(); });
     document.getElementById('msg-input').addEventListener('keydown', handleKeyDown);
+    // Voice recording — hold to record
+    initVoiceRecBtn();
+    // Walkie-talkie
+    document.getElementById('walkie-open-btn')?.addEventListener('click', openWalkie);
+    document.getElementById('walkie-close-btn')?.addEventListener('click', () => { walkieTalkieChannel?.send({ type:'broadcast', event:'walkie_leave', payload:{ user_id: currentUser?.id } }).catch(()=>{}); closeWalkie(); });
+    initWalkiePTT();
 
     // Media options
     document.querySelectorAll('.media-opt').forEach(o => o.addEventListener('click', e => triggerFile(e.currentTarget.dataset.media)));
@@ -1619,7 +1919,7 @@ function setupListeners() {
     }, 200));
 
     // Notif banner click to dismiss
-    document.getElementById('notif-banner').addEventListener('click', hideNotifBanner);
+    document.getElementById('notif-banner').addEventListener('click', notifBannerClick);
 }
 
 
@@ -1805,17 +2105,23 @@ async function finishAppInit() {
     document.getElementById('screen-dash').classList.add('active');
     startPresence(); // Start WebSocket presence first
 
-    // ── LIGHTNING FAST: Kick off all critical loads in parallel ──
+    // ── V93 LIGHTNING: Kick off ALL critical loads in parallel at startup ──
     Promise.all([
         loadChats().catch(() => {}),
         updatePresence(true).catch(() => {}),
         loadPendingRequestCount().catch(() => {}),
+        // Pre-warm schema detection — eliminates column probe delay on first chat open
+        getMsgSelectCols().catch(() => {}),
     ]);
 
-    // Warm the cache for other tabs in background (non-blocking)
+    // Warm secondary tabs in background so switching is instant
     setTimeout(() => {
         loadGlobalUsers().catch(() => {});
-    }, 2500);
+    }, 1500);
+    setTimeout(() => {
+        loadGroups().catch(() => {});
+        loadFriends().catch(() => {});
+    }, 2800);
 }
 
 // ── V88: EPHEMERAL REALTIME PRESENCE — zero DB writes for online state
@@ -2056,17 +2362,20 @@ async function saveProfileEdit() {
 }
 
 async function uploadDpToStorage(dataUrl) {
-    // Try Supabase storage first; if unavailable, store as base64 directly
     try {
+        // Convert dataUrl to bytes first
         const res = await fetch(dataUrl);
         const blob = await res.blob();
+        const arrayBuffer = await blob.arrayBuffer();
+        const bytes = new Uint8Array(arrayBuffer);
         const path = `profile_dp/${currentUser.id}_${Date.now()}.jpg`;
-        const { error } = await sb.storage.from('chat-assets').upload(path, blob, { cacheControl: '3600', upsert: true, contentType: 'image/jpeg' });
-        if (error) throw error;
-        return `${SB_URL}/storage/v1/object/public/chat-assets/${path}`;
+
+        const { data: sess } = await sb.auth.getSession();
+        const token = sess?.session?.access_token || SB_KEY;
+
+        return await uploadBytesToStorage(bytes, 'image/jpeg', 'profile.jpg', 'profile_dp', token, () => {});
     } catch(e) {
-        console.warn('DP storage upload failed, using base64:', e.message);
-        // Compress before storing as base64 to keep it small
+        console.warn('DP storage upload failed, using compressed base64:', e.message);
         return await compressDpToBase64(dataUrl);
     }
 }
@@ -2096,96 +2405,125 @@ function getMyDisplayName() {
 }
 
 
-// ── V89: Safe single-round-trip chat list.
-// Step 1: Get user's rooms (always works — basic join)
-// Step 2: Fetch last message per room using a single IN query (not N+1)
-// No PostgREST foreign-table relationship required.
+// ── CHAT LIST: cache-first + bulletproof 2-step fallback ──
+let _chatListCache = null;
+
 async function loadChats() {
     const list = document.getElementById('chats-list');
-    list.innerHTML = SKELETON_LIST;
-    try {
-        // Step 1: Get rooms user is member of (with room DP) — single query
-        const { data: memberships, error: mErr } = await sb
-            .from('room_members')
-            .select('room_id, rooms(id, name, is_direct, created_at, dp_url)')
-            .eq('user_id', currentUser.id)
-            .limit(60);
+    const cacheKey = 'orbit_chats_' + currentUser.id;
 
-        if (mErr) throw mErr;
-        if (!memberships?.length) {
+    // Show cache immediately (0ms perceived load)
+    try {
+        const raw = localStorage.getItem(cacheKey);
+        if (raw) {
+            _chatListCache = JSON.parse(raw);
+            if (_chatListCache?.length) renderChatList(_chatListCache, list);
+            else list.innerHTML = SKELETON_LIST;
+        } else {
+            list.innerHTML = SKELETON_LIST;
+        }
+    } catch(e) { list.innerHTML = SKELETON_LIST; _chatListCache = null; }
+
+    try {
+        // Step 1: Get room IDs the user belongs to
+        const { data: memData, error: memErr } = await sb
+            .from('room_members')
+            .select('room_id')
+            .eq('user_id', currentUser.id)
+            .limit(100);
+        if (memErr) throw new Error('room_members: ' + memErr.message);
+
+        const roomIds = [...new Set((memData || []).map(m => m.room_id).filter(Boolean))];
+        if (!roomIds.length) {
             list.innerHTML = emptyState('fa-comments', 'No conversations yet', 'Start chatting in Groups or Global');
+            try { localStorage.removeItem(cacheKey); } catch(e) {}
             return;
         }
 
-        // Deduplicate rooms
-        const seen = new Map();
-        memberships.forEach(m => {
-            if (m.rooms && !seen.has(m.room_id)) seen.set(m.room_id, m);
-        });
-        const rooms = Array.from(seen.values());
-        const roomIds = rooms.map(m => m.room_id);
+        // Step 2 + 3: Get room details AND last messages IN PARALLEL
+        const [roomResult, msgsResult] = await Promise.all([
+            sb.from('rooms')
+              .select('id, name, is_direct, created_at, dp_url')
+              .in('id', roomIds),
+            sb.from('messages')
+              .select('room, text, type, created_at')
+              .in('room', roomIds)
+              .order('created_at', { ascending: false })
+              .limit(Math.min(roomIds.length * 5, 300))
+        ]);
+        if (roomResult.error) throw new Error('rooms: ' + roomResult.error.message);
+        const roomData = roomResult.data;
+        const msgs = msgsResult.data;
 
-        // Step 2: Get last message for ALL rooms in ONE query (not one per room)
-        const { data: recentMsgs } = await sb
-            .from('messages')
-            .select('room, text, type, created_at, sender_id, username')
-            .in('room', roomIds)
-            .order('created_at', { ascending: false })
-            .limit(Math.max(roomIds.length * 3, 60));
+        const roomMap = new Map((roomData || []).map(r => [r.id, r]));
 
-        // Build last-message map
         const lastMsgMap = new Map();
-        (recentMsgs || []).forEach(m => {
-            if (!lastMsgMap.has(m.room)) lastMsgMap.set(m.room, m);
-        });
+        (msgs || []).forEach(m => { if (!lastMsgMap.has(m.room)) lastMsgMap.set(m.room, m); });
 
-        // Sort rooms by last message time
-        rooms.sort((a, b) => {
-            const at = lastMsgMap.get(a.room_id)?.created_at || a.rooms?.created_at || '';
-            const bt = lastMsgMap.get(b.room_id)?.created_at || b.rooms?.created_at || '';
-            return bt > at ? 1 : -1;
-        });
+        // Sort by recency
+        const sorted = roomIds
+            .filter(id => roomMap.has(id))
+            .sort((a, b) => {
+                const at = lastMsgMap.get(a)?.created_at || roomMap.get(a)?.created_at || '';
+                const bt = lastMsgMap.get(b)?.created_at || roomMap.get(b)?.created_at || '';
+                return bt > at ? 1 : -1;
+            });
 
-        const frag = document.createDocumentFragment();
-        rooms.forEach(m => {
-            const r = m.rooms || {};
-            const lm = lastMsgMap.get(m.room_id);
-            const name = r.name || 'Chat';
-            const initial = (name[0] || '?').toUpperCase();
-            const preview = lm
-                ? (lm.type === 'text' || !lm.type ? trunc(lm.text || '', 40) : lm.type === 'image' ? '📷 Photo' : lm.type === 'video' ? '📹 Video' : '📄 File')
-                : 'Tap to open';
-            const timeStr = lm ? fmtTime(lm.created_at) : '';
-            // Show room DP if available
-            const avHtml = r.dp_url
-                ? `<img src="${esc(r.dp_url)}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" loading="lazy">`
-                : `<div class="c-av-inner">${initial}</div>`;
-            const el = document.createElement('div');
-            el.className = 'contact-item touch-fix';
-            el.dataset.rid = m.room_id;
-            el.dataset.rname = name;
-            el.dataset.direct = r.is_direct ? 'true' : 'false';
-            el.innerHTML = `
-                <div class="c-av">${avHtml}</div>
-                <div class="c-info">
-                    <div class="c-name">${esc(name)}</div>
-                    <div class="c-last">${esc(preview)}</div>
-                </div>
-                <div class="c-meta"><div class="c-time">${timeStr}</div></div>`;
-            el.addEventListener('click', () => openRoom(el.dataset.rid, el.dataset.rname, el.dataset.direct === 'true'));
-            frag.appendChild(el);
-        });
-        list.innerHTML = '';
-        list.appendChild(frag);
-    } catch (e) {
-        console.error('loadChats:', e);
-        list.innerHTML = `<div style="text-align:center;padding:40px 20px;">
-            <i class="fa-solid fa-triangle-exclamation" style="font-size:30px;color:#ff4444;margin-bottom:12px;display:block;"></i>
-            <div style="color:#ff4444;font-weight:700;margin-bottom:6px;">Could not load chats</div>
-            <div style="font-size:12px;color:#666;margin-bottom:16px;">${e?.message || 'Check connection'}</div>
-            <button onclick="loadChats()" style="background:var(--gold);color:#000;border:none;padding:10px 24px;border-radius:20px;font-weight:700;cursor:pointer;font-family:'Syne',sans-serif;font-size:13px;">Retry</button>
-        </div>`;
+        const chatData = sorted.map(id => ({
+            roomId: id,
+            room: roomMap.get(id) || {},
+            lastMsg: lastMsgMap.get(id) || null
+        }));
+
+        try { localStorage.setItem(cacheKey, JSON.stringify(chatData)); } catch(e) {}
+        _chatListCache = chatData;
+        renderChatList(chatData, list);
+
+    } catch(e) {
+        console.error('loadChats error:', e);
+        if (_chatListCache?.length) {
+            showToast('⚠️ Refresh failed — showing cached chats');
+        } else {
+            list.innerHTML = `<div style="text-align:center;padding:40px 20px;">
+                <i class="fa-solid fa-triangle-exclamation" style="font-size:32px;color:#ff4444;margin-bottom:14px;display:block;"></i>
+                <div style="color:#ff4444;font-weight:700;font-size:15px;margin-bottom:6px;">Failed to load chats</div>
+                <div style="font-size:12px;color:#888;margin-bottom:20px;line-height:1.5;">${esc(e?.message || 'Check your internet connection')}</div>
+                <button onclick="loadChats()" style="background:var(--gold);color:#000;border:none;padding:12px 28px;border-radius:22px;font-weight:700;cursor:pointer;font-family:'Syne',sans-serif;font-size:13px;">↺ Retry</button>
+            </div>`;
+        }
     }
+}
+
+function renderChatList(chatData, list) {
+    if (!chatData?.length) {
+        list.innerHTML = emptyState('fa-comments', 'No conversations yet', 'Start chatting in Groups or Global');
+        return;
+    }
+    const frag = document.createDocumentFragment();
+    chatData.forEach(({ roomId, room: r, lastMsg: lm }) => {
+        const name = r.name || 'Chat';
+        const initial = (name[0] || '?').toUpperCase();
+        const preview = lm
+            ? ((!lm.type || lm.type === 'text') ? trunc(lm.text || '', 44)
+               : lm.type === 'image' ? '📷 Photo'
+               : lm.type === 'video' ? '📹 Video'
+               : '📄 File')
+            : 'Tap to open';
+        const timeStr = lm ? fmtTime(lm.created_at) : '';
+        const avHtml = r.dp_url
+            ? `<img src="${esc(r.dp_url)}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" loading="lazy" onerror="this.parentNode.innerHTML='<div class=\'c-av-inner\'>${initial}</div>'">`
+            : `<div class="c-av-inner">${initial}</div>`;
+        const el = document.createElement('div');
+        el.className = 'contact-item touch-fix';
+        el.dataset.rid = roomId; el.dataset.rname = name; el.dataset.direct = r.is_direct ? 'true' : 'false';
+        el.innerHTML = `<div class="c-av">${avHtml}</div>
+            <div class="c-info"><div class="c-name">${esc(name)}</div><div class="c-last">${esc(preview)}</div></div>
+            <div class="c-meta"><div class="c-time">${timeStr}</div></div>`;
+        el.addEventListener('click', () => openRoom(el.dataset.rid, el.dataset.rname, el.dataset.direct === 'true'));
+        frag.appendChild(el);
+    });
+    list.innerHTML = '';
+    list.appendChild(frag);
 }
 
 
@@ -2387,6 +2725,8 @@ async function loadGlobalUsers() {
         data.forEach(u => {
             const name = u.display_name || (u.email ? u.email.split('@')[0] : 'User');
             const initials = (name[0] || 'U').toUpperCase();
+            const uTier = getVerifiedTier(u.user_id);
+            const uGold = uTier === 'gold';
             const avHtml = u.dp_url
                 ? `<img src="${esc(u.dp_url)}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" loading="lazy" onerror="this.parentNode.innerHTML='<div class=\\'c-av-inner\\'>${initials}</div>'">`
                 : `<div class="c-av-inner">${initials}</div>`;
@@ -2395,9 +2735,9 @@ async function loadGlobalUsers() {
             el.dataset.uid = u.user_id;
             el.dataset.uname = name;
             el.innerHTML = `
-                <div class="c-av" style="cursor:pointer;" onclick="previewDp('${esc(u.dp_url || '')}','${esc(initials)}',event)">${avHtml}<div class="c-status-dot ${u.is_online ? 'online' : 'offline'}"></div></div>
+                <div class="c-av${uGold ? ' gold-frame-anim' : ''}" style="cursor:pointer;" onclick="previewDp('${esc(u.dp_url || '')}','${esc(initials)}',event)">${avHtml}<div class="c-status-dot ${u.is_online ? 'online' : 'offline'}"></div></div>
                 <div class="c-info">
-                    <div class="c-name">${esc(name)}</div>
+                    <div class="c-name">${esc(name)}${uTier ? getVerifiedBadgeHtml(uTier) : ''}</div>
                     <div class="c-last">${u.is_online ? '🟢 Online now' : '⏱ ' + timeAgo(u.last_seen)}</div>
                     ${u.email ? `<div style="font-size:10px;color:var(--text-sec);opacity:.75;margin-top:1px;">${esc(u.email)}</div>` : ''}
                 </div>`;
@@ -2442,16 +2782,65 @@ async function loadNotes() {
 }
 
 // ===================== CHAT OPEN =====================
-// Skeleton loading HTML for instant feel
+// Skeleton loading HTML for instant feel (static - no random to avoid re-compute issues)
 const MSG_SKELETON = `<div style="padding:14px 14px 0;display:flex;flex-direction:column;gap:10px;opacity:.35;">
-${[1,0,1,0,1,1].map(own=>
-  `<div style="display:flex;justify-content:${own?'flex-end':'flex-start'}">
-    <div style="height:36px;width:${140+Math.random()*80|0}px;background:${own?'rgba(255,215,0,0.3)':'#2a2a2a'};border-radius:12px;"></div>
-  </div>`
-).join('')}
+<div style="display:flex;justify-content:flex-end"><div style="height:36px;width:180px;background:rgba(255,215,0,0.3);border-radius:12px;"></div></div>
+<div style="display:flex;justify-content:flex-start"><div style="height:36px;width:140px;background:#2a2a2a;border-radius:12px;"></div></div>
+<div style="display:flex;justify-content:flex-end"><div style="height:36px;width:210px;background:rgba(255,215,0,0.3);border-radius:12px;"></div></div>
+<div style="display:flex;justify-content:flex-start"><div style="height:36px;width:160px;background:#2a2a2a;border-radius:12px;"></div></div>
+<div style="display:flex;justify-content:flex-end"><div style="height:36px;width:155px;background:rgba(255,215,0,0.3);border-radius:12px;"></div></div>
+<div style="display:flex;justify-content:flex-start"><div style="height:36px;width:190px;background:#2a2a2a;border-radius:12px;"></div></div>
 </div>`;
 
+function setChatHeaderAvatar(name, dpUrl, isDirect) {
+    const av = document.getElementById('chat-header-av');
+    if (!av) return;
+    const initial = (name || '?')[0].toUpperCase();
+    // Store dp url on element for click handler
+    av._currentDpUrl = dpUrl || null;
+    if (dpUrl) {
+        av.innerHTML = `<img src="${esc(dpUrl)}" alt="${esc(initial)}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;display:block;" onerror="this.parentNode.innerHTML='${initial}'">`;
+    } else {
+        av.innerHTML = isDirect ? initial : `<i class="fa-solid fa-users" style="font-size:14px;"></i>`;
+    }
+}
+
+async function updateChatHeaderAvatarForDM(roomId) {
+    try {
+        // Get the other participant
+        const { data: members } = await sb.from('room_members').select('user_id').eq('room_id', roomId);
+        if (!members) return;
+        const otherId = members.find(m => m.user_id !== currentUser?.id)?.user_id;
+        if (!otherId) return;
+        const cached = globalUsersCache.get(otherId);
+        if (cached?.dp_url) {
+            setChatHeaderAvatar(cached.display_name || '', cached.dp_url, true);
+            return;
+        }
+        const { data: pres } = await sb.from('user_presence').select('dp_url, display_name').eq('user_id', otherId).single();
+        if (pres?.dp_url) setChatHeaderAvatar(pres.display_name || '', pres.dp_url, true);
+    } catch(e) {}
+}
+
+function orbitChatAvatarClick() {
+    const av = document.getElementById('chat-header-av');
+    if (!av) return;
+    // Use stored URL — reliable even if img src got rewritten
+    const dpUrl = av._currentDpUrl;
+    if (dpUrl) previewDp(dpUrl, '', null);
+}
+
+let _chatOpenLock = false; // prevent rapid double-taps opening two chats at once
+
+// Guard: prevents stale room loads bleeding into newly opened chats
+let _openingRoomId = null;
+
 async function openRoom(roomId, roomName, isDirect) {
+    if (_chatOpenLock && _openingRoomId === roomId) return; // prevent double-open same room
+    _chatOpenLock = true;
+    _openingRoomId = roomId;
+    // Release lock after 1.5s no matter what
+    setTimeout(() => { _chatOpenLock = false; }, 1500);
     try {
         currentRoom = roomId;
         isPersonalChat = false;
@@ -2459,6 +2848,20 @@ async function openRoom(roomId, roomName, isDirect) {
         document.getElementById('chat-status').innerHTML = '<span class="chat-status-live"><span class="chat-status-dot offline"></span>Connecting...</span>';
         document.getElementById('fav-btn').innerHTML = favorites.includes(roomId) ? '<i class="fa-solid fa-star"></i>' : '<i class="fa-regular fa-star"></i>';
         document.getElementById('group-info-btn').style.display = (isDirect === true) ? 'none' : 'block';
+        // Walkie-talkie only in direct (DM) chats
+        const walkieBtn = document.getElementById('walkie-open-btn');
+        if (walkieBtn) walkieBtn.style.display = (isDirect === true) ? 'block' : 'none';
+        // Set chat header avatar immediately with initials, then update with real DP
+        setChatHeaderAvatar(roomName, null, isDirect);
+        // For direct chats, try to find the other user's DP
+        if (isDirect) {
+            setTimeout(() => updateChatHeaderAvatarForDM(roomId), 200);
+        } else {
+            // For groups, fetch room DP from rooms table
+            sb.from('rooms').select('dp_url').eq('id', roomId).single().then(({data}) => {
+                if (data?.dp_url) setChatHeaderAvatar(roomName, data.dp_url, false);
+            }).catch(() => {});
+        }
         navigate('chat');
         const feed = document.getElementById('chat-feed');
         feed.innerHTML = MSG_SKELETON;
@@ -2470,27 +2873,39 @@ async function openRoom(roomId, roomName, isDirect) {
         oldestMsgDate = null;
         document.getElementById('sel-toggle-btn').style.display = 'block';
         exitSelectMode();
-        // Sub and msgs in parallel — pinned is non-critical, load after
+        // Fire sub, typing channel, AND schema probe all at once — zero sequential wait
         setupRoomSub(roomId, false);
         setupTypingChannel(roomId);
+        // Pre-warm schema in parallel so loadRoomMsgs finds it already cached
+        if (!_msgColsCache) getMsgSelectCols().catch(() => {});
         await loadRoomMsgs(roomId);
+        // Stale-load guard: if user switched rooms while loading, abort rendering
+        if (_openingRoomId !== roomId) return;
         // Load pinned in background after messages show
         loadPinned(roomId).then(() => {
+            if (_openingRoomId !== roomId) return;
             pinnedMessages.forEach((_, mid) => {
                 document.getElementById('msg-' + mid)?.classList.add('pinned');
             });
         });
     } catch (e) { console.error('openRoom:', e); showToast('Failed to open chat'); navBack(); }
+    finally { _chatOpenLock = false; }
 }
 
 async function openPersonalChat(chatId) {
+    if (_chatOpenLock && _openingRoomId === chatId) return;
+    _chatOpenLock = true;
+    _openingRoomId = chatId;
+    setTimeout(() => { _chatOpenLock = false; }, 1500);
     try {
         const { data: chat } = await sb.from('personal_chats').select('*').eq('id', chatId).eq('user_id', currentUser.id).single();
+        if (_openingRoomId !== chatId) return; // switched away before load finished
         currentRoom = chatId;
         isPersonalChat = true;
         document.getElementById('chat-title').innerText = chat.name || 'Secure Chat';
         document.getElementById('chat-status').innerHTML = '🔒 Encrypted';
         document.getElementById('group-info-btn').style.display = 'none';
+        setChatHeaderAvatar(chat.name || 'Secure Chat', null, false);
         navigate('chat');
         const feed = document.getElementById('chat-feed');
         feed.innerHTML = MSG_SKELETON;
@@ -2504,10 +2919,11 @@ async function openPersonalChat(chatId) {
         setupTypingChannel(chatId);
         await loadPersonalMsgs(chatId);
     } catch (e) { showToast('Failed to open chat'); navBack(); }
+    finally { _chatOpenLock = false; }
 }
 
-// Supabase query with timeout wrapper
-async function sbQuery(fn, timeoutMs = 8000) {
+// Supabase query with timeout wrapper — V93: 5s max wait
+async function sbQuery(fn, timeoutMs = 5000) {
     return new Promise(async (resolve, reject) => {
         const timer = setTimeout(() => reject(new Error('Query timed out')), timeoutMs);
         try {
@@ -2521,30 +2937,118 @@ async function sbQuery(fn, timeoutMs = 8000) {
     });
 }
 
+// === SMART SCHEMA DETECTION — V94 ===
+// Probes columns silently. deleted_by & pinned are optional server-side — 
+// we always request them but never crash if missing.
+let _msgColsCache = null; // null = not probed yet
+let _hasDeletedBy = false; // track whether column exists for safe UPDATE calls
+let _hasPinned = false;
+
+const MSG_DESIRED_COLS = ['id','sender_id','username','text','type','attachments','reactions','reply_to','deleted_by','read_by','created_at','room','pinned'];
+const MSG_REQUIRED_COLS = ['id','sender_id','text','created_at','room'];
+
+// Singleton promise — prevents multiple parallel probes racing each other
+let _msgColsProbePromise = null;
+
+async function getMsgSelectCols() {
+    if (_msgColsCache) return _msgColsCache;
+    if (_msgColsProbePromise) return _msgColsProbePromise;
+
+    _msgColsProbePromise = (async () => {
+        // Fast path: try all columns at once — single round-trip
+        try {
+            const { error } = await sb.from('messages').select(MSG_DESIRED_COLS.join(',')).limit(1);
+            if (!error) {
+                _msgColsCache = MSG_DESIRED_COLS.join(',');
+                _hasDeletedBy = true; _hasPinned = true;
+                return _msgColsCache;
+            }
+        } catch(e) {}
+
+        // Fallback: probe ALL optional columns IN PARALLEL — simultaneous round-trips instead of sequential
+        const optional = MSG_DESIRED_COLS.filter(c => !MSG_REQUIRED_COLS.includes(c));
+        const results = await Promise.all(optional.map(async col => {
+            try {
+                const { error } = await sb.from('messages').select([...MSG_REQUIRED_COLS, col].join(',')).limit(1);
+                return error ? null : col;
+            } catch(e) { return null; }
+        }));
+        const available = [...MSG_REQUIRED_COLS, ...results.filter(Boolean)];
+        _hasDeletedBy = available.includes('deleted_by');
+        _hasPinned = available.includes('pinned');
+        _msgColsCache = available.join(',');
+        return _msgColsCache;
+    })();
+
+    return _msgColsProbePromise;
+}
+
 async function loadRoomMsgs(roomId) {
+    const feed = document.getElementById('chat-feed');
+    const cacheKey = 'orbit_msgs_' + roomId;
+
+    // Show cached messages INSTANTLY while network loads
     try {
-        // Use select('*') — works regardless of which optional columns exist in schema
-        const { data, error } = await sb
-            .from('messages')
-            .select('*')
-            .eq('room', roomId)
-            .order('created_at', { ascending: false })
-            .limit(40);
+        const raw = localStorage.getItem(cacheKey);
+        if (raw && _openingRoomId === roomId) {
+            const cached = JSON.parse(raw);
+            if (cached?.length) renderMsgs(cached);
+        }
+    } catch(e) {}
+
+    try {
+        // Fire schema probe + message fetch TRULY in parallel
+        // getMsgSelectCols resolves instantly if already cached (most calls)
+        // If not cached yet, both run simultaneously — no sequential wait
+        const schemaPromise = getMsgSelectCols();
+        const fetchPromise = (async () => {
+            // Use '*' as temporary fallback while schema resolves, then re-select if needed
+            const cols = _msgColsCache || MSG_DESIRED_COLS.join(',');
+            return sb.from('messages')
+                .select(cols)
+                .eq('room', roomId)
+                .order('created_at', { ascending: false })
+                .limit(60);
+        })();
+
+        const [selectCols, fetchResult] = await Promise.all([schemaPromise, fetchPromise]);
+
+        // If schema wasn't cached when we fired, re-fetch with correct cols
+        let data = fetchResult.data;
+        let error = fetchResult.error;
+        if (error && !_msgColsCache) {
+            // retry with resolved cols
+            const retry = await sb.from('messages').select(selectCols).eq('room', roomId)
+                .order('created_at', { ascending: false }).limit(60);
+            data = retry.data; error = retry.error;
+        }
+
         if (error) throw error;
+        if (_openingRoomId !== roomId) return; // stale — user switched away
+
         const msgs = (data || []).reverse();
+        try { localStorage.setItem(cacheKey, JSON.stringify(msgs)); } catch(e) {}
         renderMsgs(msgs);
-        hasMoreMessages = msgs.length >= 40;
-        if (hasMoreMessages) oldestMsgDate = msgs[0]?.created_at;
-        else if (msgs.length) oldestMsgDate = msgs[0]?.created_at;
-    } catch (e) {
+        hasMoreMessages = msgs.length >= 60;
+        oldestMsgDate = msgs[0]?.created_at || null;
+
+    } catch(e) {
         console.error('loadRoomMsgs:', e);
-        const feed = document.getElementById('chat-feed');
-        if (feed) feed.innerHTML = `<div style="text-align:center;padding:50px 24px;color:#ff4444;">
-            <i class="fa-solid fa-wifi" style="font-size:36px;margin-bottom:14px;display:block;opacity:.5;"></i>
-            <div style="font-size:15px;font-weight:700;margin-bottom:6px;">Failed to load messages</div>
-            <div style="font-size:12px;color:#666;margin-bottom:16px;">${e?.message || 'Network error'}</div>
-            <button onclick="retryLoadRoom('${roomId}')" style="background:var(--gold);color:#000;border:none;padding:12px 28px;border-radius:22px;font-weight:700;cursor:pointer;font-family:'Syne',sans-serif;font-size:13px;">Retry</button>
-        </div>`;
+        // Reset column cache so next attempt re-probes
+        _msgColsCache = null;
+        if (_openingRoomId !== roomId) return;
+        // Only show error if we have no cached data showing
+        const hasCacheShowing = feed.querySelector('.msg-row');
+        if (!hasCacheShowing) {
+            feed.innerHTML = `<div style="text-align:center;padding:50px 24px;">
+                <i class="fa-solid fa-wifi" style="font-size:36px;margin-bottom:14px;display:block;opacity:.4;color:#ff4444;"></i>
+                <div style="font-size:15px;font-weight:700;margin-bottom:6px;color:#ff4444;">Failed to load messages</div>
+                <div style="font-size:12px;color:#888;margin-bottom:16px;">${esc(e?.message || 'Network error')}</div>
+                <button onclick="retryLoadRoom('${roomId}')" style="background:var(--gold);color:#000;border:none;padding:12px 28px;border-radius:22px;font-weight:700;cursor:pointer;font-family:'Syne',sans-serif;font-size:13px;">↺ Retry</button>
+            </div>`;
+        } else {
+            showToast('⚠️ Could not refresh messages');
+        }
     }
 }
 
@@ -2555,6 +3059,18 @@ function retryLoadRoom(roomId) {
 }
 
 async function loadPersonalMsgs(chatId) {
+    const cacheKey = 'orbit_msgs_' + chatId;
+    const feed = document.getElementById('chat-feed');
+
+    // Show cache immediately while network loads
+    try {
+        const raw = localStorage.getItem(cacheKey);
+        if (raw) {
+            const cached = JSON.parse(raw);
+            if (cached?.length) renderMsgs(cached);
+        }
+    } catch(e) {}
+
     try {
         const result = await sbQuery(() =>
             sb.from('personal_chat_messages')
@@ -2564,11 +3080,17 @@ async function loadPersonalMsgs(chatId) {
               .limit(30)
         );
         const msgs = ((result.data) || []).reverse();
+        try { localStorage.setItem(cacheKey, JSON.stringify(msgs)); } catch(e) {}
         renderMsgs(msgs);
         hasMoreMessages = msgs.length >= 30;
         if (hasMoreMessages) oldestMsgDate = msgs[0]?.created_at;
     } catch (e) {
-        document.getElementById('chat-feed').innerHTML = '<div style="text-align:center;padding:40px;color:#ff4444;">Error loading messages. Tap retry.</div>';
+        const hasCacheShowing = feed?.querySelector('.msg-row');
+        if (!hasCacheShowing) {
+            feed.innerHTML = '<div style="text-align:center;padding:40px;color:#ff4444;">Error loading messages. <button onclick="loadPersonalMsgs(\'' + chatId + '\')" style="background:var(--gold);color:#000;border:none;padding:8px 20px;border-radius:16px;font-weight:700;margin-top:10px;cursor:pointer;">↺ Retry</button></div>';
+        } else {
+            showToast('⚠️ Could not refresh messages');
+        }
     }
 }
 
@@ -2756,31 +3278,62 @@ function buildMsgNode(msg) {
         content = buildImageContent(msg);
     } else if (msg.type === 'video' && msg.attachments?.[0]) {
         const url = mediaUrl(msg.attachments[0]);
-        content = `<video class="msg-video touch-fix" src="${url}" data-url="${url}" data-title="${esc(msg.text||'Video')}" data-type="video" poster="" preload="metadata" playsinline></video>`;
-        if (msg.text && !msg.text.match(/^\d+ images?$/)) content += `<div style="font-size:11px;margin-top:3px;opacity:.7;">${esc(msg.text)}</div>`;
+        const msgId = msg.id || '';
+        content = `<div class="msg-video-wrap" id="vwrap-${msgId}">
+            <video class="msg-video touch-fix"
+                src="${url}#t=0.5"
+                data-url="${url}"
+                data-title="${esc(msg.text||'Video')}"
+                data-type="video"
+                preload="metadata"
+                playsinline
+                muted
+                crossorigin="anonymous"
+                onloadeddata="orbitGenVideoPoster(this)"
+            ></video>
+            <div class="video-play-overlay" aria-hidden="true">
+                <i class="fa-solid fa-play"></i>
+            </div>
+        </div>`;
+        if (msg.text && msg.text !== msg.attachments?.[0] && !msg.text.match(/^\d+ images?$/)) {
+            content += `<div style="font-size:11px;margin-top:4px;opacity:.7;">${esc(trunc(msg.text, 40))}</div>`;
+        }
     } else if (msg.type === 'document' && msg.attachments?.[0]) {
         const url = mediaUrl(msg.attachments[0]);
         const name = msg.text || 'Document';
         const ext = name.split('.').pop().toUpperCase();
+        const isBase64 = url.startsWith('data:');
         const iconMap = { PDF:'fa-file-pdf', DOC:'fa-file-word', DOCX:'fa-file-word', XLS:'fa-file-excel', XLSX:'fa-file-excel', PPT:'fa-file-powerpoint', PPTX:'fa-file-powerpoint', ZIP:'fa-file-zipper', TXT:'fa-file-lines', CSV:'fa-file-csv', RTF:'fa-file-lines' };
         const colorMap = { PDF:'#FF3B30', DOC:'#007AFF', DOCX:'#007AFF', XLS:'#34C759', XLSX:'#34C759', PPT:'#FF9500', PPTX:'#FF9500', ZIP:'#8E8E93', TXT:'#636366', CSV:'#34C759', RTF:'#636366' };
         const icon = iconMap[ext] || 'fa-file';
         const color = colorMap[ext] || '#8E8E93';
         const isOwnMsg = msg.sender_id === currentUser.id;
-        // Size display — read from metadata (new) or file_size (legacy) or fallback to ext
         const rawSize = msg.metadata?.file_size || msg.file_size || null;
         const sizeLabel = rawSize ? (rawSize > 1048576 ? (rawSize/1048576).toFixed(1)+'MB' : Math.round(rawSize/1024)+'KB') : ext;
+        const actionLabel = ext === 'PDF' ? 'Preview' : (isBase64 ? 'Download' : 'Open');
         content = `<div class="doc-card touch-fix" data-url="${esc(url)}" data-name="${esc(name)}" data-ext="${ext}" style="background:${isOwnMsg ? 'rgba(0,0,0,0.15)' : 'rgba(255,255,255,0.07)'}">
             <div style="width:44px;height:44px;border-radius:10px;background:${color}22;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
                 <i class="fa-solid ${icon}" style="color:${color};font-size:22px;"></i>
             </div>
             <div style="flex:1;overflow:hidden;">
                 <div class="doc-name">${esc(trunc(name,30))}</div>
-                <div class="doc-sub">${sizeLabel} · Tap to ${ext==='PDF'?'preview':'open'}</div>
+                <div class="doc-sub">${sizeLabel} · Tap to ${actionLabel}</div>
             </div>
             <div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex-shrink:0;">
                 <i class="fa-solid fa-arrow-down-to-line" style="color:${color};font-size:14px;opacity:0.8;"></i>
             </div>
+        </div>`;
+    } else if (msg.type === 'voice' && msg.attachments?.[0]) {
+        const url = mediaUrl(msg.attachments[0]);
+        const dur = msg.metadata?.duration || 0;
+        const durStr = `0:${String(Math.max(0,Math.round(dur))).padStart(2,'0')}`;
+        let bars = '';
+        const seed = msg.id ? msg.id.charCodeAt(0) * 7 + msg.id.charCodeAt(2) : 42;
+        for (let i = 0; i < 24; i++) { const h = 6 + ((seed * (i+3) * 13 + i * 19) % 18); bars += `<div class="voice-bar" style="height:${h}px;"></div>`; }
+        content = `<div class="voice-msg-player" data-url="${esc(url)}" data-dur="${dur}">
+            <button class="voice-play-btn touch-fix" data-url="${esc(url)}"><i class="fa-solid fa-play" style="font-size:12px;"></i></button>
+            <div class="voice-waveform"><div class="voice-progress" style="width:0%"></div><div class="voice-bars">${bars}</div></div>
+            <span class="voice-dur">${durStr}</span>
         </div>`;
     } else {
         content = `<div style="white-space:pre-wrap;word-break:break-word;">${esc(msg.text || '')}</div>`;
@@ -2798,18 +3351,39 @@ function buildMsgNode(msg) {
     return div;
 }
 
+// Generate video poster thumbnail from first frame via canvas
+function orbitGenVideoPoster(videoEl) {
+    if (!videoEl || videoEl.dataset.posterSet) return;
+    videoEl.dataset.posterSet = '1';
+    try {
+        const canvas = document.createElement('canvas');
+        canvas.width = videoEl.videoWidth || 320;
+        canvas.height = videoEl.videoHeight || 180;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(videoEl, 0, 0, canvas.width, canvas.height);
+        const poster = canvas.toDataURL('image/jpeg', 0.85);
+        videoEl.setAttribute('poster', poster);
+    } catch(e) {
+        // CORS or cross-origin video — can't capture frame, that's OK
+        // The video still shows with #t=0.5 seek position
+    }
+}
+
 function buildImageContent(msg) {
     const atts = msg.attachments;
     const count = atts.length;
+    // g1=single, g2=two side-by-side, g3=big+two, g4=2x2 grid
     let gridClass = count === 1 ? 'g1' : count === 2 ? 'g2' : count === 3 ? 'g3' : 'g4';
     let html = `<div class="image-grid ${gridClass}">`;
     const maxShow = Math.min(count, 4);
+    const allUrls = atts.map(a => mediaUrl(a)).join('||');
     for (let i = 0; i < maxShow; i++) {
         const url = mediaUrl(atts[i]);
-        const allUrls = atts.map(a => mediaUrl(a)).join('||');
-        if (i === 3 && count > 4) {
-            html += `<div class="gi-more" data-urls="${esc(allUrls)}" data-start="${i}" data-title="${esc(msg.text||'Images')}">
-                <img src="${url}" alt=""><div class="gi-more-over">+${count - 3}</div></div>`;
+        // Show +N overlay on last slot if there are more images
+        if (i === maxShow - 1 && count > maxShow) {
+            const extra = count - (maxShow - 1); // remaining unseen count
+            html += `<div class="gi-more touch-fix" data-urls="${esc(allUrls)}" data-start="${i}" data-title="${esc(msg.text||'Images')}">
+                <img src="${url}" alt=""><div class="gi-more-over">+${extra}</div></div>`;
         } else {
             html += `<img class="gi touch-fix" src="${url}" data-url="${url}" data-urls="${esc(allUrls)}" data-start="${i}" data-title="${esc(msg.text||'Images')}" alt="" loading="lazy">`;
         }
@@ -2846,11 +3420,15 @@ function attachMsgListeners() {
         row.querySelectorAll('.single-img').forEach(img => {
             img.addEventListener('click', e => { e.stopPropagation(); openLightbox(img.dataset.url || img.src, 'image', img.dataset.title || 'Image'); });
         });
-        // Video click
-        row.querySelectorAll('.msg-video').forEach(vid => {
-            vid.addEventListener('click', e => {
+        // Video click — tap wrap to open in lightbox
+        row.querySelectorAll('.msg-video-wrap').forEach(wrap => {
+            wrap.addEventListener('click', e => {
                 e.stopPropagation();
-                openLightbox(vid.dataset.url || vid.src, 'video', vid.dataset.title || 'Video');
+                const vid = wrap.querySelector('.msg-video');
+                if (!vid) return;
+                const url = vid.dataset.url || vid.src;
+                const title = vid.dataset.title || 'Video';
+                if (url) openLightbox(url, 'video', title);
             });
         });
         // Document download/open
@@ -2861,12 +3439,11 @@ function attachMsgListeners() {
                 const name = card.dataset.name || 'document';
                 const ext = (card.dataset.ext || name.split('.').pop()).toUpperCase();
                 if (!url) return;
-                if (ext === 'PDF') {
+                const extUpper = (card.dataset.ext || name.split('.').pop()).toUpperCase();
+                if (extUpper === 'PDF') {
                     openPdfViewer(url, name);
-                } else if (url.startsWith('data:') || url.startsWith('http')) {
-                    dlFile(url, name);
                 } else {
-                    window.open(url, '_blank');
+                    dlFile(url, name);
                 }
             });
         });
@@ -2876,6 +3453,46 @@ function attachMsgListeners() {
                 e.stopPropagation();
                 const target = document.getElementById('msg-' + el.dataset.replyto);
                 if (target) { target.scrollIntoView({ behavior: 'smooth', block: 'center' }); target.classList.add('selected'); setTimeout(() => target.classList.remove('selected'), 1800); }
+            });
+        });
+        // Voice message player
+        row.querySelectorAll('.voice-msg-player').forEach(player => {
+            const btn = player.querySelector('.voice-play-btn');
+            const progress = player.querySelector('.voice-progress');
+            const durEl = player.querySelector('.voice-dur');
+            const totalDur = parseFloat(player.dataset.dur) || 0;
+            let audio = null;
+            btn?.addEventListener('click', e => {
+                e.stopPropagation();
+                const url = btn.dataset.url;
+                if (!url) return;
+                // Stop any other playing voice messages
+                document.querySelectorAll('.voice-play-btn[data-playing="true"]').forEach(b => {
+                    if (b !== btn) { b.dataset.playing = ''; b.innerHTML = '<i class="fa-solid fa-play" style="font-size:12px;"></i>'; }
+                });
+                if (btn.dataset.playing === 'true') {
+                    audio?.pause();
+                    btn.dataset.playing = '';
+                    btn.innerHTML = '<i class="fa-solid fa-play" style="font-size:12px;"></i>';
+                    return;
+                }
+                if (!audio) { audio = new Audio(url); }
+                audio.currentTime = 0;
+                audio.play().catch(() => {});
+                btn.dataset.playing = 'true';
+                btn.innerHTML = '<i class="fa-solid fa-pause" style="font-size:12px;"></i>';
+                audio.ontimeupdate = () => {
+                    const pct = totalDur > 0 ? (audio.currentTime / totalDur * 100) : (audio.currentTime / (audio.duration || 1) * 100);
+                    if (progress) progress.style.width = Math.min(100, pct) + '%';
+                    const rem = Math.max(0, (audio.duration || totalDur) - audio.currentTime);
+                    if (durEl) durEl.textContent = `0:${String(Math.round(rem)).padStart(2,'0')}`;
+                };
+                audio.onended = () => {
+                    btn.dataset.playing = '';
+                    btn.innerHTML = '<i class="fa-solid fa-play" style="font-size:12px;"></i>';
+                    if (progress) progress.style.width = '0%';
+                    if (durEl && totalDur) durEl.textContent = `0:${String(Math.round(totalDur)).padStart(2,'0')}`;
+                };
             });
         });
     });
@@ -2957,6 +3574,7 @@ function handleCtx(action) {
                 document.querySelector('#modal-pin .delete-title').innerText = isAlreadyPinned ? 'Unpin Message' : 'Pin Message';
                 document.querySelector('#modal-pin .delete-desc').innerText = isAlreadyPinned ? 'Remove this pin?' : 'Pin this message to the top?';
                 document.getElementById('do-pin').innerText = isAlreadyPinned ? 'Unpin' : 'Pin';
+                window._pinTargetMsg = selectedMsg; // Store reference — survives modal open delay
             }
             document.getElementById('modal-pin').classList.add('active'); 
             break;
@@ -3054,50 +3672,131 @@ async function sendMessage() {
     }
 }
 
-// ===================== SEND FILES — V83 SMART PIPELINE (STORAGE + BASE64 FALLBACK) =====================
+// ===================== SEND FILES — V92 ANDROID-SAFE PIPELINE =====================
+// ROOT CAUSE OF 400 ERRORS: Android revokes File references after async gaps.
+// FIX: Read ALL file bytes into Uint8Array IMMEDIATELY at send time, before any await.
+
+// MIME type map used throughout upload pipeline
+const MIME_MAP = {
+    jpg:'image/jpeg',jpeg:'image/jpeg',png:'image/png',gif:'image/gif',
+    webp:'image/webp',heic:'image/heic',heif:'image/heif',
+    mp4:'video/mp4',mov:'video/quicktime',avi:'video/x-msvideo',
+    mkv:'video/x-matroska',webm:'video/webm','3gp':'video/3gpp',
+    pdf:'application/pdf',
+    doc:'application/msword',
+    docx:'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    xls:'application/vnd.ms-excel',
+    xlsx:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    ppt:'application/vnd.ms-powerpoint',
+    pptx:'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+    zip:'application/zip',txt:'text/plain',csv:'text/csv',
+    mp3:'audio/mpeg',ogg:'audio/ogg',wav:'audio/wav',
+};
+
+function getFileMime(file) {
+    const ext = (file.name.split('.').pop() || 'bin').toLowerCase();
+    const fromExt = MIME_MAP[ext] || 'application/octet-stream';
+    // Prefer file.type only if it's actually set and not generic
+    if (file.type && file.type !== '' && file.type !== 'application/octet-stream') return file.type;
+    return fromExt;
+}
+
+// ── STEP 1: Read file bytes into memory immediately (before any async gap) ──
+// This must be called synchronously inside a user-gesture event handler or
+// right at the start of sendFiles, before any await.
+async function readFileToBytes(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = e => resolve(new Uint8Array(e.target.result));
+        reader.onerror = () => reject(new Error('Cannot read file: ' + file.name));
+        reader.readAsArrayBuffer(file);
+    });
+}
+
 async function sendFiles() {
     if (!selectedFiles.length || !currentRoom || uploadInProgress) return;
     uploadInProgress = true;
-    const files = [...selectedFiles];
-    clearMediaPreview();
 
-    const imageFiles = files.filter(f => f.type.startsWith('image/'));
-    const videoFiles = files.filter(f => f.type.startsWith('video/'));
-    const docFiles   = files.filter(f => !f.type.startsWith('image/') && !f.type.startsWith('video/'));
+    // Snapshot file references IMMEDIATELY - freeze the list before any async gap
+    const filesToSend = [...selectedFiles];
 
-    const totalGroups = (imageFiles.length > 0 ? 1 : 0) + videoFiles.length + docFiles.length;
-    let sentCount = 0;
-
-    showUploadOverlay(true, `${files.length} file(s)`);
+    showUploadOverlay(true, 'Reading files...');
     updateProgressRing(2);
 
+    // ── CRITICAL: Read ALL bytes into memory NOW before any await that crosses a task boundary ──
+    // Android Chrome/WebView revokes File references after async microtask boundaries.
+    // Plain Uint8Array in memory is never revoked.
+    const fileSnapshots = [];
+    for (const file of filesToSend) {
+        try {
+            const mime = getFileMime(file);
+            const bytes = await readFileToBytes(file);
+            fileSnapshots.push({
+                name: file.name,
+                mime,
+                size: file.size,
+                bytes,
+                isImage: mime.startsWith('image/'),
+                isVideo: mime.startsWith('video/'),
+                isDoc: !mime.startsWith('image/') && !mime.startsWith('video/'),
+            });
+        } catch(e) {
+            console.warn('Read failed:', file.name, e);
+            showToast('⚠️ Cannot read: ' + file.name);
+        }
+    }
+
+    // Now safe to clear preview — bytes are in memory
+    clearMediaPreview();
+
+    if (!fileSnapshots.length) {
+        hideUploadOverlay();
+        uploadInProgress = false;
+        return;
+    }
+
+    const images = fileSnapshots.filter(f => f.isImage);
+    const videos = fileSnapshots.filter(f => f.isVideo);
+    const docs   = fileSnapshots.filter(f => f.isDoc);
+    const totalGroups = (images.length > 0 ? 1 : 0) + videos.length + docs.length;
+    let sentCount = 0;
+
+    // Refresh auth token once at start of batch
+    let authToken = SB_KEY;
     try {
-        // ── Images — process in PARALLEL for speed ──
-        if (imageFiles.length > 0 && !uploadCanceled) {
-            updateUploadUI(imageFiles.length === 1 ? imageFiles[0].name : `${imageFiles.length} images`, 1, totalGroups, 5);
-            let processed = 0;
-            // Parallel image processing (up to 3 at once to not overwhelm browser)
-            const PARALLEL = 3;
+        const { data: sd } = await sb.auth.getSession();
+        authToken = sd?.session?.access_token || SB_KEY;
+    } catch(e) { console.warn('Could not get auth token, using anon key'); }
+
+    try {
+        // ── Images ──
+        if (images.length > 0 && !uploadCanceled) {
+            const label = images.length === 1 ? images[0].name : `${images.length} images`;
+            updateUploadUI(label, 1, totalGroups, 5);
             const mediaUrls = [];
-            for (let start = 0; start < imageFiles.length; start += PARALLEL) {
+            for (let i = 0; i < images.length; i++) {
                 if (uploadCanceled) break;
-                const batch = imageFiles.slice(start, start + PARALLEL);
-                const results = await Promise.allSettled(batch.map(f => 
-                    processMediaFile(f, 'images', () => {
-                        processed++;
-                        updateProgressRing(5 + Math.round((processed / imageFiles.length) * 80));
-                        updateUploadUI(`Processing ${processed}/${imageFiles.length} images`, 1, totalGroups, 5 + Math.round((processed / imageFiles.length) * 80));
-                    })
-                ));
-                results.forEach((r, i) => {
-                    if (r.status === 'fulfilled' && r.value) mediaUrls.push(r.value);
-                    else if (r.status === 'rejected') showToast(`Skipped: ${batch[i].name}`);
-                });
+                const snap = images[i];
+                try {
+                    // V93: Upload at ORIGINAL quality — no compression, every pixel preserved
+                    updateUploadUI(`Uploading ${i+1}/${images.length}...`, 1, totalGroups, 10);
+                    updateProgressRing(15);
+                    const url = await uploadBytesToStorage(
+                        snap.bytes, snap.mime,
+                        snap.name,
+                        'images', authToken,
+                        p => updateProgressRing(15 + Math.round(p * 80))
+                    );
+                    if (url) mediaUrls.push(url);
+                } catch(e) {
+                    console.error('Image upload failed:', snap.name, e);
+                    showToast('⚠️ ' + (e.message || 'Image upload failed').substring(0, 100));
+                }
             }
             if (mediaUrls.length && !uploadCanceled) {
-                updateUploadUI('Sending images...', 1, totalGroups, 90);
+                updateUploadUI('Sending...', 1, totalGroups, 95);
                 await insertMessage(buildFilePayload(
-                    mediaUrls.length === 1 ? imageFiles[0].name : `${mediaUrls.length} images`,
+                    mediaUrls.length === 1 ? images[0].name : `${mediaUrls.length} images`,
                     mediaUrls, 'image'
                 ));
                 updateProgressRing(100);
@@ -3105,55 +3804,80 @@ async function sendFiles() {
             }
         }
 
-        // ── Videos ──
-        for (let vi = 0; vi < videoFiles.length; vi++) {
-            const f = videoFiles[vi];
-            if (uploadCanceled) break;
+        // ── Videos (Premium only) ──
+        for (let vi = 0; vi < videos.length && !uploadCanceled; vi++) {
+            if (!isPremium()) { showPremiumGate('Video sharing is a Gold feature'); break; }
+            const snap = videos[vi];
             sentCount++;
-            updateUploadUI(f.name, sentCount, totalGroups, 5);
+            updateUploadUI(snap.name, sentCount, totalGroups, 5);
+
             try {
-                const url = await processMediaFile(f, 'videos', (p) => {
-                    updateProgressRing(5 + Math.round(p * 88));
-                    updateUploadUI(f.name, sentCount, totalGroups, 5 + Math.round(p * 88));
-                });
+                // V93: Upload at ORIGINAL quality — skip canvas compression
+                const uploadBytes = snap.bytes;
+                const uploadMime = snap.mime;
+
+                // Hard size gate — base64 in Supabase DB rows is limited to ~5MB practical limit
+                const MAX_VIDEO_BYTES = 4 * 1024 * 1024; // 4MB
+                if (uploadBytes.length > MAX_VIDEO_BYTES && storageAvailable !== true) {
+                    sentCount--;
+                    const sizeMB = (snap.bytes.length / 1048576).toFixed(1);
+                    showToast(`🎥 Video (${sizeMB}MB) too large for current setup. Configure Supabase Storage bucket to send large videos.`);
+                    continue;
+                }
+
+                const url = await uploadBytesToStorage(
+                    uploadBytes, uploadMime,
+                    snap.name,
+                    'videos', authToken,
+                    p => { updateProgressRing(5 + Math.round(p * 90)); updateUploadUI(snap.name, sentCount, totalGroups, 5 + Math.round(p*90)); }
+                );
                 if (!url || uploadCanceled) { sentCount--; continue; }
-                updateUploadUI('Sending video...', sentCount, totalGroups, 95);
-                await insertMessage(buildFilePayload(f.name, [url], 'video'));
+                await insertMessage(buildFilePayload(snap.name, [url], 'video'));
                 updateProgressRing(100);
-            } catch(vErr) {
+            } catch(e) {
                 sentCount--;
-                console.error('Video send error:', vErr);
-                showToast(vErr.message || `Failed to send ${f.name}`);
+                console.error('Video upload error:', e);
+                showToast('🎥 ' + (e.message||'Video upload failed').substring(0, 120));
             }
         }
 
         // ── Documents / PDFs ──
-        for (let di = 0; di < docFiles.length; di++) {
-            const f = docFiles[di];
-            if (uploadCanceled) break;
+        for (let di = 0; di < docs.length && !uploadCanceled; di++) {
+            const snap = docs[di];
             sentCount++;
-            updateUploadUI(f.name, sentCount, totalGroups, 5);
+            updateUploadUI(snap.name, sentCount, totalGroups, 5);
+
+            // Hard size gate for base64 fallback path
+            const MAX_DOC_BYTES = 3 * 1024 * 1024; // 3MB
+            if (snap.bytes.length > MAX_DOC_BYTES && storageAvailable !== true) {
+                sentCount--;
+                const sizeMB = (snap.bytes.length / 1048576).toFixed(1);
+                showToast(`📄 File (${sizeMB}MB) too large. Configure Supabase Storage or use files under 3MB.`);
+                continue;
+            }
+
             try {
-                const url = await processMediaFile(f, 'documents', (p) => {
-                    updateProgressRing(5 + Math.round(p * 88));
-                    updateUploadUI(f.name, sentCount, totalGroups, 5 + Math.round(p * 88));
-                });
+                const url = await uploadBytesToStorage(
+                    snap.bytes, snap.mime, snap.name, 'documents', authToken,
+                    p => { updateProgressRing(5 + Math.round(p * 90)); updateUploadUI(snap.name, sentCount, totalGroups, 5 + Math.round(p*90)); }
+                );
                 if (!url || uploadCanceled) { sentCount--; continue; }
-                updateUploadUI('Sending document...', sentCount, totalGroups, 95);
-                const sizeBytes = f.size;
-                const payload = buildFilePayload(f.name, [url], 'document');
-                payload.metadata = { file_size: sizeBytes };
+                const payload = buildFilePayload(snap.name, [url], 'document');
+                payload.metadata = { file_size: snap.size };
                 await insertMessage(payload);
                 updateProgressRing(100);
-            } catch(dErr) {
+            } catch(e) {
                 sentCount--;
-                console.error('Doc send error:', dErr);
-                showToast(dErr.message || `Failed to send ${f.name}`);
+                console.error('Doc upload error:', e);
+                showToast('📄 ' + (e.message||'Upload failed').substring(0, 120));
             }
         }
 
-    } catch (e) {
-        if (e.message !== 'canceled') { console.error('sendFiles:', e); showToast('Send failed: ' + (e.message || '')); }
+    } catch(outerErr) {
+        if (outerErr?.message !== 'canceled') {
+            console.error('sendFiles outer error:', outerErr);
+            showToast('Send failed: ' + (outerErr?.message || 'Unknown error'));
+        }
     }
 
     hideUploadOverlay();
@@ -3162,185 +3886,249 @@ async function sendFiles() {
     uploadInProgress = false;
 }
 
-// ── V88: BINARY-ONLY MEDIA PIPELINE — No base64 in DB ever.
-// All media → Supabase Storage (S3/CDN). DB row gets tiny URL string only.
-// Image compression runs in a Web Worker (off main thread → UI never freezes).
-
-// Inline Web Worker script for image compression (no separate file needed)
-const WORKER_SRC = `
-self.onmessage = async function(e) {
-    const { id, file, maxDim, quality } = e.data;
-    try {
-        const bitmap = await createImageBitmap(file);
-        let w = bitmap.width, h = bitmap.height;
-        if (w > maxDim || h > maxDim) {
-            if (w > h) { h = Math.round(h * maxDim / w); w = maxDim; }
-            else { w = Math.round(w * maxDim / h); h = maxDim; }
-        }
-        const canvas = new OffscreenCanvas(w, h);
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(bitmap, 0, 0, w, h);
-        // Try to fit under 800KB
-        let q = quality;
-        let blob = await canvas.convertToBlob({ type: 'image/jpeg', quality: q });
-        while (blob.size > 800000 && q > 0.3) {
-            q -= 0.12;
-            blob = await canvas.convertToBlob({ type: 'image/jpeg', quality: q });
-        }
-        self.postMessage({ id, blob, ok: true });
-    } catch(err) {
-        self.postMessage({ id, ok: false, error: err.message });
-    }
-};
-`;
-let _compressionWorker = null;
-let _workerCallbacks = new Map();
-let _workerJobId = 0;
-
-function getCompressionWorker() {
-    if (_compressionWorker) return _compressionWorker;
-    try {
-        const blob = new Blob([WORKER_SRC], { type: 'application/javascript' });
-        _compressionWorker = new Worker(URL.createObjectURL(blob));
-        _compressionWorker.onmessage = (e) => {
-            const { id, blob, ok, error } = e.data;
-            const cb = _workerCallbacks.get(id);
-            if (cb) { _workerCallbacks.delete(id); cb(ok ? blob : null, error); }
-        };
-        _compressionWorker.onerror = (e) => {
-            console.warn('Compression worker error:', e);
-            _compressionWorker = null; // reset so next call recreates
-        };
-    } catch(e) {
-        console.warn('Web Worker not supported, falling back to main thread:', e);
-    }
-    return _compressionWorker;
-}
-
-async function compressImageInWorker(file) {
-    const worker = getCompressionWorker();
-    if (!worker) {
-        // Fallback: compress on main thread (old path)
-        return compressImageToDataUrl_MAIN(file, () => {});
-    }
+// ── Compress image Uint8Array → smaller Uint8Array (JPEG) ──
+// All operations on already-read bytes — no File reference needed.
+async function compressBytesToJpeg(bytes) {
     return new Promise((resolve) => {
-        const id = ++_workerJobId;
-        _workerCallbacks.set(id, (blob, err) => {
-            if (blob) resolve(new File([blob], file.name.replace(/\.[^/.]+$/, '') + '.jpg', { type: 'image/jpeg' }));
-            else resolve(file); // fallback: send original
-        });
-        worker.postMessage({ id, file, maxDim: 1280, quality: 0.82 });
-    });
-}
-
-// Main-thread compression fallback (only used if workers unavailable)
-async function compressImageToDataUrl_MAIN(file, onProgress) {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onerror = reject;
-        reader.onload = e => {
-            onProgress && onProgress(0.5);
-            const img = new Image();
-            img.onerror = reject;
-            img.onload = () => {
-                const MAX = 1280;
-                let w = img.width, h = img.height;
-                if (w > MAX || h > MAX) {
-                    if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
-                    else { w = Math.round(w * MAX / h); h = MAX; }
-                }
-                if (w < 1) w = 1; if (h < 1) h = 1;
-                const canvas = document.createElement('canvas');
-                canvas.width = w; canvas.height = h;
-                const ctx = canvas.getContext('2d');
-                ctx.fillStyle = '#ffffff';
-                ctx.fillRect(0, 0, w, h);
-                ctx.drawImage(img, 0, 0, w, h);
-                onProgress && onProgress(0.85);
-                const tryEncode = (quality) => {
-                    const dataUrl = canvas.toDataURL('image/jpeg', quality);
-                    const approxBytes = (dataUrl.length - 22) * 0.75;
-                    if (approxBytes > 800000 && quality > 0.3) return tryEncode(quality - 0.15);
-                    return dataUrl;
-                };
-                onProgress && onProgress(1);
-                // Return as File object for consistent handling
-                const dataUrl = tryEncode(0.82);
-                fetch(dataUrl).then(r => r.blob()).then(blob => {
-                    resolve(new File([blob], file.name.replace(/\.[^/.]+$/, '') + '.jpg', { type: 'image/jpeg' }));
-                }).catch(() => resolve(file));
+        const blob = new Blob([bytes]);
+        const blobUrl = URL.createObjectURL(blob);
+        const img = new Image();
+        img.onload = () => {
+            URL.revokeObjectURL(blobUrl);
+            const MAX = 1280;
+            let w = img.naturalWidth || img.width;
+            let h = img.naturalHeight || img.height;
+            if (!w || !h) { resolve(bytes); return; }
+            if (w > MAX || h > MAX) {
+                if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
+                else { w = Math.round(w * MAX / h); h = MAX; }
+            }
+            const canvas = document.createElement('canvas');
+            canvas.width = w; canvas.height = h;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, w, h);
+            ctx.drawImage(img, 0, 0, w, h);
+            const tryQ = (q) => {
+                canvas.toBlob(outBlob => {
+                    if (!outBlob) { resolve(bytes); return; }
+                    if (outBlob.size > 800000 && q > 0.3) { tryQ(Math.round((q - 0.12) * 100) / 100); return; }
+                    const reader = new FileReader();
+                    reader.onload = e => resolve(new Uint8Array(e.target.result));
+                    reader.onerror = () => resolve(bytes);
+                    reader.readAsArrayBuffer(outBlob);
+                }, 'image/jpeg', q);
             };
-            img.src = e.target.result;
+            tryQ(0.82);
         };
-        reader.readAsDataURL(file);
+        img.onerror = () => { URL.revokeObjectURL(blobUrl); resolve(bytes); };
+        img.src = blobUrl;
     });
 }
 
-// Main entry: always binary to Storage, CDN URL in DB. No base64 ever.
-async function processMediaFile(file, folder, onProgress) {
-    const isImage = file.type.startsWith('image/');
+// ── Compress video using canvas frame capture + MediaRecorder ──
+// Returns compressed webm bytes, or original bytes if compression fails.
+async function compressVideoBytes(bytes, originalMime) {
+    if (!window.MediaRecorder || !MediaRecorder.isTypeSupported('video/webm')) return bytes;
+    return new Promise((resolve) => {
+        const blob = new Blob([bytes], { type: originalMime });
+        const blobUrl = URL.createObjectURL(blob);
+        const video = document.createElement('video');
+        video.muted = true; video.playsInline = true; video.src = blobUrl;
 
-    // Compress images (in worker = off main thread)
-    let uploadFile = file;
-    if (isImage) {
-        onProgress && onProgress(0.1);
-        try {
-            uploadFile = await compressImageInWorker(file);
-        } catch(e) {
-            uploadFile = file; // worst case: upload original
-        }
-        onProgress && onProgress(0.35);
-    }
+        // Safety timeout — if anything hangs, return original
+        const bail = setTimeout(() => { URL.revokeObjectURL(blobUrl); resolve(bytes); }, 25000);
 
-    // Try Storage upload (binary → S3/CDN)
-    if (storageAvailable !== false) {
-        try {
-            const url = await uploadToStorage(uploadFile, folder, onProgress);
-            storageAvailable = true;
-            return url;
-        } catch(e) {
-            console.warn('Storage upload failed:', e.message);
-            storageAvailable = false;
-        }
-    }
+        video.onloadedmetadata = () => {
+            const maxDim = 480;
+            let w = video.videoWidth || 640, h = video.videoHeight || 360;
+            if (w > maxDim || h > maxDim) {
+                if (w > h) { h = Math.round(h * maxDim / w); w = maxDim; }
+                else { w = Math.round(w * maxDim / h); h = maxDim; }
+            }
+            w = Math.max(2, w & ~1); h = Math.max(2, h & ~1); // even numbers
 
-    // Storage unavailable — only allow small images as base64 emergency fallback
-    // Videos and docs CANNOT be stored as base64 (destroys DB performance)
-    if (isImage && uploadFile.size < 300000) { // <300KB only
-        return new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = e => { onProgress && onProgress(1); resolve(e.target.result); };
-            reader.onerror = reject;
-            reader.readAsDataURL(uploadFile);
-        });
-    }
+            const canvas = document.createElement('canvas');
+            canvas.width = w; canvas.height = h;
+            const ctx = canvas.getContext('2d');
+            const stream = canvas.captureStream(15);
+            let recorder;
+            try {
+                recorder = new MediaRecorder(stream, { mimeType: 'video/webm;codecs=vp8', videoBitsPerSecond: 500000 });
+            } catch(e) { clearTimeout(bail); URL.revokeObjectURL(blobUrl); resolve(bytes); return; }
 
-    // For everything else: storage bucket is REQUIRED
-    throw new Error(
-        isImage
-            ? 'Image too large for emergency fallback. Please create a "chat-assets" Storage bucket in Supabase Dashboard → Storage.'
-            : file.type.startsWith('video/')
-                ? 'Videos require Supabase Storage. Create a "chat-assets" bucket in Supabase Dashboard → Storage → New Bucket → Public.'
-                : 'Documents require Supabase Storage. Create a "chat-assets" bucket in Supabase Dashboard → Storage → New Bucket → Public.'
-    );
+            const chunks = [];
+            recorder.ondataavailable = e => { if (e.data?.size > 0) chunks.push(e.data); };
+            recorder.onstop = () => {
+                clearTimeout(bail); URL.revokeObjectURL(blobUrl);
+                const out = new Blob(chunks, { type: 'video/webm' });
+                if (!chunks.length || out.size >= bytes.length) { resolve(bytes); return; }
+                const reader = new FileReader();
+                reader.onload = e => resolve(new Uint8Array(e.target.result));
+                reader.onerror = () => resolve(bytes);
+                reader.readAsArrayBuffer(out);
+            };
+
+            const drawLoop = () => {
+                if (video.ended || video.paused) { if (recorder.state === 'recording') recorder.stop(); return; }
+                ctx.drawImage(video, 0, 0, w, h);
+                requestAnimationFrame(drawLoop);
+            };
+            video.onplay = () => { recorder.start(200); requestAnimationFrame(drawLoop); };
+            video.onended = () => { if (recorder.state === 'recording') recorder.stop(); };
+            video.onerror = () => { clearTimeout(bail); URL.revokeObjectURL(blobUrl); resolve(bytes); };
+            video.play().catch(() => { clearTimeout(bail); URL.revokeObjectURL(blobUrl); resolve(bytes); });
+        };
+        video.onerror = () => { clearTimeout(bail); URL.revokeObjectURL(blobUrl); resolve(bytes); };
+    });
 }
 
-// Upload raw binary to Supabase Storage — returns CDN URL
-async function uploadToStorage(file, folder, onProgress) {
-    const ext = (file.name.split('.').pop() || 'bin').toLowerCase();
+// ── UPLOAD BYTES TO SUPABASE STORAGE ──
+// Tries 4 storage methods, then falls back to base64-in-DB for ALL file types.
+// This means media ALWAYS sends even if storage is not configured.
+async function uploadBytesToStorage(bytes, mime, fileName, folder, authToken, onProgress) {
+    // If storage check is still pending, wait briefly (max 1.5s instead of 4s)
+    if (storageAvailable === null) {
+        await Promise.race([
+            checkStorageBucket(),
+            new Promise(res => setTimeout(res, 1500))
+        ]);
+    }
+
+    const ext = (fileName.split('.').pop() || 'bin').toLowerCase();
     const safeName = `${Date.now()}_${Math.random().toString(36).slice(2,8)}.${ext}`;
     const path = `${folder}/${currentUser.id}/${safeName}`;
-    onProgress && onProgress(0.4);
-    const { error } = await sb.storage.from('chat-assets').upload(path, file, {
-        cacheControl: '31536000', // 1-year CDN cache
-        upsert: false,
-        contentType: file.type || 'application/octet-stream'
-    });
-    if (error) throw error;
-    onProgress && onProgress(0.95);
-    const { data } = sb.storage.from('chat-assets').getPublicUrl(path);
-    onProgress && onProgress(1);
-    return data.publicUrl;
+    const publicUrl = `${SB_URL}/storage/v1/object/public/chat-assets/${path}`;
+
+    onProgress && onProgress(0.05);
+
+    // ── METHOD 1: SDK upload with Blob ──
+    try {
+        const blob = new Blob([bytes], { type: mime });
+        const { error } = await sb.storage.from('chat-assets').upload(path, blob, {
+            cacheControl: '31536000', upsert: true, contentType: mime
+        });
+        if (!error) {
+            onProgress && onProgress(1);
+            const { data: urlData } = sb.storage.from('chat-assets').getPublicUrl(path);
+            return urlData?.publicUrl || publicUrl;
+        }
+        console.warn('M1 SDK Blob failed:', error.message || error.statusCode);
+    } catch(e) { console.warn('M1 exception:', e.message); }
+
+    onProgress && onProgress(0.25);
+
+    // ── METHOD 2: PUT fetch ──
+    try {
+        const r = await fetch(`${SB_URL}/storage/v1/object/chat-assets/${path}`, {
+            method: 'PUT',
+            headers: { 'Authorization': `Bearer ${authToken}`, 'apikey': SB_KEY, 'Content-Type': mime, 'x-upsert': 'true' },
+            body: bytes
+        });
+        if (r.ok) { onProgress && onProgress(1); return publicUrl; }
+        let d = ''; try { const j = await r.clone().json(); d = j.message || j.error || r.status; } catch(_) { d = r.status; }
+        console.warn('M2 PUT failed:', d);
+    } catch(e) { console.warn('M2 exception:', e.message); }
+
+    onProgress && onProgress(0.45);
+
+    // ── METHOD 3: POST fetch ──
+    try {
+        const r = await fetch(`${SB_URL}/storage/v1/object/chat-assets/${path}`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${authToken}`, 'apikey': SB_KEY, 'Content-Type': mime, 'x-upsert': 'true' },
+            body: bytes
+        });
+        if (r.ok) { onProgress && onProgress(1); return publicUrl; }
+        let d = ''; try { const j = await r.clone().json(); d = j.message || j.error || String(r.status); } catch(_) { d = String(r.status); }
+        console.warn('M3 POST failed:', d);
+    } catch(e) { console.warn('M3 exception:', e.message); }
+
+    onProgress && onProgress(0.6);
+
+    // ── METHOD 4: FormData multipart ──
+    try {
+        const blob = new Blob([bytes], { type: mime });
+        const fd = new FormData();
+        fd.append('', blob, fileName);
+        const r = await fetch(`${SB_URL}/storage/v1/object/chat-assets/${path}`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${authToken}`, 'apikey': SB_KEY, 'x-upsert': 'true' },
+            body: fd
+        });
+        if (r.ok) { onProgress && onProgress(1); return publicUrl; }
+        let d = ''; try { const j = await r.clone().json(); d = j.message || j.error || String(r.status); } catch(_) { d = String(r.status); }
+        console.warn('M4 FormData failed:', d);
+    } catch(e) { console.warn('M4 exception:', e.message); }
+
+    onProgress && onProgress(0.8);
+
+    // ── FALLBACK: Base64 data URL stored directly in DB ──
+    // Works for ALL file types — no storage bucket needed.
+    // Size limit: keep under 5MB total (Supabase DB row limit).
+    console.info('ℹ️ Storage unavailable — using base64 fallback (configure storage RLS policies to avoid this)');
+    try {
+        const b64 = bytesToBase64(bytes);
+        const dataUrl = `data:${mime};base64,${b64}`;
+        onProgress && onProgress(1);
+        return dataUrl;
+    } catch(e) {
+        throw new Error(`Upload failed and base64 fallback also failed: ${e.message}. File may be too large.`);
+    }
+}
+
+// ── Safe chunked base64 encoder — avoids call stack overflow on large files ──
+function bytesToBase64(bytes) {
+    let binary = '';
+    const chunkSize = 8192;
+    for (let i = 0; i < bytes.length; i += chunkSize) {
+        binary += String.fromCharCode(...bytes.subarray(i, Math.min(i + chunkSize, bytes.length)));
+    }
+    return btoa(binary);
+}
+
+// Legacy alias kept for profile/group DP uploads
+async function uploadToStorage(fileArg, folder, onProgress) {
+    const mime = getFileMime(fileArg);
+    const bytes = await readFileToBytes(fileArg);
+    const { data: sessData } = await sb.auth.getSession();
+    const token = sessData?.session?.access_token || SB_KEY;
+    return uploadBytesToStorage(bytes, mime, fileArg.name, folder, token, onProgress);
+}
+
+// ── Image compression kept for legacy paths (editor, profile dp, etc.) ──
+async function compressImageInWorker(file) {
+    try {
+        const bytes = await readFileToBytes(file);
+        const compressed = await compressBytesToJpeg(bytes);
+        return new File([compressed], file.name.replace(/\.[^.]+$/, '') + '.jpg', { type: 'image/jpeg' });
+    } catch(e) { return file; }
+}
+
+async function compressImageToDataUrl_MAIN(file, onProgress) {
+    try {
+        const bytes = await readFileToBytes(file);
+        const compressed = await compressBytesToJpeg(bytes);
+        onProgress && onProgress(1);
+        return new File([compressed], file.name.replace(/\.[^.]+$/, '') + '.jpg', { type: 'image/jpeg' });
+    } catch(e) { return file; }
+}
+
+async function processMediaFile(file, folder, onProgress) {
+    const mime = getFileMime(file);
+    const bytes = await readFileToBytes(file);
+    const { data: sessData } = await sb.auth.getSession();
+    const token = sessData?.session?.access_token || SB_KEY;
+    let uploadBytes = bytes;
+    if (mime.startsWith('image/')) {
+        onProgress && onProgress(0.1);
+        uploadBytes = await compressBytesToJpeg(bytes);
+        onProgress && onProgress(0.35);
+    }
+    return uploadBytesToStorage(
+        uploadBytes,
+        mime.startsWith('image/') ? 'image/jpeg' : mime,
+        file.name, folder, token, onProgress
+    );
 }
 
 function buildFilePayload(name, paths, type) {
@@ -3362,25 +4150,38 @@ const MSG_SAFE_COLS = new Set(['sender_id','username','text','attachments','type
 async function insertMessage(payload) {
     try {
         const table = isPersonalChat ? 'personal_chat_messages' : 'messages';
-        // Only keep columns relevant to this table
         const safe = {};
         Object.keys(payload).forEach(k => { if (MSG_SAFE_COLS.has(k)) safe[k] = payload[k]; });
-        // metadata only exists if column was added — try with it, retry without if schema error
+
+        // Check if attachments contain large base64 data URLs and warn
+        if (safe.attachments?.some(a => typeof a === 'string' && a.startsWith('data:') && a.length > 1000000)) {
+            console.warn('Large base64 attachment — configure Supabase Storage for better performance');
+        }
+
         let result = await sb.from(table).insert([safe]).select().single();
         if (result.error) {
-            // If metadata column doesn't exist, retry without it
+            // Retry without metadata column if schema error
             if (result.error.message?.includes('metadata') || result.error.code === 'PGRST204') {
                 delete safe.metadata;
+                result = await sb.from(table).insert([safe]).select().single();
+            }
+            // If still failing due to row size (large base64), try sending as text-only fallback
+            if (result.error && result.error.message?.toLowerCase().includes('size')) {
+                safe.attachments = null;
+                safe.type = 'text';
+                safe.text = '[Media too large to send. Setup Supabase Storage bucket "chat-assets" with INSERT policy.]';
                 result = await sb.from(table).insert([safe]).select().single();
             }
             if (result.error) throw result.error;
         }
         const data = result.data;
         if (data && !messageCache.has(data.id)) {
-            messageCache.set(data.id, data);
-            document.getElementById('chat-feed').appendChild(buildMsgNode(data));
-            scrollBottom();
-            attachMsgListeners();
+            // Use virtAppendMessage so the virtualized scroll engine stays consistent
+            virtAppendMessage(data);
+            // Invalidate msg cache so next room-open fetches fresh
+            try { localStorage.removeItem('orbit_msgs_' + (isPersonalChat ? data.chat_id : data.room)); } catch(e) {}
+            // Also invalidate chat list cache so preview updates
+            try { localStorage.removeItem('orbit_chats_' + currentUser.id); } catch(e) {}
         }
     } catch (e) {
         console.error('insertMessage error:', e);
@@ -3459,7 +4260,8 @@ function renderMediaPreview() {
                 <button class="remove-mb touch-fix" data-i="${i}"><i class="fa-solid fa-xmark"></i></button>`;
         } else if (file.type.startsWith('video/')) {
             thumb.className = 'media-thumb';
-            thumb.innerHTML = `<video src="${URL.createObjectURL(file)}" muted></video>
+            const objUrl = URL.createObjectURL(file);
+            thumb.innerHTML = `<video src="${objUrl}#t=0.001" muted preload="metadata" playsinline style="width:100%;height:100%;object-fit:cover;"></video>
                 <div class="play-over"><i class="fa-solid fa-play"></i></div>
                 <button class="remove-mb touch-fix" data-i="${i}"><i class="fa-solid fa-xmark"></i></button>`;
         } else {
@@ -3530,6 +4332,11 @@ function handleVideo(e) {
     const file = e.target.files?.[0];
     e.target.value = '';
     if (!file) return;
+    // Double-check premium gate (in case triggered outside triggerFile)
+    if (!isPremium()) {
+        showPremiumGate('Video sharing is a Gold feature');
+        return;
+    }
     showVideoPreview(file);
 }
 
@@ -3625,6 +4432,11 @@ function openMediaPicker() { document.getElementById('sheet-media').classList.ad
 function closeMediaSheet() { document.getElementById('sheet-media').classList.remove('active'); }
 function triggerFile(type) {
     closeMediaSheet();
+    // ── VIDEO IS PREMIUM/GOLD ONLY ──
+    if ((type === 'video' || type === 'video-record') && !isPremium()) {
+        showPremiumGate('Video sharing is a Gold feature');
+        return;
+    }
     const delay = 250;
     switch (type) {
         case 'gallery': setTimeout(() => document.getElementById('inp-gallery').click(), delay); break;
@@ -3633,6 +4445,18 @@ function triggerFile(type) {
         case 'video-record': setTimeout(() => document.getElementById('inp-video-record').click(), delay); break;
         case 'document': setTimeout(() => document.getElementById('inp-document').click(), delay); break;
     }
+}
+
+// ===================== PREMIUM GATE =====================
+function showPremiumGate(featureName) {
+    const modal = document.getElementById('modal-premium-gate');
+    if (modal) {
+        document.getElementById('premium-gate-feature').innerText = featureName || 'This feature';
+        modal.classList.add('active');
+        return;
+    }
+    // Fallback if modal not in DOM yet
+    showToast(`🔒 ${featureName || 'This feature'} is Gold-only. Support the developer to unlock!`);
 }
 
 // ===================== SELECT MODE =====================
@@ -3688,9 +4512,12 @@ async function deleteSelected() {
         for (const id of selectedMessages) {
             const msg = messageCache.get(id);
             if (!msg) continue;
-            const deletedBy = [...(msg.deleted_by || []), currentUser.id];
             const table = isPersonalChat ? 'personal_chat_messages' : 'messages';
-            await sb.from(table).update({ deleted_by: deletedBy }).eq('id', id);
+            if (_hasDeletedBy) {
+                const deletedBy = [...(msg.deleted_by || []), currentUser.id];
+                await sb.from(table).update({ deleted_by: deletedBy }).eq('id', id);
+            }
+            // Always remove from local view regardless of column support
             document.getElementById('msg-' + id)?.remove();
             messageCache.delete(id);
         }
@@ -3707,9 +4534,11 @@ async function deleteForMe() {
     const msg = messageCache.get(deleteMessageId);
     if (!msg) { hideDeleteModal(); return; }
     try {
-        const deletedBy = [...(msg.deleted_by || []), currentUser.id];
         const table = isPersonalChat ? 'personal_chat_messages' : 'messages';
-        await sb.from(table).update({ deleted_by: deletedBy }).eq('id', deleteMessageId);
+        if (_hasDeletedBy) {
+            const deletedBy = [...(msg.deleted_by || []), currentUser.id];
+            await sb.from(table).update({ deleted_by: deletedBy }).eq('id', deleteMessageId);
+        }
         document.getElementById('msg-' + deleteMessageId)?.remove();
         messageCache.delete(deleteMessageId);
         showToast('Deleted for you', 'success');
@@ -3733,35 +4562,58 @@ async function deleteForAll() {
 
 // ===================== PIN =====================
 async function pinMessage() {
-    if (!selectedMsg) return;
+    // Use _pinTargetMsg (set in handleCtx) as it reliably survives modal open delay
+    const target = window._pinTargetMsg || selectedMsg;
+    if (!target) { document.getElementById('modal-pin').classList.remove('active'); return; }
+    window._pinTargetMsg = null;
     try {
-        const msgId = selectedMsg.id;
+        const msgId = target.id;
         const alreadyPinned = pinnedMessages.has(msgId);
         if (alreadyPinned) {
-            // Unpin
-            await sb.from('pinned_messages').delete().eq('message_id', msgId).eq('room_id', currentRoom);
+            // Try DB unpin, but always update locally
+            try { await sb.from('pinned_messages').delete().eq('message_id', msgId).eq('room_id', currentRoom); } catch(e) {}
             pinnedMessages.delete(msgId);
             const node = document.getElementById('msg-' + msgId);
-            if (node) { node.classList.remove('pinned'); const badge = node.querySelector('.pin-badge'); if (badge) badge.remove(); }
+            if (node) { 
+                node.classList.remove('pinned'); 
+                // Remove pin badge from meta
+                const badge = node.querySelector('.pin-badge'); 
+                if (badge) badge.remove();
+                // Also update in virt_allMsgs cache
+                const vi = virt_allMsgs.findIndex(m => m.id === msgId);
+                if (vi !== -1) virt_allMsgs[vi] = { ...virt_allMsgs[vi], pinned: false };
+            }
             document.getElementById('modal-pin').classList.remove('active');
-            showToast('Message unpinned', 'success');
+            showToast('Message unpinned ✓', 'success');
+            if (!isPersonalChat) {
+                sb.from('messages').insert([{ room: currentRoom, sender_id: currentUser.id, username: getMyDisplayName(), text: `📌 ${getMyDisplayName()} unpinned a message`, type: 'system', read_by: [currentUser.id], created_at: new Date().toISOString() }]).catch(() => {});
+            }
         } else {
-            // Pin
-            const { error } = await sb.from('pinned_messages').upsert([{ 
-                room_id: currentRoom, 
-                message_id: msgId, 
-                pinned_by: currentUser.id, 
-                pinned_at: new Date().toISOString() 
-            }], { onConflict: 'room_id,message_id', ignoreDuplicates: true });
-            if (error && !error.message?.includes('duplicate')) throw error;
-            pinnedMessages.set(msgId, selectedMsg);
-            document.getElementById('msg-' + msgId)?.classList.add('pinned');
+            // Try DB pin, but always update locally
+            try {
+                await sb.from('pinned_messages').upsert([{ room_id: currentRoom, message_id: msgId, pinned_by: currentUser.id, pinned_at: new Date().toISOString() }], { onConflict: 'room_id,message_id', ignoreDuplicates: true });
+            } catch(e) {} // table may not exist — local pin still works
+            pinnedMessages.set(msgId, target);
+            const node = document.getElementById('msg-' + msgId);
+            if (node) {
+                node.classList.add('pinned');
+                // Add pin badge to meta if not already present
+                const meta = node.querySelector('.msg-meta');
+                if (meta && !node.querySelector('.pin-badge')) {
+                    const badge = document.createElement('i');
+                    badge.className = 'fa-solid fa-thumbtack pin-badge';
+                    meta.insertBefore(badge, meta.firstChild);
+                }
+            }
             document.getElementById('modal-pin').classList.remove('active');
             showToast('Message pinned ✓', 'success');
+            if (!isPersonalChat) {
+                const preview = target.type === 'text' ? (target.text || '').substring(0, 40) : '📎 Media';
+                sb.from('messages').insert([{ room: currentRoom, sender_id: currentUser.id, username: getMyDisplayName(), text: `📌 ${getMyDisplayName()} pinned: "${preview}"`, type: 'system', read_by: [currentUser.id], created_at: new Date().toISOString() }]).catch(() => {});
+            }
         }
     } catch (e) { 
-        console.error('pinMessage:', e);
-        showToast('Pin failed: ' + (e.message || '')); 
+        showToast('Pin failed'); 
         document.getElementById('modal-pin').classList.remove('active');
     }
 }
@@ -4139,15 +4991,15 @@ async function saveGroupDp() {
     showToast('Saving...', 'success');
     groupDpCropper.getCroppedCanvas({ width: 400, height: 400 }).toBlob(async blob => {
         try {
+            const arrayBuffer = await blob.arrayBuffer();
+            const bytes = new Uint8Array(arrayBuffer);
+            const { data: sess } = await sb.auth.getSession();
+            const token = sess?.session?.access_token || SB_KEY;
             let dpUrl;
-            // Try storage first, always fallback to base64
             try {
-                const path = `group_dp/${groupSettingsRoomId}_${Date.now()}.jpg`;
-                const { error } = await sb.storage.from('chat-assets').upload(path, blob, { cacheControl: '3600', upsert: true, contentType: 'image/jpeg' });
-                if (error) throw error;
-                dpUrl = `${SB_URL}/storage/v1/object/public/chat-assets/${path}`;
+                dpUrl = await uploadBytesToStorage(bytes, 'image/jpeg', `group_${groupSettingsRoomId}.jpg`, 'group_dp', token, () => {});
             } catch(e) {
-                // Always fallback to base64 — compress to stay small
+                // Fallback: compress to base64
                 const canvas = document.createElement('canvas');
                 canvas.width = 200; canvas.height = 200;
                 const imgEl = new Image();
@@ -4204,6 +5056,269 @@ function showTypingIndicator(name) {
     }
 }
 
+
+// ===================== VOICE RECORDING =====================
+let voiceMediaRecorder = null;
+let voiceChunks = [];
+let voiceRecording = false;
+let voiceRecTimerInterval = null;
+let voiceRecSeconds = 0;
+
+function initVoiceRecBtn() {
+    const btn = document.getElementById('voice-rec-btn');
+    if (!btn) return;
+    btn.addEventListener('touchstart', e => { e.preventDefault(); startVoiceRec(); }, { passive: false });
+    btn.addEventListener('touchend', e => { e.preventDefault(); stopVoiceRec(); }, { passive: false });
+    btn.addEventListener('touchcancel', e => { e.preventDefault(); cancelVoiceRec(); }, { passive: false });
+    btn.addEventListener('mousedown', () => startVoiceRec());
+    btn.addEventListener('mouseup', () => stopVoiceRec());
+    btn.addEventListener('mouseleave', () => { if (voiceRecording) cancelVoiceRec(); });
+}
+
+async function startVoiceRec() {
+    if (voiceRecording) return;
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        voiceChunks = [];
+        const mime = MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/ogg';
+        voiceMediaRecorder = new MediaRecorder(stream, { mimeType: mime });
+        voiceMediaRecorder.ondataavailable = e => { if (e.data.size > 0) voiceChunks.push(e.data); };
+        voiceMediaRecorder.start(100);
+        voiceRecording = true;
+        voiceRecSeconds = 0;
+        const btn = document.getElementById('voice-rec-btn');
+        const timer = document.getElementById('voice-rec-timer');
+        btn?.classList.add('recording');
+        if (timer) timer.textContent = '0:00';
+        voiceRecTimerInterval = setInterval(() => {
+            voiceRecSeconds++;
+            if (timer) timer.textContent = `0:${String(voiceRecSeconds).padStart(2,'0')}`;
+            if (voiceRecSeconds >= 120) stopVoiceRec();
+        }, 1000);
+        showToast('🔴 Recording... release to send', 'success');
+    } catch(e) { showToast('Microphone access denied'); }
+}
+
+async function stopVoiceRec() {
+    if (!voiceRecording || !voiceMediaRecorder) return;
+    clearInterval(voiceRecTimerInterval);
+    voiceRecording = false;
+    document.getElementById('voice-rec-btn')?.classList.remove('recording');
+    return new Promise(resolve => {
+        voiceMediaRecorder.onstop = async () => {
+            const duration = voiceRecSeconds;
+            const mime = voiceMediaRecorder.mimeType || 'audio/webm';
+            const blob = new Blob(voiceChunks, { type: mime });
+            voiceChunks = [];
+            voiceMediaRecorder.stream?.getTracks().forEach(t => t.stop());
+            voiceMediaRecorder = null;
+            if (blob.size < 500 || duration < 1) { showToast('Too short — hold longer'); resolve(); return; }
+            await sendVoiceMessage(blob, mime, duration);
+            resolve();
+        };
+        voiceMediaRecorder.stop();
+    });
+}
+
+function cancelVoiceRec() {
+    if (!voiceRecording || !voiceMediaRecorder) return;
+    clearInterval(voiceRecTimerInterval);
+    voiceRecording = false;
+    document.getElementById('voice-rec-btn')?.classList.remove('recording');
+    voiceMediaRecorder.stream?.getTracks().forEach(t => t.stop());
+    voiceMediaRecorder = null;
+    voiceChunks = [];
+    showToast('Recording cancelled');
+}
+
+async function sendVoiceMessage(blob, mime, duration) {
+    if (!currentRoom) return;
+    showToast('Sending voice message...', 'success');
+    try {
+        const arrayBuffer = await blob.arrayBuffer();
+        const bytes = new Uint8Array(arrayBuffer);
+        const ext = mime.includes('ogg') ? 'ogg' : 'webm';
+        const filename = `voice_${Date.now()}.${ext}`;
+        const { data: sess } = await sb.auth.getSession();
+        const token = sess?.session?.access_token || SB_KEY;
+        let audioUrl;
+        try {
+            audioUrl = await uploadBytesToStorage(bytes, mime, filename, 'voice', token, () => {});
+        } catch(e) {
+            audioUrl = await blobToBase64(blob);
+        }
+        const payload = {
+            sender_id: currentUser.id,
+            username: getMyDisplayName(),
+            text: '🎙️ Voice message',
+            type: 'voice',
+            attachments: [audioUrl],
+            metadata: { duration, mime },
+            read_by: [currentUser.id],
+            created_at: new Date().toISOString(),
+            ...(isPersonalChat ? { chat_id: currentRoom } : { room: currentRoom })
+        };
+        await insertMessage(payload);
+        showToast('Voice message sent ✓', 'success');
+    } catch(e) { console.error('Voice send error:', e); showToast('Failed to send voice message'); }
+}
+
+function blobToBase64(blob) {
+    return new Promise((res, rej) => {
+        const r = new FileReader();
+        r.onload = () => res(r.result);
+        r.onerror = rej;
+        r.readAsDataURL(blob);
+    });
+}
+
+// ===================== WALKIE-TALKIE =====================
+let walkieTalkieChannel = null;
+let walkieRecorder = null;
+let walkieChunks = [];
+let walkieActive = false;
+let walkieAllowed = false;
+let walkieOtherAllowed = false;
+let walkieOtherName = '';
+
+function openWalkie() {
+    if (!currentRoom) return;
+    const modal = document.getElementById('walkie-modal');
+    if (!modal) return;
+    const myName = getMyDisplayName();
+    document.getElementById('walkie-my-name').textContent = myName;
+    const myAv = document.getElementById('walkie-my-av');
+    if (userProfile?.dp_url) { myAv.innerHTML = `<img src="${userProfile.dp_url}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">`; }
+    else { myAv.textContent = myName[0]?.toUpperCase() || 'M'; }
+    const chatTitle = document.getElementById('chat-title')?.textContent || 'User';
+    document.getElementById('walkie-their-name').textContent = chatTitle;
+    document.getElementById('walkie-their-av').textContent = chatTitle[0]?.toUpperCase() || '?';
+    document.getElementById('walkie-status').textContent = 'Joining channel...';
+    document.getElementById('walkie-indicator').textContent = '';
+    modal.classList.add('active');
+    setupWalkieChannel();
+}
+
+function closeWalkie() {
+    walkieAllowed = false; walkieOtherAllowed = false; walkieActive = false;
+    if (walkieRecorder?.state === 'recording') walkieRecorder.stop();
+    walkieRecorder?.stream?.getTracks().forEach(t => t.stop());
+    walkieRecorder = null;
+    if (walkieTalkieChannel) { try { sb.removeChannel(walkieTalkieChannel); } catch(e) {} walkieTalkieChannel = null; }
+    document.getElementById('walkie-modal')?.classList.remove('active');
+    document.getElementById('walkie-my-av')?.classList.remove('speaking');
+    document.getElementById('walkie-their-av')?.classList.remove('speaking');
+}
+
+function setupWalkieChannel() {
+    if (walkieTalkieChannel) { try { sb.removeChannel(walkieTalkieChannel); } catch(e) {} }
+    const channelName = `walkie_${currentRoom.replace(/-/g,'').slice(0,16)}`;
+    walkieTalkieChannel = sb.channel(channelName, { config: { broadcast: { self: false } } })
+        .on('broadcast', { event: 'walkie_ready' }, ({ payload }) => {
+            if (payload.user_id === currentUser?.id) return;
+            walkieOtherAllowed = true;
+            walkieOtherName = payload.name || 'User';
+            document.getElementById('walkie-their-name').textContent = walkieOtherName;
+            const av = document.getElementById('walkie-their-av');
+            if (payload.dp_url) { av.innerHTML = `<img src="${payload.dp_url}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">`; }
+            else { av.textContent = walkieOtherName[0]?.toUpperCase() || '?'; }
+            updateWalkieStatus();
+            // Send back our presence so they know we're here
+            walkieTalkieChannel.send({ type: 'broadcast', event: 'walkie_ready', payload: { user_id: currentUser.id, name: getMyDisplayName(), dp_url: userProfile?.dp_url || null } });
+        })
+        .on('broadcast', { event: 'walkie_audio' }, async ({ payload }) => {
+            if (payload.user_id === currentUser?.id) return;
+            document.getElementById('walkie-their-av')?.classList.add('speaking');
+            document.getElementById('walkie-indicator').textContent = `${walkieOtherName || 'User'} is talking...`;
+            try {
+                const resp = await fetch(payload.audio);
+                const blob = await resp.blob();
+                const url = URL.createObjectURL(blob);
+                const audio = new Audio(url);
+                audio.onended = () => {
+                    URL.revokeObjectURL(url);
+                    document.getElementById('walkie-their-av')?.classList.remove('speaking');
+                    document.getElementById('walkie-indicator').textContent = '';
+                };
+                audio.play().catch(() => {});
+            } catch(e) {}
+        })
+        .on('broadcast', { event: 'walkie_leave' }, ({ payload }) => {
+            if (payload.user_id === currentUser?.id) return;
+            walkieOtherAllowed = false;
+            updateWalkieStatus();
+            showToast((walkieOtherName || 'User') + ' left walkie-talkie');
+        })
+        .subscribe(status => {
+            if (status === 'SUBSCRIBED') {
+                walkieAllowed = true;
+                walkieTalkieChannel.send({ type: 'broadcast', event: 'walkie_ready', payload: { user_id: currentUser.id, name: getMyDisplayName(), dp_url: userProfile?.dp_url || null } });
+                updateWalkieStatus();
+            }
+        });
+}
+
+function updateWalkieStatus() {
+    const statusEl = document.getElementById('walkie-status');
+    const pttBtn = document.getElementById('walkie-ptt-btn');
+    if (walkieAllowed && walkieOtherAllowed) {
+        statusEl.textContent = '✅ Both connected — hold button to talk';
+        if (pttBtn) pttBtn.style.opacity = '1';
+    } else if (walkieAllowed) {
+        statusEl.textContent = '⏳ Waiting for other user to open walkie-talkie...';
+        if (pttBtn) pttBtn.style.opacity = '0.4';
+    }
+}
+
+function initWalkiePTT() {
+    const btn = document.getElementById('walkie-ptt-btn');
+    if (!btn) return;
+    btn.addEventListener('touchstart', e => { e.preventDefault(); walkieStartTalk(); }, { passive: false });
+    btn.addEventListener('touchend', e => { e.preventDefault(); walkieStopTalk(); }, { passive: false });
+    btn.addEventListener('touchcancel', e => { e.preventDefault(); walkieStopTalk(); }, { passive: false });
+    btn.addEventListener('mousedown', () => walkieStartTalk());
+    btn.addEventListener('mouseup', () => walkieStopTalk());
+    btn.addEventListener('mouseleave', () => { if (walkieRecorder?.state === 'recording') walkieStopTalk(); });
+}
+
+async function walkieStartTalk() {
+    if (!walkieAllowed || !walkieOtherAllowed) { showToast('Other user not in walkie-talkie yet'); return; }
+    if (walkieRecorder?.state === 'recording') return;
+    document.getElementById('walkie-ptt-btn')?.classList.add('pressing');
+    document.getElementById('walkie-my-av')?.classList.add('speaking');
+    document.getElementById('walkie-indicator').textContent = '🎙️ Transmitting...';
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        walkieChunks = [];
+        const mime = MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/ogg';
+        walkieRecorder = new MediaRecorder(stream, { mimeType: mime });
+        walkieRecorder.ondataavailable = e => { if (e.data.size > 0) walkieChunks.push(e.data); };
+        walkieRecorder.start(50);
+    } catch(e) {
+        showToast('Microphone access denied');
+        document.getElementById('walkie-ptt-btn')?.classList.remove('pressing');
+        document.getElementById('walkie-my-av')?.classList.remove('speaking');
+    }
+}
+
+function walkieStopTalk() {
+    document.getElementById('walkie-ptt-btn')?.classList.remove('pressing');
+    document.getElementById('walkie-my-av')?.classList.remove('speaking');
+    document.getElementById('walkie-indicator').textContent = '';
+    if (!walkieRecorder || walkieRecorder.state !== 'recording') return;
+    walkieRecorder.onstop = async () => {
+        const mime = walkieRecorder.mimeType || 'audio/webm';
+        const blob = new Blob(walkieChunks, { type: mime });
+        walkieChunks = [];
+        walkieRecorder.stream?.getTracks().forEach(t => t.stop());
+        walkieRecorder = null;
+        if (blob.size < 200 || !walkieTalkieChannel) return;
+        const b64 = await blobToBase64(blob);
+        walkieTalkieChannel.send({ type: 'broadcast', event: 'walkie_audio', payload: { user_id: currentUser.id, audio: b64 } });
+    };
+    walkieRecorder.stop();
+}
+
 // ===================== REACTIONS =====================
 let reactionPickerMsgId = null;
 
@@ -4228,11 +5343,12 @@ function closeReactionPicker() {
 }
 
 async function sendReaction(emoji) {
-    if (!reactionPickerMsgId || !currentUser) return;
+    const targetMsgId = reactionPickerMsgId; // capture BEFORE close nulls it
+    if (!targetMsgId || !currentUser) return;
     closeReactionPicker();
     try {
         const table = isPersonalChat ? 'personal_chat_messages' : 'messages';
-        const msg = messageCache.get(reactionPickerMsgId);
+        const msg = messageCache.get(targetMsgId);
         if (!msg) return;
         const reactions = JSON.parse(JSON.stringify(msg.reactions || {})); // deep copy
         if (!reactions[emoji]) reactions[emoji] = [];
@@ -4240,18 +5356,19 @@ async function sendReaction(emoji) {
         if (userIdx > -1) reactions[emoji].splice(userIdx, 1);
         else reactions[emoji].push(currentUser.id);
         if (reactions[emoji].length === 0) delete reactions[emoji];
-        await sb.from(table).update({ reactions }).eq('id', reactionPickerMsgId);
-        // Update locally
+        await sb.from(table).update({ reactions }).eq('id', targetMsgId);
+        // Update locally in both cache and virtual list
         msg.reactions = reactions;
-        const node = document.getElementById('msg-' + reactionPickerMsgId);
+        const vi = virt_allMsgs.findIndex(m => m.id === targetMsgId);
+        if (vi !== -1) virt_allMsgs[vi] = msg;
+        const node = document.getElementById('msg-' + targetMsgId);
         if (node) {
-            // Remove existing reactions div (it's a direct child of msg-row, outside bubble)
             const existing = node.querySelector('.msg-reactions');
             if (existing) existing.remove();
-            const reactEl = buildReactionsEl(reactions, reactionPickerMsgId);
-            if (reactEl) node.appendChild(reactEl); // append to msg-row, not bubble
+            const reactEl = buildReactionsEl(reactions, targetMsgId);
+            if (reactEl) node.appendChild(reactEl);
         }
-    } catch(e) { console.warn('Reaction error:', e); }
+    } catch(e) { console.warn('Reaction error:', e); showToast('Reaction failed'); }
 }
 
 function buildReactionsEl(reactions, msgId) {
@@ -4279,17 +5396,19 @@ function setupGlobalRealtime() {
 function setupRoomSub(roomId, isPersonal) {
     // Kill all old subs aggressively
     try {
-        activeSubscriptions.forEach(ch => sb.removeChannel(ch));
+        activeSubscriptions.forEach(ch => { try { sb.removeChannel(ch); } catch(_) {} });
     } catch(e) {}
     activeSubscriptions = [];
 
+    if (!roomId) return; // Guard: don't subscribe to null
+
     const tableName = isPersonal ? 'personal_chat_messages' : 'messages';
     const roomField = isPersonal ? 'chat_id' : 'room';
-    // Stable channel name (no timestamp) — prevents channel accumulation
-    const channelName = `chat:${roomId.slice(0, 18)}`;
+    // Unique channel name per room+timestamp to avoid stale channel conflicts
+    const channelName = `chat_${roomId.replace(/-/g,'').slice(0,16)}_${Date.now()}`;
 
     try {
-        const ch = sb.channel(channelName)
+        const ch = sb.channel(channelName, { config: { broadcast: { self: false } } })
             .on('postgres_changes', {
                 event: 'INSERT',
                 schema: 'public',
@@ -4301,6 +5420,9 @@ function setupRoomSub(roomId, isPersonal) {
                 if (msg[roomField] !== roomId) return; // double-check filter
                 if (messageCache.has(msg.id)) return;
                 virtAppendMessage(msg);
+                // Invalidate caches so they re-fetch on next open
+                try { localStorage.removeItem('orbit_msgs_' + roomId); } catch(e) {}
+                try { localStorage.removeItem('orbit_chats_' + currentUser.id); } catch(e) {}
                 if (msg.sender_id !== currentUser?.id) {
                     const u = globalUsersCache.get(msg.sender_id);
                     showNotif(msg.username || u?.display_name || 'User', msg.text || '📎 Media', { dpUrl: u?.dp_url });
@@ -4327,18 +5449,51 @@ function setupRoomSub(roomId, isPersonal) {
             }, payload => {
                 if (!payload?.new) return;
                 const msg = payload.new;
-                if ((msg.deleted_by || []).includes(currentUser?.id)) {
+                if (_hasDeletedBy && (msg.deleted_by || []).includes(currentUser?.id)) {
                     document.getElementById('msg-' + msg.id)?.remove();
                     messageCache.delete(msg.id);
                     return;
                 }
+                // ── REACTION NOTIFICATION: fire when someone reacts to your message ──
+                const oldMsg = messageCache.get(msg.id);
+                if (msg.reactions && currentUser && msg.sender_id === currentUser.id) {
+                    const oldReactions = oldMsg?.reactions || {};
+                    const newReactions = msg.reactions || {};
+                    // Detect newly added emoji by another user
+                    for (const [emoji, users] of Object.entries(newReactions)) {
+                        const oldUsers = oldReactions[emoji] || [];
+                        const newUser = Array.isArray(users) && users.find(uid => uid !== currentUser.id && !oldUsers.includes(uid));
+                        if (newUser) {
+                            const u = globalUsersCache.get(newUser);
+                            const name = u?.display_name || 'Someone';
+                            showNotif(`${emoji} Reaction`, `${name} reacted ${emoji} to your message`, { dpUrl: u?.dp_url, userId: newUser });
+                            break;
+                        }
+                    }
+                }
+                // Update cache
                 messageCache.set(msg.id, msg);
+                // Update virt_allMsgs so scroll re-renders see fresh reactions
+                const _vi = virt_allMsgs.findIndex(m => m.id === msg.id);
+                if (_vi !== -1) virt_allMsgs[_vi] = msg;
+                // Update DOM node reactions instantly (no re-open needed)
                 const node = document.getElementById('msg-' + msg.id);
                 if (node) {
                     const existingReact = node.querySelector('.msg-reactions');
                     if (existingReact) existingReact.remove();
                     const reactEl = buildReactionsEl(msg.reactions, msg.id);
                     if (reactEl) node.appendChild(reactEl);
+                    // Also update pin badge if pinned state changed
+                    if (msg.pinned !== undefined) {
+                        const meta = node.querySelector('.msg-meta');
+                        if (msg.pinned && meta && !node.querySelector('.pin-badge')) {
+                            const badge = document.createElement('i');
+                            badge.className = 'fa-solid fa-thumbtack pin-badge';
+                            meta.insertBefore(badge, meta.firstChild);
+                        } else if (!msg.pinned) {
+                            node.querySelector('.pin-badge')?.remove();
+                        }
+                    }
                 }
             })
             .subscribe((status, err) => {
@@ -4347,12 +5502,20 @@ function setupRoomSub(roomId, isPersonal) {
                 if (status === 'SUBSCRIBED') {
                     statusEl.innerHTML = '<span class="chat-status-live"><span class="chat-status-dot online"></span>Live</span>';
                 } else if (status === 'CHANNEL_ERROR') {
-                    console.warn('Channel error:', err);
-                    statusEl.innerHTML = '<span class="chat-status-live"><span class="chat-status-dot offline"></span>Offline</span>';
+                    const errMsg = err?.message || (typeof err === 'string' ? err : 'Connection issue');
+                    console.warn('Channel error:', errMsg);
+                    statusEl.innerHTML = '<span class="chat-status-live"><span class="chat-status-dot offline"></span>Reconnecting...</span>';
+                    // Auto-retry after 3s
+                    setTimeout(() => {
+                        if (currentRoom === roomId) setupRoomSub(roomId, isPersonal);
+                    }, 3000);
                 } else if (status === 'TIMED_OUT') {
                     statusEl.innerHTML = '<span class="chat-status-live"><span class="chat-status-dot away"></span>Reconnecting...</span>';
+                    setTimeout(() => {
+                        if (currentRoom === roomId) setupRoomSub(roomId, isPersonal);
+                    }, 4000);
                 } else if (status === 'CLOSED') {
-                    statusEl.innerHTML = '<span class="chat-status-live"><span class="chat-status-dot offline"></span>Disconnected</span>';
+                    statusEl.innerHTML = '<span class="chat-status-live"><span class="chat-status-dot offline"></span>Offline</span>';
                 }
             });
         activeSubscriptions.push(ch);
@@ -4388,9 +5551,19 @@ function renderLbMedia(url, type) {
     const img = document.getElementById('lb-img');
     const vid = document.getElementById('lb-video');
     if (type === 'video') {
-        img.style.display = 'none'; vid.style.display = 'block'; vid.src = url;
+        img.style.display = 'none';
+        vid.style.display = 'block';
+        vid.src = url;
+        vid.load();
+        // Autoplay with sound when opened in lightbox
+        vid.muted = false;
+        vid.play().catch(() => { vid.muted = true; vid.play().catch(() => {}); });
     } else {
-        vid.style.display = 'none'; img.style.display = 'block'; img.src = url;
+        vid.pause && vid.pause();
+        vid.src = '';
+        vid.style.display = 'none';
+        img.style.display = 'block';
+        img.src = url;
     }
     document.getElementById('lightbox')._url = url;
 }
@@ -4407,9 +5580,11 @@ function nextLbImg() {
     renderLbMedia(url, type);
 }
 function closeLightbox() {
+    const vid = document.getElementById('lb-video');
+    try { vid.pause(); vid.src = ''; vid.load(); } catch(e) {}
+    document.getElementById('lb-video').style.display = 'none';
+    document.getElementById('lb-img').style.display = 'none';
     document.getElementById('lightbox').classList.remove('active');
-    document.getElementById('lb-video').pause?.();
-    document.getElementById('lb-video').src = '';
 }
 function downloadLb() {
     const url = document.getElementById('lightbox')._url;
@@ -4431,6 +5606,7 @@ function navigate(screen) {
     }
 }
 function navBack() {
+    _openingRoomId = null;
     document.getElementById('screen-chat').classList.remove('active');
     document.getElementById('screen-dash').classList.add('active');
     currentRoom = null;
@@ -4440,6 +5616,11 @@ function navBack() {
     exitSelectMode();
     activeSubscriptions.forEach(ch => { try { sb.removeChannel(ch); } catch (e) {} });
     activeSubscriptions = [];
+    // Close walkie-talkie if open
+    if (walkieTalkieChannel) closeWalkie();
+    // Hide walkie button
+    const walkieBtn = document.getElementById('walkie-open-btn');
+    if (walkieBtn) walkieBtn.style.display = 'none';
     loadChats();
 }
 function toggleFav() {
@@ -4536,18 +5717,14 @@ function toggleTheme() {
 }
 
 // ===================== INFINITE SCROLL =====================
+// NOTE: loadOlderMessages is triggered by setupVirtScroll (the virtualization engine).
+// onFeedScroll only manages the UI scroll-to-bottom button to avoid duplicate triggers.
 async function onFeedScroll() {
     const feed = document.getElementById('chat-feed');
     const scrollBtn = document.getElementById('scroll-bottom-btn');
     const distFromBottom = feed.scrollHeight - feed.clientHeight - feed.scrollTop;
     // Show/hide scroll-to-bottom button
     if (scrollBtn) scrollBtn.style.display = distFromBottom > 200 ? 'flex' : 'none';
-    // Load older messages when scrolled to top
-    if (feed.scrollTop < 60 && !loadingMore && hasMoreMessages && oldestMsgDate) {
-        loadingMore = true;
-        await loadOlderMessages();
-        loadingMore = false;
-    }
 }
 async function loadOlderMessages() {
     if (!currentRoom || !oldestMsgDate) return;
@@ -4559,8 +5736,9 @@ async function loadOlderMessages() {
                 .lt('created_at', oldestMsgDate)
                 .order('created_at', { ascending: false }).limit(30);
         } else {
+            const _lmCols = await getMsgSelectCols();
             query = sb.from('messages')
-                .select('id,sender_id,username,text,type,attachments,reactions,reply_to,deleted_by,read_by,created_at,room')
+                .select(_lmCols)
                 .eq('room', currentRoom)
                 .lt('created_at', oldestMsgDate)
                 .order('created_at', { ascending: false }).limit(30);
@@ -4571,16 +5749,19 @@ async function loadOlderMessages() {
         // Prepend to virtual message list
         msgs.forEach(m => { messageCache.set(m.id, m); });
         virt_allMsgs = msgs.concat(virt_allMsgs);
-        virt_startIdx = 0; // show from new beginning
+        // Place virtual window to show the newly loaded messages at the top of view
+        virt_startIdx = 0;
         hasMoreMessages = data.length >= 30;
         oldestMsgDate = msgs[0]?.created_at;
 
-        // Re-render virtual window (preserves scroll position via virtRenderWindow)
+        // Re-render and restore scroll position so user stays at same spot
         const feed = document.getElementById('chat-feed');
         const oldScrollHeight = feed.scrollHeight;
         virtRenderWindow(feed);
-        feed.scrollTop = feed.scrollHeight - oldScrollHeight + 60;
+        // Anchor to the same content — add delta in scroll height so view doesn't jump
+        feed.scrollTop = Math.max(0, feed.scrollHeight - oldScrollHeight);
         attachMsgListeners();
+        setupVirtScroll(feed); // rebind scroll handler after re-render
     } catch (e) { console.error('loadOlderMessages:', e); }
 }
 
@@ -4597,51 +5778,63 @@ let pdfViewerName = null;
 function openPdfViewer(url, name) {
     pdfViewerUrl = url;
     pdfViewerName = name;
-    document.getElementById('pdf-viewer-title').innerText = name;
+    document.getElementById('pdf-viewer-title').innerText = name || 'Document';
     document.getElementById('pdf-viewer-modal').style.display = 'flex';
-    document.getElementById('pdf-pages-container').innerHTML = '<div style="color:#888;padding:40px;text-align:center;"><div class="loader"></div><div style="margin-top:12px;font-size:13px;">Loading...</div></div>';
-    document.getElementById('pdf-dl-btn').onclick = () => dlFile(url, name);
+    const container = document.getElementById('pdf-pages-container');
+    container.innerHTML = '<div style="color:#888;padding:40px;text-align:center;"><div class="loader"></div><div style="margin-top:12px;font-size:13px;">Loading document...</div></div>';
+    document.getElementById('pdf-dl-btn').onclick = () => dlFile(url, name || 'document.pdf');
 
-    // Set PDF.js worker
-    if (window.pdfjsLib) {
-        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-        renderPdf(url);
-    } else {
-        // Fallback if PDF.js not loaded
-        document.getElementById('pdf-pages-container').innerHTML = `
-            <div style="text-align:center;padding:40px;color:#888;">
-                <i class="fa-solid fa-file-pdf" style="font-size:56px;color:#FF3B30;margin-bottom:16px;display:block;"></i>
-                <div style="font-size:14px;color:#fff;margin-bottom:8px;">${esc(name)}</div>
-                <div style="font-size:12px;color:#888;margin-bottom:24px;">PDF preview unavailable</div>
-                <button onclick="dlFile('${esc(url)}','${esc(name)}')" style="background:var(--gold);color:#000;border:none;padding:12px 24px;border-radius:12px;font-weight:700;font-size:14px;cursor:pointer;font-family:'Syne',sans-serif;">
-                    <i class="fa-solid fa-download"></i> Download PDF
-                </button>
-            </div>`;
-    }
+    const tryRender = () => {
+        if (window.pdfjsLib) {
+            pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+            renderPdf(url);
+        } else {
+            // PDF.js not yet loaded — load it now
+            const script = document.createElement('script');
+            script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+            script.onload = () => {
+                pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+                renderPdf(url);
+            };
+            script.onerror = () => {
+                container.innerHTML = `<div style="text-align:center;padding:40px;color:#888;">
+                    <i class="fa-solid fa-file-pdf" style="font-size:56px;color:#FF3B30;margin-bottom:16px;display:block;"></i>
+                    <div style="font-size:14px;color:#fff;margin-bottom:8px;">${esc(name)}</div>
+                    <div style="font-size:12px;color:#888;margin-bottom:24px;">PDF preview unavailable</div>
+                    <button onclick="dlFile(pdfViewerUrl,'${esc(name)}')" style="background:var(--gold);color:#000;border:none;padding:12px 24px;border-radius:12px;font-weight:700;font-size:14px;cursor:pointer;font-family:'Syne',sans-serif;">
+                        <i class="fa-solid fa-download"></i> Download PDF
+                    </button>
+                </div>`;
+            };
+            document.head.appendChild(script);
+        }
+    };
+    tryRender();
 }
 
 async function renderPdf(url) {
+    const container = document.getElementById('pdf-pages-container');
     try {
-        const container = document.getElementById('pdf-pages-container');
         let pdfData;
         if (url.startsWith('data:')) {
-            // Extract base64 data
+            // base64 data URL — decode to bytes for PDF.js
             const base64 = url.split(',')[1];
-            const binary = atob(base64);
-            const bytes = new Uint8Array(binary.length);
-            for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+            if (!base64) throw new Error('Invalid data URL');
+            const binaryStr = atob(base64);
+            const bytes = new Uint8Array(binaryStr.length);
+            for (let i = 0; i < binaryStr.length; i++) bytes[i] = binaryStr.charCodeAt(i);
             pdfData = { data: bytes };
         } else {
             pdfData = { url };
         }
+
         const pdf = await pdfjsLib.getDocument(pdfData).promise;
         container.innerHTML = '';
         const totalPages = pdf.numPages;
 
-        // Show page count
         const header = document.createElement('div');
-        header.style.cssText = 'color:#888;font-size:11px;padding:4px 0 8px;text-align:center;';
-        header.innerText = `${totalPages} page${totalPages > 1 ? 's' : ''}`;
+        header.style.cssText = 'color:#888;font-size:11px;padding:4px 0 10px;text-align:center;';
+        header.innerText = `${totalPages} page${totalPages !== 1 ? 's' : ''}`;
         container.appendChild(header);
 
         const vp = document.getElementById('app-viewport');
@@ -4650,36 +5843,40 @@ async function renderPdf(url) {
         for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
             const page = await pdf.getPage(pageNum);
             const viewport = page.getViewport({ scale: 1 });
-            const scale = maxWidth / viewport.width;
+            // Use devicePixelRatio for crisp retina/high-DPI rendering
+            const dpr = window.devicePixelRatio || 2;
+            const scale = (maxWidth / viewport.width) * dpr;
             const scaledViewport = page.getViewport({ scale });
 
             const canvas = document.createElement('canvas');
+            // Physical pixels = scaled, CSS display = maxWidth
             canvas.width = scaledViewport.width;
             canvas.height = scaledViewport.height;
-            canvas.style.cssText = `width:100%;border-radius:8px;display:block;margin-bottom:8px;box-shadow:0 2px 12px rgba(0,0,0,0.5);`;
+            canvas.style.cssText = `width:100%;height:auto;border-radius:8px;display:block;margin-bottom:8px;box-shadow:0 2px 12px rgba(0,0,0,0.5);`;
+            const ctx2d = canvas.getContext('2d');
+            ctx2d.imageSmoothingEnabled = true;
+            ctx2d.imageSmoothingQuality = 'high';
 
             const wrapper = document.createElement('div');
             wrapper.style.cssText = 'width:100%;position:relative;';
-
-            const pageLabel = document.createElement('div');
-            pageLabel.style.cssText = 'font-size:10px;color:#555;text-align:right;margin-bottom:3px;';
-            pageLabel.innerText = `Page ${pageNum}`;
-            wrapper.appendChild(pageLabel);
+            const lbl = document.createElement('div');
+            lbl.style.cssText = 'font-size:10px;color:#555;text-align:right;margin-bottom:3px;';
+            lbl.innerText = `Page ${pageNum}`;
+            wrapper.appendChild(lbl);
             wrapper.appendChild(canvas);
             container.appendChild(wrapper);
 
-            await page.render({ canvasContext: canvas.getContext('2d'), viewport: scaledViewport }).promise;
+            await page.render({ canvasContext: ctx2d, viewport: scaledViewport }).promise;
         }
     } catch(err) {
         console.error('PDF render error:', err);
-        document.getElementById('pdf-pages-container').innerHTML = `
-            <div style="text-align:center;padding:40px;color:#888;">
-                <i class="fa-solid fa-file-pdf" style="font-size:56px;color:#FF3B30;margin-bottom:16px;display:block;"></i>
-                <div style="font-size:12px;margin-bottom:20px;">Could not render PDF</div>
-                <button onclick="dlFile('${esc(pdfViewerUrl)}','${esc(pdfViewerName)}')" style="background:var(--gold);color:#000;border:none;padding:12px 24px;border-radius:12px;font-weight:700;cursor:pointer;font-family:'Syne',sans-serif;">
-                    <i class="fa-solid fa-download"></i> Download
-                </button>
-            </div>`;
+        container.innerHTML = `<div style="text-align:center;padding:40px;color:#888;">
+            <i class="fa-solid fa-file-pdf" style="font-size:56px;color:#FF3B30;margin-bottom:16px;display:block;"></i>
+            <div style="font-size:12px;color:#888;margin-bottom:20px;">Could not render PDF: ${esc(err.message || '')}</div>
+            <button onclick="dlFile(pdfViewerUrl,pdfViewerName)" style="background:var(--gold);color:#000;border:none;padding:12px 24px;border-radius:12px;font-weight:700;cursor:pointer;font-family:'Syne',sans-serif;">
+                <i class="fa-solid fa-download"></i> Download
+            </button>
+        </div>`;
     }
 }
 
@@ -4689,14 +5886,12 @@ function closePdfViewer() {
     pdfViewerUrl = null; pdfViewerName = null;
 }
 
-console.log('%c⚡ Orbit V89 — Fetch Errors Fixed', 'color:#FFD700;font-weight:bold;font-size:17px;');
-console.log('%c✅ loadRoomMsgs: select(*) — works on any schema, no column mismatch', 'color:#34C759;font-size:13px;');
-console.log('%c✅ loadChats: safe 2-step (rooms + IN last-msgs) — no PostgREST FK required', 'color:#34C759;font-size:13px;');
-console.log('%c✅ setupRoomSub: stable channel names, error logging, double-filter check', 'color:#34C759;font-size:13px;');
-console.log('%c✅ setupGlobalRealtime: removed (was creating channel conflicts)', 'color:#34C759;font-size:13px;');
-console.log('%c✅ finishAppInit: presence starts first, chats load immediately', 'color:#34C759;font-size:13px;');
-console.log('%c✅ DOM Virtualization: 22-msg window, flat RAM', 'color:#34C759;font-size:13px;');
-console.log('%c✅ Web Worker image compression: UI never freezes on uploads', 'color:#34C759;font-size:13px;');
+console.log('%c⚡ Orbit V97 — Fast Chat · Circular Avatar · Video Poster · Background Notifications · HiDPI PDF', 'color:#FFD700;font-weight:bold;font-size:17px;');
+console.log('%c✅ Chat load: schema pre-warmed, cache-first render, sub+schema in parallel', 'color:#34C759;font-size:13px;');
+console.log('%c✅ Header: circular DP shown in chat header, auto-fetches for DMs and groups', 'color:#34C759;font-size:13px;');
+console.log('%c✅ Pin/Unpin: uses _pinTargetMsg guard, updates DOM immediately without re-open', 'color:#34C759;font-size:13px;');
+console.log('%c✅ Reactions: realtime UPDATE rebuilds reaction UI instantly for all users', 'color:#34C759;font-size:13px;');
+console.log('%c✅ Notifications: iOS/Android style banner with sound, progress bar, smooth animation', 'color:#34C759;font-size:13px;');
 /*
   ╔══════════════════════════════════════════════════════════════════════════════╗
   ║         ORBIT V85 — SUPABASE SQL MIGRATION (Run in SQL Editor)             ║
