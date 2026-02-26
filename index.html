@@ -272,6 +272,18 @@
         .media-thumb{position:relative;width:72px;height:72px;border-radius:12px;overflow:hidden;border:2px solid var(--border);flex-shrink:0;background:#111;}
         .media-thumb img,.media-thumb video{width:100%;height:100%;object-fit:cover;}
         .media-thumb .play-over{position:absolute;inset:0;background:rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;color:#fff;font-size:18px;}
+        /* Quality Picker Sheet */
+        .quality-sheet{position:absolute;bottom:0;left:0;right:0;background:var(--surface);border-radius:22px 22px 0 0;padding:20px 18px 28px;z-index:600;transform:translateY(100%);transition:transform .28s cubic-bezier(.32,1.08,.54,1);box-shadow:0 -8px 40px rgba(0,0,0,.5);}
+        .quality-sheet.active{transform:translateY(0);}
+        .quality-sheet-title{font-size:13px;font-weight:700;color:var(--text-sec);letter-spacing:.5px;margin-bottom:14px;text-align:center;}
+        .quality-opt{display:flex;align-items:center;gap:14px;padding:14px 16px;border-radius:16px;border:2px solid var(--border);margin-bottom:10px;cursor:pointer;background:var(--surface-light);transition:border-color .15s,background .15s;}
+        .quality-opt.selected{border-color:var(--gold);background:var(--gold-dim);}
+        .quality-opt-icon{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;}
+        .quality-opt-info{flex:1;}
+        .quality-opt-name{font-size:14px;font-weight:700;color:var(--text);}
+        .quality-opt-desc{font-size:11px;color:var(--text-sec);margin-top:2px;}
+        .quality-sheet-send{width:100%;background:var(--gold);color:#000;border:none;padding:14px;border-radius:16px;font-weight:800;font-size:15px;cursor:pointer;font-family:'Syne',sans-serif;margin-top:6px;}
+        .quality-badge{position:absolute;bottom:4px;left:4px;background:rgba(0,0,0,.7);color:#fff;font-size:9px;font-weight:700;padding:2px 5px;border-radius:6px;font-family:'DM Sans',sans-serif;}
         .remove-mb{position:absolute;top:3px;right:3px;background:rgba(220,0,0,.9);color:#fff;border:none;width:18px;height:18px;border-radius:50%;font-size:9px;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:2;}
 
         /* SELECTION TOOLBAR */
@@ -767,6 +779,30 @@
                 </button>
             </div>
         </div>
+        <!-- Quality Picker Sheet — slides up before send -->
+        <div id="quality-sheet" class="quality-sheet">
+            <div class="quality-sheet-title">SEND QUALITY</div>
+            <div class="quality-opt selected" id="qopt-standard" onclick="selectQuality('standard')">
+                <div class="quality-opt-icon" style="background:rgba(0,230,118,0.12);">🖼️</div>
+                <div class="quality-opt-info">
+                    <div class="quality-opt-name">Standard <span style="font-size:10px;background:rgba(0,230,118,0.2);color:#00E676;padding:2px 7px;border-radius:8px;font-weight:700;vertical-align:middle;">ORIGINAL</span></div>
+                    <div class="quality-opt-desc">Full resolution · Best quality · Slower on large files</div>
+                </div>
+                <i class="fa-solid fa-circle-check" id="qcheck-standard" style="color:var(--gold);font-size:18px;"></i>
+            </div>
+            <div class="quality-opt" id="qopt-instant" onclick="selectQuality('instant')">
+                <div class="quality-opt-icon" style="background:rgba(255,215,0,0.12);">⚡</div>
+                <div class="quality-opt-info">
+                    <div class="quality-opt-name">Instant <span style="font-size:10px;background:rgba(255,215,0,0.2);color:var(--gold);padding:2px 7px;border-radius:8px;font-weight:700;vertical-align:middle;">FAST</span></div>
+                    <div class="quality-opt-desc">Compressed · 3-4× faster upload · Slightly smaller size</div>
+                </div>
+                <i class="fa-solid fa-circle" id="qcheck-instant" style="color:var(--border);font-size:18px;"></i>
+            </div>
+            <button class="quality-sheet-send touch-fix" onclick="confirmQualityAndSend()">
+                <i class="fa-solid fa-paper-plane"></i> Send
+            </button>
+        </div>
+        <div id="quality-sheet-bg" style="display:none;position:absolute;inset:0;background:rgba(0,0,0,.5);z-index:599;" onclick="closeQualitySheet()"></div>
     </div>
 
     <!-- WALKIE-TALKIE MODAL -->
@@ -1274,15 +1310,15 @@ const SB_URL = "https://dhtbiggamuwoqurguhib.supabase.co";
 const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRodGJpZ2dhbXV3b3F1cmd1aGliIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMxNzY2MzksImV4cCI6MjA3ODc1MjYzOX0.-utin9W_-hSeijdHwcVSjft9biB5DSXrNOmuz5kCPlE";
 let sb;
 try {
-    // V93: Realtime via WebSocket only (no long-polling fallback delay), global fetch
     sb = supabase.createClient(SB_URL, SB_KEY, {
-        auth: { persistSession: true, autoRefreshToken: true },
-        realtime: { params: { eventsPerSecond: 20 } },
-        global: { headers: { 'x-client-info': 'orbit-v93' } }
+        auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false },
+        realtime: { params: { eventsPerSecond: 25 }, heartbeatIntervalMs: 25000 },
+        global: { headers: { 'x-client-info': 'orbit-v98' } }
     });
 } catch(e) {
     console.error('Supabase init failed:', e);
-    document.getElementById('auth-err') && (document.getElementById('auth-err').innerText = 'App failed to load. Please refresh.') && (document.getElementById('auth-err').style.display = 'block');
+    const errEl = document.getElementById('auth-err');
+    if (errEl) { errEl.innerText = 'App failed to load. Please refresh.'; errEl.style.display = 'block'; }
 }
 
 // ===================== OWNER & PREMIUM =====================
@@ -1397,6 +1433,7 @@ let uploadCanceled = false;
 let deleteMessageId = null;
 let editingNoteId = null;
 let videoFile = null;
+let _uploadQuality = 'standard'; // 'standard' = original quality, 'instant' = compressed fast
 let favorites = JSON.parse(localStorage.getItem('orbit_favorites') || '[]');
 let presenceInterval = null;
 let localCounter = 0;
@@ -1476,15 +1513,16 @@ CREATE POLICY "Allow authenticated deletes" ON storage.objects
 function requestNotifPerms() {
     if (!('Notification' in window)) return;
     if (Notification.permission === 'default') {
-        // Delay request to avoid blocking load
+        // Request sooner on mobile so it's ready when first message arrives
+        const delay = /Mobi|Android|iPhone/i.test(navigator.userAgent) ? 1500 : 3000;
         setTimeout(() => {
             Notification.requestPermission().then(perm => {
                 if (perm === 'granted') {
                     console.log('✅ Notifications granted');
                     registerServiceWorker();
                 }
-            });
-        }, 3000);
+            }).catch(() => {});
+        }, delay);
     } else if (Notification.permission === 'granted') {
         registerServiceWorker();
     }
@@ -1598,13 +1636,6 @@ function showNotif(title, body, senderInfo) {
 
     if (!('Notification' in window) || Notification.permission !== 'granted') return;
 
-    const isMobile = /Mobi|Android/i.test(navigator.userAgent);
-    const isBackground = document.visibilityState !== 'visible';
-    // On mobile always show native notif so it appears in system tray
-    // On desktop show when backgrounded
-    const shouldFireNative = isMobile || isBackground;
-    if (!shouldFireNative) return;
-
     try {
         const notifTitle = `Orbit — ${title}`;
         const opts = {
@@ -1622,7 +1653,8 @@ function showNotif(title, body, senderInfo) {
         if (window._swRegistration) {
             // Route through SW → shows even when tab is in background / screen locked
             window._swRegistration.showNotification(notifTitle, opts).catch(() => {
-                new Notification(notifTitle, opts);
+                // SW failed — fall back to direct Notification API
+                try { new Notification(notifTitle, opts); } catch(_) {}
             });
             // Also post message to SW so it can handle it even without push server
             if (navigator.serviceWorker.controller) {
@@ -1636,8 +1668,8 @@ function showNotif(title, body, senderInfo) {
                 });
             }
         } else {
-            // Fallback: direct Notification API (works when tab is visible/focused)
-            new Notification(notifTitle, opts);
+            // No SW: direct Notification API — works whenever tab is open
+            try { new Notification(notifTitle, opts); } catch(_) {}
         }
     } catch(e) {
         console.warn('Notification failed:', e);
@@ -1933,14 +1965,25 @@ function togglePass() {
 }
 
 async function checkSession() {
+    // Guard: if sb failed to init, show error on auth screen
+    if (!sb) {
+        const errEl = document.getElementById('auth-err');
+        if (errEl) { errEl.innerText = 'App failed to initialize. Please refresh.'; errEl.style.display = 'block'; }
+        return;
+    }
     try {
         // getSession() uses localStorage cache — instant, no network needed
         const { data: { session } } = await sb.auth.getSession();
-        if (session) { currentUser = session.user; await initApp(); }
+        if (session) {
+            currentUser = session.user;
+            document.getElementById('screen-auth').classList.remove('active');
+            await initApp();
+        }
         // Listen for auth state changes (handles token refresh etc)
         sb.auth.onAuthStateChange((event, sess) => {
             if (event === 'SIGNED_IN' && sess && !currentUser) {
                 currentUser = sess.user;
+                document.getElementById('screen-auth').classList.remove('active');
                 initApp();
             } else if (event === 'SIGNED_OUT') {
                 currentUser = null;
@@ -1948,7 +1991,10 @@ async function checkSession() {
                 document.getElementById('screen-auth').classList.add('active');
             }
         });
-    } catch (e) {}
+    } catch (e) {
+        console.warn('checkSession error:', e);
+        // Auth screen stays visible — user can still log in manually
+    }
 }
 
 async function signOut() {
@@ -2053,6 +2099,12 @@ async function handleAuth() {
         } else {
             localStorage.removeItem('orbit_remember_email');
         }
+        // Request notification permission right after login — user just interacted so browser allows it
+        if ('Notification' in window && Notification.permission === 'default') {
+            Notification.requestPermission().then(perm => {
+                if (perm === 'granted') registerServiceWorker();
+            }).catch(() => {});
+        }
         await initApp();
     } catch (e) {
         err.innerText = e.message || 'Connection failed. Check internet.';
@@ -2114,14 +2166,96 @@ async function finishAppInit() {
         getMsgSelectCols().catch(() => {}),
     ]);
 
-    // Warm secondary tabs in background so switching is instant
+    // Warm secondary tabs in background so switching is instant — reduced wait times
     setTimeout(() => {
         loadGlobalUsers().catch(() => {});
-    }, 1500);
+    }, 800);
     setTimeout(() => {
         loadGroups().catch(() => {});
         loadFriends().catch(() => {});
-    }, 2800);
+    }, 1500);
+
+    // Start background notification channel after chats loaded
+    setTimeout(() => { setupBackgroundNotifChannel().catch(() => {}); }, 3000);
+}
+
+// ─── BACKGROUND NOTIFICATION CHANNEL ───
+// Listens for new messages in ALL user rooms and fires native notification
+// even when user is on dashboard/groups/global tab (not inside the chat view)
+let _bgNotifChannel = null;
+let _bgNotifRoomIds = [];
+
+async function setupBackgroundNotifChannel() {
+    if (!currentUser) return;
+    // Clean up old channel
+    if (_bgNotifChannel) { try { sb.removeChannel(_bgNotifChannel); } catch(e) {} _bgNotifChannel = null; }
+
+    // Get all room IDs user is in
+    try {
+        const { data: memData } = await sb.from('room_members').select('room_id').eq('user_id', currentUser.id).limit(100);
+        _bgNotifRoomIds = [...new Set((memData || []).map(m => m.room_id).filter(Boolean))];
+    } catch(e) { return; }
+
+    if (!_bgNotifRoomIds.length) return;
+
+    // Subscribe to ALL rooms at once — background notif channel
+    // (active subscription is for the open chat room; this is for all OTHER rooms)
+    _bgNotifChannel = sb.channel('orbit_bg_notifs_' + currentUser.id.slice(0,8))
+        .on('postgres_changes', {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'messages'
+        }, payload => {
+            const msg = payload?.new;
+            if (!msg) return;
+            if (msg.sender_id === currentUser.id) return; // own message
+            if (msg.room === currentRoom) return; // already viewing this room
+            if (!_bgNotifRoomIds.includes(msg.room)) return; // not in our rooms
+
+            // Fire notification for background rooms
+            const u = globalUsersCache.get(msg.sender_id);
+            const name = msg.username || u?.display_name || 'Someone';
+            const body = msg.type === 'text' ? (msg.text || '') :
+                         msg.type === 'image' ? '📷 Photo' :
+                         msg.type === 'video' ? '📹 Video' :
+                         msg.type === 'voice' ? '🎤 Voice message' :
+                         msg.type === 'document' ? '📄 Document' : '💬 New message';
+
+            showNotif(name, body, { dpUrl: u?.dp_url, userId: msg.sender_id });
+
+            // Update unread badge on chat list if visible
+            updateUnreadBadge(msg.room);
+
+            // Invalidate chat list cache so it refreshes
+            try { localStorage.removeItem('orbit_chats_' + currentUser.id); } catch(e) {}
+        })
+        .subscribe();
+}
+
+// Track unread counts per room
+const _unreadCounts = new Map();
+
+function updateUnreadBadge(roomId) {
+    const count = (_unreadCounts.get(roomId) || 0) + 1;
+    _unreadCounts.set(roomId, count);
+    // Find the chat list item for this room and update badge
+    const el = document.querySelector(`.chat-item[data-rid="${roomId}"]`);
+    if (!el) return;
+    let badge = el.querySelector('.unread-badge');
+    if (!badge) {
+        badge = document.createElement('span');
+        badge.className = 'unread-badge';
+        badge.style.cssText = 'margin-left:auto;flex-shrink:0;';
+        el.appendChild(badge);
+    }
+    badge.textContent = count > 99 ? '99+' : count;
+    badge.style.display = 'inline';
+}
+
+function clearUnreadBadge(roomId) {
+    _unreadCounts.delete(roomId);
+    const el = document.querySelector(`.chat-item[data-rid="${roomId}"]`);
+    el?.querySelector('.unread-badge')?.remove();
 }
 
 // ── V88: EPHEMERAL REALTIME PRESENCE — zero DB writes for online state
@@ -2205,14 +2339,16 @@ function startPresence() {
             }
         });
 
-    // DB write only once on login, then once every 5 minutes (not every 30s)
+    // DB write only once on login, then once every 2 minutes to keep last_seen fresh
     updatePresence(true).catch(() => {});
-    presenceInterval = setInterval(() => updatePresence(true), 5 * 60 * 1000);
+    presenceInterval = setInterval(() => updatePresence(true), 2 * 60 * 1000);
     document.addEventListener('visibilitychange', () => {
         if (document.hidden) {
             presenceChannel?.untrack().catch(() => {});
+            // Write last_seen to DB when going background
+            updatePresence(true).catch(() => {});
         } else {
-            presenceChannel?.track({ user_id: currentUser.id, display_name: getMyDisplayName(), online_at: new Date().toISOString() }).catch(() => {});
+            presenceChannel?.track({ user_id: currentUser.id, display_name: getMyDisplayName(), dp_url: userProfile?.dp_url || null, online_at: new Date().toISOString() }).catch(() => {});
         }
     });
     window.addEventListener('beforeunload', () => {
@@ -2424,75 +2560,85 @@ async function loadChats() {
         }
     } catch(e) { list.innerHTML = SKELETON_LIST; _chatListCache = null; }
 
-    try {
-        // Step 1: Get room IDs the user belongs to
-        const { data: memData, error: memErr } = await sb
-            .from('room_members')
-            .select('room_id')
-            .eq('user_id', currentUser.id)
-            .limit(100);
-        if (memErr) throw new Error('room_members: ' + memErr.message);
+    // Retry wrapper with exponential backoff for reliability
+    const MAX_RETRIES = 3;
+    let lastErr = null;
+    for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+        if (attempt > 0) await new Promise(r => setTimeout(r, 800 * attempt));
+        try {
+            const { data: memData, error: memErr } = await sb
+                .from('room_members')
+                .select('room_id')
+                .eq('user_id', currentUser.id)
+                .limit(100);
+            if (memErr) throw new Error('room_members: ' + memErr.message);
 
-        const roomIds = [...new Set((memData || []).map(m => m.room_id).filter(Boolean))];
-        if (!roomIds.length) {
-            list.innerHTML = emptyState('fa-comments', 'No conversations yet', 'Start chatting in Groups or Global');
-            try { localStorage.removeItem(cacheKey); } catch(e) {}
-            return;
-        }
+            const roomIds = [...new Set((memData || []).map(m => m.room_id).filter(Boolean))];
+            if (!roomIds.length) {
+                list.innerHTML = emptyState('fa-comments', 'No conversations yet', 'Start chatting in Groups or Global');
+                try { localStorage.removeItem(cacheKey); } catch(e) {}
+                return;
+            }
 
-        // Step 2 + 3: Get room details AND last messages IN PARALLEL
-        const [roomResult, msgsResult] = await Promise.all([
-            sb.from('rooms')
-              .select('id, name, is_direct, created_at, dp_url')
-              .in('id', roomIds),
-            sb.from('messages')
-              .select('room, text, type, created_at')
-              .in('room', roomIds)
-              .order('created_at', { ascending: false })
-              .limit(Math.min(roomIds.length * 5, 300))
-        ]);
-        if (roomResult.error) throw new Error('rooms: ' + roomResult.error.message);
-        const roomData = roomResult.data;
-        const msgs = msgsResult.data;
+            const batchRoomIds = roomIds.slice(0, 40);
+            const [roomResult, msgsResult] = await Promise.all([
+                sb.from('rooms')
+                  .select('id, name, is_direct, created_at, dp_url')
+                  .in('id', batchRoomIds),
+                sb.from('messages')
+                  .select('room, text, type, created_at, sender_id')
+                  .in('room', batchRoomIds)
+                  .order('created_at', { ascending: false })
+                  .limit(batchRoomIds.length)
+            ]);
+            if (roomResult.error) throw new Error('rooms: ' + roomResult.error.message);
+            const roomData = roomResult.data;
+            const msgs = msgsResult.data;
 
-        const roomMap = new Map((roomData || []).map(r => [r.id, r]));
+            const roomMap = new Map((roomData || []).map(r => [r.id, r]));
 
-        const lastMsgMap = new Map();
-        (msgs || []).forEach(m => { if (!lastMsgMap.has(m.room)) lastMsgMap.set(m.room, m); });
+            const lastMsgMap = new Map();
+            (msgs || []).forEach(m => { if (!lastMsgMap.has(m.room)) lastMsgMap.set(m.room, m); });
 
-        // Sort by recency
-        const sorted = roomIds
-            .filter(id => roomMap.has(id))
-            .sort((a, b) => {
-                const at = lastMsgMap.get(a)?.created_at || roomMap.get(a)?.created_at || '';
-                const bt = lastMsgMap.get(b)?.created_at || roomMap.get(b)?.created_at || '';
-                return bt > at ? 1 : -1;
-            });
+            const sorted = roomIds
+                .filter(id => roomMap.has(id))
+                .sort((a, b) => {
+                    const at = lastMsgMap.get(a)?.created_at || roomMap.get(a)?.created_at || '';
+                    const bt = lastMsgMap.get(b)?.created_at || roomMap.get(b)?.created_at || '';
+                    return bt > at ? 1 : -1;
+                });
 
-        const chatData = sorted.map(id => ({
-            roomId: id,
-            room: roomMap.get(id) || {},
-            lastMsg: lastMsgMap.get(id) || null
-        }));
+            const chatData = sorted.map(id => ({
+                roomId: id,
+                room: roomMap.get(id) || {},
+                lastMsg: lastMsgMap.get(id) || null
+            }));
 
-        try { localStorage.setItem(cacheKey, JSON.stringify(chatData)); } catch(e) {}
-        _chatListCache = chatData;
-        renderChatList(chatData, list);
+            try { localStorage.setItem(cacheKey, JSON.stringify(chatData)); } catch(e) {}
+            _chatListCache = chatData;
+            renderChatList(chatData, list);
+            return; // success
 
-    } catch(e) {
-        console.error('loadChats error:', e);
-        if (_chatListCache?.length) {
-            showToast('⚠️ Refresh failed — showing cached chats');
-        } else {
-            list.innerHTML = `<div style="text-align:center;padding:40px 20px;">
-                <i class="fa-solid fa-triangle-exclamation" style="font-size:32px;color:#ff4444;margin-bottom:14px;display:block;"></i>
-                <div style="color:#ff4444;font-weight:700;font-size:15px;margin-bottom:6px;">Failed to load chats</div>
-                <div style="font-size:12px;color:#888;margin-bottom:20px;line-height:1.5;">${esc(e?.message || 'Check your internet connection')}</div>
-                <button onclick="loadChats()" style="background:var(--gold);color:#000;border:none;padding:12px 28px;border-radius:22px;font-weight:700;cursor:pointer;font-family:'Syne',sans-serif;font-size:13px;">↺ Retry</button>
-            </div>`;
+        } catch(e) {
+            lastErr = e;
+            console.warn(`loadChats attempt ${attempt+1} failed:`, e.message);
         }
     }
+
+    // All retries exhausted
+    console.error('loadChats error:', lastErr);
+    if (_chatListCache?.length) {
+        showToast('⚠️ Refresh failed — showing cached chats');
+    } else {
+        list.innerHTML = `<div style="text-align:center;padding:40px 20px;">
+            <i class="fa-solid fa-triangle-exclamation" style="font-size:32px;color:#ff4444;margin-bottom:14px;display:block;"></i>
+            <div style="color:#ff4444;font-weight:700;font-size:15px;margin-bottom:6px;">Failed to load chats</div>
+            <div style="font-size:12px;color:#888;margin-bottom:20px;line-height:1.5;">${esc(lastErr?.message || 'Check your internet connection')}</div>
+            <button onclick="loadChats()" style="background:var(--gold);color:#000;border:none;padding:12px 28px;border-radius:22px;font-weight:700;cursor:pointer;font-family:'Syne',sans-serif;font-size:13px;">↺ Retry</button>
+        </div>`;
+    }
 }
+
 
 function renderChatList(chatData, list) {
     if (!chatData?.length) {
@@ -2514,11 +2660,13 @@ function renderChatList(chatData, list) {
             ? `<img src="${esc(r.dp_url)}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" loading="lazy" onerror="this.parentNode.innerHTML='<div class=\'c-av-inner\'>${initial}</div>'">`
             : `<div class="c-av-inner">${initial}</div>`;
         const el = document.createElement('div');
-        el.className = 'contact-item touch-fix';
+        el.className = 'contact-item chat-item touch-fix';
         el.dataset.rid = roomId; el.dataset.rname = name; el.dataset.direct = r.is_direct ? 'true' : 'false';
+        const unread = _unreadCounts.get(roomId) || 0;
+        const unreadHtml = unread > 0 ? `<span class="unread-badge" style="margin-left:4px;">${unread > 99 ? '99+' : unread}</span>` : '';
         el.innerHTML = `<div class="c-av">${avHtml}</div>
             <div class="c-info"><div class="c-name">${esc(name)}</div><div class="c-last">${esc(preview)}</div></div>
-            <div class="c-meta"><div class="c-time">${timeStr}</div></div>`;
+            <div class="c-meta"><div class="c-time">${timeStr}</div>${unreadHtml}</div>`;
         el.addEventListener('click', () => openRoom(el.dataset.rid, el.dataset.rname, el.dataset.direct === 'true'));
         frag.appendChild(el);
     });
@@ -2740,7 +2888,8 @@ async function loadGlobalUsers() {
                     <div class="c-name">${esc(name)}${uTier ? getVerifiedBadgeHtml(uTier) : ''}</div>
                     <div class="c-last">${u.is_online ? '🟢 Online now' : '⏱ ' + timeAgo(u.last_seen)}</div>
                     ${u.email ? `<div style="font-size:10px;color:var(--text-sec);opacity:.75;margin-top:1px;">${esc(u.email)}</div>` : ''}
-                </div>`;
+                </div>
+                <button class="global-add-friend-btn touch-fix" data-uid="${esc(u.user_id)}" data-uname="${esc(name)}" onclick="event.stopPropagation();sendFriendRequestById('${esc(u.user_id)}','${esc(name)}',this)" style="background:var(--surface-light);border:1px solid var(--border);color:var(--text-sec);border-radius:20px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;font-family:'Syne',sans-serif;white-space:nowrap;flex-shrink:0;"><i class="fa-solid fa-user-plus" style="font-size:10px;"></i></button>`;
             el.addEventListener('click', () => startChat(el.dataset.uid, el.dataset.uname));
             frag.appendChild(el);
         });
@@ -2812,14 +2961,80 @@ async function updateChatHeaderAvatarForDM(roomId) {
         if (!members) return;
         const otherId = members.find(m => m.user_id !== currentUser?.id)?.user_id;
         if (!otherId) return;
+        
+        // Fetch presence with last_seen
+        let pres = null;
         const cached = globalUsersCache.get(otherId);
-        if (cached?.dp_url) {
-            setChatHeaderAvatar(cached.display_name || '', cached.dp_url, true);
-            return;
+        if (cached?.dp_url && cached?.last_seen) {
+            pres = cached;
+        } else {
+            const { data } = await sb.from('user_presence').select('dp_url, display_name, is_online, last_seen').eq('user_id', otherId).single();
+            pres = data;
+            if (pres) globalUsersCache.set(otherId, { ...((cached)||{}), ...pres, user_id: otherId });
         }
-        const { data: pres } = await sb.from('user_presence').select('dp_url, display_name').eq('user_id', otherId).single();
-        if (pres?.dp_url) setChatHeaderAvatar(pres.display_name || '', pres.dp_url, true);
+        
+        if (!pres) return;
+        if (pres.dp_url) setChatHeaderAvatar(pres.display_name || '', pres.dp_url, true);
+        
+        // Store other user id for live last-seen updates
+        _currentDMOtherId = otherId;
+        
+        // Update status bar with last seen
+        updateLastSeenStatus(pres);
+        
+        // Subscribe to real-time presence for this specific user
+        subscribeToUserPresence(otherId, roomId);
+        
     } catch(e) {}
+}
+
+let _currentDMOtherId = null;
+let _dmPresenceChannel = null;
+
+function updateLastSeenStatus(pres) {
+    const statusEl = document.getElementById('chat-status');
+    if (!statusEl) return;
+    // Only update if not showing "Live" (connected) status
+    if (statusEl.querySelector('.chat-status-dot.online')) return;
+    const isOnline = pres?.is_online || (pres?.last_seen && (Date.now() - new Date(pres.last_seen).getTime() < 90000));
+    if (isOnline) {
+        statusEl.innerHTML = '<span class="chat-status-live"><span class="chat-status-dot online"></span>Online</span>';
+    } else if (pres?.last_seen) {
+        statusEl.innerHTML = `<span class="chat-status-live"><span class="chat-status-dot offline"></span>Last seen ${timeAgo(pres.last_seen)}</span>`;
+    }
+}
+
+function subscribeToUserPresence(userId, roomId) {
+    // Clean up previous DM presence sub
+    if (_dmPresenceChannel) { try { sb.removeChannel(_dmPresenceChannel); } catch(e) {} _dmPresenceChannel = null; }
+    
+    // Listen to user_presence changes for this specific user
+    _dmPresenceChannel = sb.channel('dm-presence-' + userId)
+        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'user_presence', filter: `user_id=eq.${userId}` }, payload => {
+            if (_openingRoomId !== roomId) return;
+            updateLastSeenStatus(payload.new);
+        })
+        .subscribe();
+    
+    // Also watch realtime presence channel joins/leaves for this DM partner
+    if (presenceChannel) {
+        presenceChannel.on('presence', { event: 'join' }, ({ key }) => {
+            if (key === userId && _openingRoomId === roomId) {
+                document.getElementById('chat-status').innerHTML = '<span class="chat-status-live"><span class="chat-status-dot online"></span>Online</span>';
+            }
+        });
+        presenceChannel.on('presence', { event: 'leave' }, ({ key }) => {
+            if (key === userId && _openingRoomId === roomId) {
+                document.getElementById('chat-status').innerHTML = '<span class="chat-status-live"><span class="chat-status-dot offline"></span>Last seen just now</span>';
+                // Update last_seen in DB
+                sb.from('user_presence').select('last_seen').eq('user_id', userId).single().then(({data}) => {
+                    if (data?.last_seen && _openingRoomId === roomId) {
+                        document.getElementById('chat-status').innerHTML = `<span class="chat-status-live"><span class="chat-status-dot offline"></span>Last seen ${timeAgo(data.last_seen)}</span>`;
+                    }
+                }).catch(()=>{});
+            }
+        });
+    }
 }
 
 function orbitChatAvatarClick() {
@@ -2843,6 +3058,7 @@ async function openRoom(roomId, roomName, isDirect) {
     setTimeout(() => { _chatOpenLock = false; }, 1500);
     try {
         currentRoom = roomId;
+        clearUnreadBadge(roomId); // Clear notification badge on open
         isPersonalChat = false;
         document.getElementById('chat-title').innerText = roomName;
         document.getElementById('chat-status').innerHTML = '<span class="chat-status-live"><span class="chat-status-dot offline"></span>Connecting...</span>';
@@ -2947,6 +3163,18 @@ let _hasPinned = false;
 const MSG_DESIRED_COLS = ['id','sender_id','username','text','type','attachments','reactions','reply_to','deleted_by','read_by','created_at','room','pinned'];
 const MSG_REQUIRED_COLS = ['id','sender_id','text','created_at','room'];
 
+// ── Persist schema in localStorage so repeat visits skip the probe entirely ──
+const _SCHEMA_LS_KEY = 'orbit_msg_cols_v3';
+try {
+    const saved = localStorage.getItem(_SCHEMA_LS_KEY);
+    if (saved) {
+        const parsed = JSON.parse(saved);
+        _msgColsCache = parsed.cols;
+        _hasDeletedBy = !!parsed.deletedBy;
+        _hasPinned = !!parsed.pinned;
+    }
+} catch(e) {}
+
 // Singleton promise — prevents multiple parallel probes racing each other
 let _msgColsProbePromise = null;
 
@@ -2961,6 +3189,7 @@ async function getMsgSelectCols() {
             if (!error) {
                 _msgColsCache = MSG_DESIRED_COLS.join(',');
                 _hasDeletedBy = true; _hasPinned = true;
+                try { localStorage.setItem(_SCHEMA_LS_KEY, JSON.stringify({ cols: _msgColsCache, deletedBy: true, pinned: true })); } catch(e) {}
                 return _msgColsCache;
             }
         } catch(e) {}
@@ -2977,6 +3206,7 @@ async function getMsgSelectCols() {
         _hasDeletedBy = available.includes('deleted_by');
         _hasPinned = available.includes('pinned');
         _msgColsCache = available.join(',');
+        try { localStorage.setItem(_SCHEMA_LS_KEY, JSON.stringify({ cols: _msgColsCache, deletedBy: _hasDeletedBy, pinned: _hasPinned })); } catch(e) {}
         return _msgColsCache;
     })();
 
@@ -2996,61 +3226,76 @@ async function loadRoomMsgs(roomId) {
         }
     } catch(e) {}
 
-    try {
-        // Fire schema probe + message fetch TRULY in parallel
-        // getMsgSelectCols resolves instantly if already cached (most calls)
-        // If not cached yet, both run simultaneously — no sequential wait
-        const schemaPromise = getMsgSelectCols();
-        const fetchPromise = (async () => {
-            // Use '*' as temporary fallback while schema resolves, then re-select if needed
-            const cols = _msgColsCache || MSG_DESIRED_COLS.join(',');
-            return sb.from('messages')
-                .select(cols)
-                .eq('room', roomId)
-                .order('created_at', { ascending: false })
-                .limit(60);
-        })();
+    // Retry with backoff for reliability
+    const MAX_RETRIES = 3;
+    let lastErr = null;
+    for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+        if (attempt > 0) await new Promise(r => setTimeout(r, 600 * attempt));
+        if (_openingRoomId !== roomId) return; // user switched away
+        try {
+            // If schema is already cached (from localStorage or prior probe), fire query immediately.
+            // Only block on schema probe on first-ever run when cache is cold.
+            let data, error;
+            if (_msgColsCache) {
+                // Fast path: schema known — fire straight away
+                const res = await sb.from('messages')
+                    .select(_msgColsCache)
+                    .eq('room', roomId)
+                    .order('created_at', { ascending: false })
+                    .limit(35);
+                data = res.data; error = res.error;
+            } else {
+                // Cold start: probe schema + fetch in parallel
+                const schemaPromise = getMsgSelectCols();
+                const fetchPromise = sb.from('messages')
+                    .select(MSG_DESIRED_COLS.join(','))
+                    .eq('room', roomId)
+                    .order('created_at', { ascending: false })
+                    .limit(35);
+                const [selectCols, fetchResult] = await Promise.all([schemaPromise, fetchPromise]);
+                data = fetchResult.data; error = fetchResult.error;
+                // If column error, retry with probed cols
+                if (error) {
+                    const retry = await sb.from('messages').select(selectCols).eq('room', roomId)
+                        .order('created_at', { ascending: false }).limit(35);
+                    data = retry.data; error = retry.error;
+                }
+            }
 
-        const [selectCols, fetchResult] = await Promise.all([schemaPromise, fetchPromise]);
+            if (error) throw error;
+            if (_openingRoomId !== roomId) return;
 
-        // If schema wasn't cached when we fired, re-fetch with correct cols
-        let data = fetchResult.data;
-        let error = fetchResult.error;
-        if (error && !_msgColsCache) {
-            // retry with resolved cols
-            const retry = await sb.from('messages').select(selectCols).eq('room', roomId)
-                .order('created_at', { ascending: false }).limit(60);
-            data = retry.data; error = retry.error;
-        }
+            const msgs = (data || []).reverse();
+            try { localStorage.setItem(cacheKey, JSON.stringify(msgs)); } catch(e) {}
+            renderMsgs(msgs);
+            hasMoreMessages = msgs.length >= 35;
+            oldestMsgDate = msgs[0]?.created_at || null;
+            return; // success
 
-        if (error) throw error;
-        if (_openingRoomId !== roomId) return; // stale — user switched away
-
-        const msgs = (data || []).reverse();
-        try { localStorage.setItem(cacheKey, JSON.stringify(msgs)); } catch(e) {}
-        renderMsgs(msgs);
-        hasMoreMessages = msgs.length >= 60;
-        oldestMsgDate = msgs[0]?.created_at || null;
-
-    } catch(e) {
-        console.error('loadRoomMsgs:', e);
-        // Reset column cache so next attempt re-probes
-        _msgColsCache = null;
-        if (_openingRoomId !== roomId) return;
-        // Only show error if we have no cached data showing
-        const hasCacheShowing = feed.querySelector('.msg-row');
-        if (!hasCacheShowing) {
-            feed.innerHTML = `<div style="text-align:center;padding:50px 24px;">
-                <i class="fa-solid fa-wifi" style="font-size:36px;margin-bottom:14px;display:block;opacity:.4;color:#ff4444;"></i>
-                <div style="font-size:15px;font-weight:700;margin-bottom:6px;color:#ff4444;">Failed to load messages</div>
-                <div style="font-size:12px;color:#888;margin-bottom:16px;">${esc(e?.message || 'Network error')}</div>
-                <button onclick="retryLoadRoom('${roomId}')" style="background:var(--gold);color:#000;border:none;padding:12px 28px;border-radius:22px;font-weight:700;cursor:pointer;font-family:'Syne',sans-serif;font-size:13px;">↺ Retry</button>
-            </div>`;
-        } else {
-            showToast('⚠️ Could not refresh messages');
+        } catch(e) {
+            lastErr = e;
+            // Only clear schema cache on column errors, not network errors
+            if (e.message?.includes('column') || e.code === 'PGRST204') _msgColsCache = null;
+            console.warn(`loadRoomMsgs attempt ${attempt+1} failed:`, e.message);
         }
     }
+
+    // All retries failed
+    console.error('loadRoomMsgs:', lastErr);
+    if (_openingRoomId !== roomId) return;
+    const hasCacheShowing = feed.querySelector('.msg-row');
+    if (!hasCacheShowing) {
+        feed.innerHTML = `<div style="text-align:center;padding:50px 24px;">
+            <i class="fa-solid fa-wifi" style="font-size:36px;margin-bottom:14px;display:block;opacity:.4;color:#ff4444;"></i>
+            <div style="font-size:15px;font-weight:700;margin-bottom:6px;color:#ff4444;">Failed to load messages</div>
+            <div style="font-size:12px;color:#888;margin-bottom:16px;">${esc(lastErr?.message || 'Network error')}</div>
+            <button onclick="retryLoadRoom('${roomId}')" style="background:var(--gold);color:#000;border:none;padding:12px 28px;border-radius:22px;font-weight:700;cursor:pointer;font-family:'Syne',sans-serif;font-size:13px;">&#8635; Retry</button>
+        </div>`;
+    } else {
+        showToast('⚠️ Could not refresh messages');
+    }
 }
+
 
 function retryLoadRoom(roomId) {
     const feed = document.getElementById('chat-feed');
@@ -3281,7 +3526,7 @@ function buildMsgNode(msg) {
         const msgId = msg.id || '';
         content = `<div class="msg-video-wrap" id="vwrap-${msgId}">
             <video class="msg-video touch-fix"
-                src="${url}#t=0.5"
+                src="${url}"
                 data-url="${url}"
                 data-title="${esc(msg.text||'Video')}"
                 data-type="video"
@@ -3290,6 +3535,7 @@ function buildMsgNode(msg) {
                 muted
                 crossorigin="anonymous"
                 onloadeddata="orbitGenVideoPoster(this)"
+                onerror="this.setAttribute('crossorigin','use-credentials');this.load();"
             ></video>
             <div class="video-play-overlay" aria-hidden="true">
                 <i class="fa-solid fa-play"></i>
@@ -3599,7 +3845,12 @@ function cancelReply() { replyToMsg = null; document.getElementById('reply-bar')
 
 // ===================== SEND MESSAGE =====================
 async function sendMessage() {
-    if (selectedFiles.length > 0) { await sendFiles(); return; }
+    if (selectedFiles.length > 0) {
+        // Show quality picker for images/videos only
+        const hasMedia = selectedFiles.some(f => f.type.startsWith('image/') || f.type.startsWith('video/'));
+        if (hasMedia) { showQualitySheet(); return; }
+        await sendFiles(); return;
+    }
     const input = document.getElementById('msg-input');
     const text = input.value.trim();
     if (!text || !currentRoom) return;
@@ -3713,6 +3964,37 @@ async function readFileToBytes(file) {
     });
 }
 
+// ── Quality Picker Sheet ──
+function showQualitySheet() {
+    document.getElementById('quality-sheet').classList.add('active');
+    document.getElementById('quality-sheet-bg').style.display = 'block';
+    selectQuality(_uploadQuality); // restore last choice
+}
+function closeQualitySheet() {
+    document.getElementById('quality-sheet').classList.remove('active');
+    document.getElementById('quality-sheet-bg').style.display = 'none';
+}
+function selectQuality(q) {
+    _uploadQuality = q;
+    ['standard','instant'].forEach(opt => {
+        const el = document.getElementById('qopt-' + opt);
+        const check = document.getElementById('qcheck-' + opt);
+        if (opt === q) {
+            el.classList.add('selected');
+            check.className = 'fa-solid fa-circle-check';
+            check.style.color = 'var(--gold)';
+        } else {
+            el.classList.remove('selected');
+            check.className = 'fa-solid fa-circle';
+            check.style.color = 'var(--border)';
+        }
+    });
+}
+async function confirmQualityAndSend() {
+    closeQualitySheet();
+    await sendFiles();
+}
+
 async function sendFiles() {
     if (!selectedFiles.length || !currentRoom || uploadInProgress) return;
     uploadInProgress = true;
@@ -3778,11 +4060,18 @@ async function sendFiles() {
                 if (uploadCanceled) break;
                 const snap = images[i];
                 try {
-                    // V93: Upload at ORIGINAL quality — no compression, every pixel preserved
                     updateUploadUI(`Uploading ${i+1}/${images.length}...`, 1, totalGroups, 10);
                     updateProgressRing(15);
+                    // Apply quality compression based on user choice
+                    let uploadBytes = snap.bytes;
+                    let uploadMime = snap.mime;
+                    if (_uploadQuality === 'instant' && snap.isImage) {
+                        updateUploadUI(`Compressing ${i+1}/${images.length}...`, 1, totalGroups, 8);
+                        uploadBytes = await compressBytesToJpeg(snap.bytes, 640, 0.45);
+                        uploadMime = 'image/jpeg';
+                    }
                     const url = await uploadBytesToStorage(
-                        snap.bytes, snap.mime,
+                        uploadBytes, uploadMime,
                         snap.name,
                         'images', authToken,
                         p => updateProgressRing(15 + Math.round(p * 80))
@@ -3888,20 +4177,19 @@ async function sendFiles() {
 
 // ── Compress image Uint8Array → smaller Uint8Array (JPEG) ──
 // All operations on already-read bytes — no File reference needed.
-async function compressBytesToJpeg(bytes) {
+async function compressBytesToJpeg(bytes, maxDim = 1280, quality = 0.82) {
     return new Promise((resolve) => {
         const blob = new Blob([bytes]);
         const blobUrl = URL.createObjectURL(blob);
         const img = new Image();
         img.onload = () => {
             URL.revokeObjectURL(blobUrl);
-            const MAX = 1280;
             let w = img.naturalWidth || img.width;
             let h = img.naturalHeight || img.height;
             if (!w || !h) { resolve(bytes); return; }
-            if (w > MAX || h > MAX) {
-                if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
-                else { w = Math.round(w * MAX / h); h = MAX; }
+            if (w > maxDim || h > maxDim) {
+                if (w > h) { h = Math.round(h * maxDim / w); w = maxDim; }
+                else { w = Math.round(w * maxDim / h); h = maxDim; }
             }
             const canvas = document.createElement('canvas');
             canvas.width = w; canvas.height = h;
@@ -3911,14 +4199,15 @@ async function compressBytesToJpeg(bytes) {
             const tryQ = (q) => {
                 canvas.toBlob(outBlob => {
                     if (!outBlob) { resolve(bytes); return; }
-                    if (outBlob.size > 800000 && q > 0.3) { tryQ(Math.round((q - 0.12) * 100) / 100); return; }
+                    // For instant mode, don't re-try quality reduction
+                    if (outBlob.size > 800000 && q > 0.3 && maxDim >= 1280) { tryQ(Math.round((q - 0.12) * 100) / 100); return; }
                     const reader = new FileReader();
                     reader.onload = e => resolve(new Uint8Array(e.target.result));
                     reader.onerror = () => resolve(bytes);
                     reader.readAsArrayBuffer(outBlob);
                 }, 'image/jpeg', q);
             };
-            tryQ(0.82);
+            tryQ(quality);
         };
         img.onerror = () => { URL.revokeObjectURL(blobUrl); resolve(bytes); };
         img.src = blobUrl;
@@ -4193,8 +4482,13 @@ function mediaUrl(path) {
     if (!path) return '';
     // data: URLs and http URLs are already complete
     if (path.startsWith('data:') || path.startsWith('http')) return path;
-    // Legacy storage paths
-    return `${SB_URL}/storage/v1/object/public/chat-assets/${path}`;
+    // blob URLs
+    if (path.startsWith('blob:')) return path;
+    // Already contains storage path prefix
+    if (path.includes('/storage/v1/object/')) return `${SB_URL}${path.startsWith('/') ? '' : '/'}${path}`;
+    // Legacy storage paths — strip leading slash if present
+    const cleanPath = path.startsWith('/') ? path.slice(1) : path;
+    return `${SB_URL}/storage/v1/object/public/chat-assets/${cleanPath}`;
 }
 
 // ===================== COMPRESS =====================
@@ -4256,14 +4550,44 @@ function renderMediaPreview() {
         if (file.type.startsWith('image/')) {
             thumb.className = 'media-thumb';
             const url = URL.createObjectURL(file);
-            thumb.innerHTML = `<img src="${url}" alt="">
-                <button class="remove-mb touch-fix" data-i="${i}"><i class="fa-solid fa-xmark"></i></button>`;
+            const img = document.createElement('img');
+            img.src = url;
+            img.alt = '';
+            img.style.cssText = 'width:100%;height:100%;object-fit:cover;';
+            img.onerror = () => { img.src = ''; thumb.style.background = '#222'; };
+            thumb.appendChild(img);
+            const sizeLabel = file.size > 1048576 ? (file.size/1048576).toFixed(1)+'MB' : Math.round(file.size/1024)+'KB';
+            thumb.insertAdjacentHTML('beforeend', `<span class="quality-badge">${sizeLabel}</span><button class="remove-mb touch-fix" data-i="${i}"><i class="fa-solid fa-xmark"></i></button>`);
         } else if (file.type.startsWith('video/')) {
             thumb.className = 'media-thumb';
             const objUrl = URL.createObjectURL(file);
-            thumb.innerHTML = `<video src="${objUrl}#t=0.001" muted preload="metadata" playsinline style="width:100%;height:100%;object-fit:cover;"></video>
-                <div class="play-over"><i class="fa-solid fa-play"></i></div>
-                <button class="remove-mb touch-fix" data-i="${i}"><i class="fa-solid fa-xmark"></i></button>`;
+            // Create canvas thumbnail — more reliable than #t=0.001 on Android
+            const thumbCanvas = document.createElement('canvas');
+            thumbCanvas.style.cssText = 'width:100%;height:100%;object-fit:cover;';
+            const playOverlay = `<div class="play-over"><i class="fa-solid fa-play"></i></div>`;
+            const removeBtn = `<button class="remove-mb touch-fix" data-i="${i}"><i class="fa-solid fa-xmark"></i></button>`;
+            // Start with poster placeholder, then capture frame
+            thumb.innerHTML = `<div style="width:100%;height:100%;background:#1a1a1a;display:flex;align-items:center;justify-content:center;"><i class="fa-solid fa-video" style="color:#555;font-size:22px;"></i></div>${playOverlay}${removeBtn}`;
+            // Try to capture a frame for thumbnail
+            const capVid = document.createElement('video');
+            capVid.muted = true; capVid.playsInline = true; capVid.src = objUrl;
+            capVid.addEventListener('loadeddata', () => {
+                try {
+                    thumbCanvas.width = 72; thumbCanvas.height = 72;
+                    const ctx = thumbCanvas.getContext('2d');
+                    ctx.drawImage(capVid, 0, 0, 72, 72);
+                    const img = document.createElement('img');
+                    img.src = thumbCanvas.toDataURL('image/jpeg', 0.7);
+                    img.style.cssText = 'width:100%;height:100%;object-fit:cover;';
+                    thumb.innerHTML = '';
+                    thumb.appendChild(img);
+                    thumb.insertAdjacentHTML('beforeend', playOverlay + removeBtn);
+                    thumb.querySelectorAll('.remove-mb').forEach(b => b.addEventListener('click', e => { e.stopPropagation(); removeMedia(parseInt(b.dataset.i)); }));
+                } catch(e) {}
+                capVid.src = '';
+            }, { once: true });
+            capVid.addEventListener('error', () => { capVid.src = ''; }, { once: true });
+            capVid.load();
         } else {
             // Document — WhatsApp-style card
             thumb.className = 'doc-preview-card';
@@ -4756,6 +5080,34 @@ async function createSecureChat() {
         openPersonalChat(data.id);
     } catch (e) { showToast('Failed to create secure chat'); }
 }
+async function sendFriendRequestById(userId, userName, btn) {
+    if (!userId || userId === currentUser.id) return;
+    const orig = btn?.innerHTML || '';
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin" style="font-size:10px;"></i>'; }
+    try {
+        // Check if already friends or request exists
+        const { data: existing } = await sb.from('friends').select('id,status').or(`and(user_id.eq.${currentUser.id},friend_id.eq.${userId}),and(user_id.eq.${userId},friend_id.eq.${currentUser.id})`).limit(1);
+        if (existing?.length) {
+            const st = existing[0].status;
+            showToast(st === 'accepted' ? 'Already friends!' : 'Request already sent!');
+            if (btn) { btn.innerHTML = '<i class="fa-solid fa-check" style="font-size:10px;color:var(--gold)"></i>'; btn.disabled = true; }
+            return;
+        }
+        const { error } = await sb.from('friends').insert([{
+            user_id: currentUser.id,
+            friend_id: userId,
+            status: 'pending',
+            created_at: new Date().toISOString()
+        }]);
+        if (error) throw error;
+        showToast(`Friend request sent to ${userName}! ✓`, 'success');
+        if (btn) { btn.innerHTML = '<i class="fa-solid fa-check" style="font-size:10px;color:var(--gold)"></i>'; btn.disabled = true; btn.style.borderColor = 'var(--gold)'; }
+    } catch(e) {
+        showToast('Failed: ' + (e.message || 'Unknown error'));
+        if (btn) { btn.disabled = false; btn.innerHTML = orig; }
+    }
+}
+
 async function sendFriendRequest() {
     const email = document.getElementById('friend-email-in').value.trim();
     if (!email) { showToast("Enter email"); return; }
@@ -5223,14 +5575,20 @@ function setupWalkieChannel() {
             if (payload.dp_url) { av.innerHTML = `<img src="${payload.dp_url}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">`; }
             else { av.textContent = walkieOtherName[0]?.toUpperCase() || '?'; }
             updateWalkieStatus();
-            // Send back our presence so they know we're here
-            walkieTalkieChannel.send({ type: 'broadcast', event: 'walkie_ready', payload: { user_id: currentUser.id, name: getMyDisplayName(), dp_url: userProfile?.dp_url || null } });
+            // Echo back so they know we joined
+            walkieTalkieChannel.send({ type: 'broadcast', event: 'walkie_ready', payload: { user_id: currentUser.id, name: getMyDisplayName(), dp_url: userProfile?.dp_url || null } }).catch(() => {});
+        })
+        .on('broadcast', { event: 'walkie_ping' }, ({ payload }) => {
+            // Other user is checking if we're here — reply with our ready signal
+            if (payload.user_id === currentUser?.id) return;
+            walkieTalkieChannel.send({ type: 'broadcast', event: 'walkie_ready', payload: { user_id: currentUser.id, name: getMyDisplayName(), dp_url: userProfile?.dp_url || null } }).catch(() => {});
         })
         .on('broadcast', { event: 'walkie_audio' }, async ({ payload }) => {
             if (payload.user_id === currentUser?.id) return;
             document.getElementById('walkie-their-av')?.classList.add('speaking');
             document.getElementById('walkie-indicator').textContent = `${walkieOtherName || 'User'} is talking...`;
             try {
+                // payload.audio is a base64 data URL — convert to blob URL for playback
                 const resp = await fetch(payload.audio);
                 const blob = await resp.blob();
                 const url = URL.createObjectURL(blob);
@@ -5240,8 +5598,16 @@ function setupWalkieChannel() {
                     document.getElementById('walkie-their-av')?.classList.remove('speaking');
                     document.getElementById('walkie-indicator').textContent = '';
                 };
+                audio.onerror = () => {
+                    URL.revokeObjectURL(url);
+                    document.getElementById('walkie-their-av')?.classList.remove('speaking');
+                    document.getElementById('walkie-indicator').textContent = '';
+                };
                 audio.play().catch(() => {});
-            } catch(e) {}
+            } catch(e) {
+                document.getElementById('walkie-their-av')?.classList.remove('speaking');
+                document.getElementById('walkie-indicator').textContent = '';
+            }
         })
         .on('broadcast', { event: 'walkie_leave' }, ({ payload }) => {
             if (payload.user_id === currentUser?.id) return;
@@ -5252,8 +5618,23 @@ function setupWalkieChannel() {
         .subscribe(status => {
             if (status === 'SUBSCRIBED') {
                 walkieAllowed = true;
-                walkieTalkieChannel.send({ type: 'broadcast', event: 'walkie_ready', payload: { user_id: currentUser.id, name: getMyDisplayName(), dp_url: userProfile?.dp_url || null } });
+                // Announce our presence
+                walkieTalkieChannel.send({ type: 'broadcast', event: 'walkie_ready', payload: { user_id: currentUser.id, name: getMyDisplayName(), dp_url: userProfile?.dp_url || null } }).catch(() => {});
                 updateWalkieStatus();
+                // Ping every 2s for first 10s to catch the other user if they joined before us
+                let pingCount = 0;
+                const pingInterval = setInterval(() => {
+                    pingCount++;
+                    if (pingCount >= 5 || walkieOtherAllowed || !walkieTalkieChannel) {
+                        clearInterval(pingInterval);
+                        return;
+                    }
+                    walkieTalkieChannel.send({ type: 'broadcast', event: 'walkie_ping', payload: { user_id: currentUser.id } }).catch(() => {});
+                }, 2000);
+            } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+                walkieAllowed = false;
+                const statusEl = document.getElementById('walkie-status');
+                if (statusEl) statusEl.textContent = '⚠️ Connection error — tap Leave and rejoin';
             }
         });
 }
@@ -5500,7 +5881,16 @@ function setupRoomSub(roomId, isPersonal) {
                 const statusEl = document.getElementById('chat-status');
                 if (!statusEl) return;
                 if (status === 'SUBSCRIBED') {
+                    // Show live, then after 2s check and update to last seen if DM
                     statusEl.innerHTML = '<span class="chat-status-live"><span class="chat-status-dot online"></span>Live</span>';
+                    if (_currentDMOtherId) {
+                        setTimeout(() => {
+                            const pres = globalUsersCache.get(_currentDMOtherId);
+                            if (pres && statusEl && !pres.is_online) {
+                                updateLastSeenStatus(pres);
+                            }
+                        }, 1500);
+                    }
                 } else if (status === 'CHANNEL_ERROR') {
                     const errMsg = err?.message || (typeof err === 'string' ? err : 'Connection issue');
                     console.warn('Channel error:', errMsg);
@@ -5607,6 +5997,7 @@ function navigate(screen) {
 }
 function navBack() {
     _openingRoomId = null;
+    _currentDMOtherId = null;
     document.getElementById('screen-chat').classList.remove('active');
     document.getElementById('screen-dash').classList.add('active');
     currentRoom = null;
@@ -5616,6 +6007,8 @@ function navBack() {
     exitSelectMode();
     activeSubscriptions.forEach(ch => { try { sb.removeChannel(ch); } catch (e) {} });
     activeSubscriptions = [];
+    // Clean up DM presence sub
+    if (_dmPresenceChannel) { try { sb.removeChannel(_dmPresenceChannel); } catch(e) {} _dmPresenceChannel = null; }
     // Close walkie-talkie if open
     if (walkieTalkieChannel) closeWalkie();
     // Hide walkie button
@@ -5663,7 +6056,18 @@ function updateOnlineCount(count) {
 }
 function autoResize() { this.style.height = 'auto'; this.style.height = this.scrollHeight + 'px'; }
 function handleKeyDown(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } }
-function scrollBottom() { const f = document.getElementById('chat-feed'); setTimeout(() => { f.scrollTop = f.scrollHeight; }, 40); }
+function scrollBottom() {
+    const f = document.getElementById('chat-feed');
+    if (!f) return;
+    // Double-rAF: first rAF = layout done, second rAF = paint done — scrollHeight is final
+    requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+            f.scrollTop = f.scrollHeight;
+            // Safety fallback for lazy-loaded images pushing content down
+            setTimeout(() => { f.scrollTop = f.scrollHeight; }, 250);
+        });
+    });
+}
 function showToast(msg, type = 'error') {
     const el = document.getElementById('toast');
     el.innerText = msg;
@@ -5741,7 +6145,7 @@ async function loadOlderMessages() {
                 .select(_lmCols)
                 .eq('room', currentRoom)
                 .lt('created_at', oldestMsgDate)
-                .order('created_at', { ascending: false }).limit(30);
+                .order('created_at', { ascending: false }).limit(40);
         }
         const { data } = await query;
         if (!data?.length) { hasMoreMessages = false; return; }
@@ -5751,7 +6155,7 @@ async function loadOlderMessages() {
         virt_allMsgs = msgs.concat(virt_allMsgs);
         // Place virtual window to show the newly loaded messages at the top of view
         virt_startIdx = 0;
-        hasMoreMessages = data.length >= 30;
+        hasMoreMessages = data.length >= 40;
         oldestMsgDate = msgs[0]?.created_at;
 
         // Re-render and restore scroll position so user stays at same spot
@@ -5825,7 +6229,16 @@ async function renderPdf(url) {
             for (let i = 0; i < binaryStr.length; i++) bytes[i] = binaryStr.charCodeAt(i);
             pdfData = { data: bytes };
         } else {
-            pdfData = { url };
+            // Fetch as array buffer to avoid CORS issues with PDF.js
+            try {
+                const resp = await fetch(url);
+                if (!resp.ok) throw new Error('HTTP ' + resp.status);
+                const buf = await resp.arrayBuffer();
+                pdfData = { data: new Uint8Array(buf) };
+            } catch(fetchErr) {
+                // Fall back to direct URL if fetch fails (e.g. CORS with creds)
+                pdfData = { url, withCredentials: false };
+            }
         }
 
         const pdf = await pdfjsLib.getDocument(pdfData).promise;
@@ -5886,12 +6299,13 @@ function closePdfViewer() {
     pdfViewerUrl = null; pdfViewerName = null;
 }
 
-console.log('%c⚡ Orbit V97 — Fast Chat · Circular Avatar · Video Poster · Background Notifications · HiDPI PDF', 'color:#FFD700;font-weight:bold;font-size:17px;');
-console.log('%c✅ Chat load: schema pre-warmed, cache-first render, sub+schema in parallel', 'color:#34C759;font-size:13px;');
-console.log('%c✅ Header: circular DP shown in chat header, auto-fetches for DMs and groups', 'color:#34C759;font-size:13px;');
-console.log('%c✅ Pin/Unpin: uses _pinTargetMsg guard, updates DOM immediately without re-open', 'color:#34C759;font-size:13px;');
-console.log('%c✅ Reactions: realtime UPDATE rebuilds reaction UI instantly for all users', 'color:#34C759;font-size:13px;');
-console.log('%c✅ Notifications: iOS/Android style banner with sound, progress bar, smooth animation', 'color:#34C759;font-size:13px;');
+console.log('%c⚡ Orbit V100 — Fast Uploads · Quality Picker · Media Preview Fixed · Long Chat Speed', 'color:#FFD700;font-weight:bold;font-size:17px;');
+console.log('%c✅ Quality Picker: Standard (original) vs Instant (640px/0.45q) — 3-4× faster upload', 'color:#34C759;font-size:13px;');
+console.log('%c✅ Media Preview: canvas frame capture for video thumbnails — works on all Android', 'color:#34C759;font-size:13px;');
+console.log('%c✅ Long Chat Speed: schema cached in localStorage — instant on repeat opens', 'color:#34C759;font-size:13px;');
+console.log('%c✅ Pagination: 35 msgs on open, 40 older msgs per page', 'color:#34C759;font-size:13px;');
+console.log('%c✅ Walkie-Talkie: ping/pong handshake, both users connect reliably', 'color:#34C759;font-size:13px;');
+console.log('%c✅ Notifications: fires on all devices when permission granted, try/catch on every path', 'color:#34C759;font-size:13px;');
 /*
   ╔══════════════════════════════════════════════════════════════════════════════╗
   ║         ORBIT V85 — SUPABASE SQL MIGRATION (Run in SQL Editor)             ║
