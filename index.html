@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="theme-color" content="#000000">
-    <title>Orbit Pro | Solar OS V97</title>
+    <title>Orbit Pro | Solar OS V100.3</title>
     
     <!-- Preconnect for speed -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -20,8 +20,16 @@
     <!-- Cropper CSS -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css">
     <!-- Non-critical scripts deferred -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js" defer></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script>
+        // Initialize PDF.js worker immediately after script loads
+        if (typeof pdfjsLib !== 'undefined') {
+            pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        }
+    </script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js" defer></script>
+    <!-- SheetJS for Excel preview -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
     <style>
         :root {
@@ -478,7 +486,23 @@
         .doc-prev-meta{font-size:10px;color:var(--text-sec);margin-top:2px;}
         .remove-mb-doc{position:absolute;top:5px;right:5px;background:rgba(220,0,0,.9);color:#fff;border:none;width:18px;height:18px;border-radius:50%;font-size:9px;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:2;}
 
-        /* GROUP ACTIONS */
+        /* STORAGE SUGGESTION MODAL */
+        .storage-modal{position:absolute;inset:0;background:rgba(0,0,0,.88);z-index:900;display:none;align-items:flex-end;justify-content:center;}
+        .storage-modal.active{display:flex;animation:fadeIn .2s;}
+        .storage-box{width:100%;background:var(--surface);border-radius:22px 22px 0 0;padding:24px 20px 32px;border-top:1px solid var(--border);max-height:80vh;overflow-y:auto;}
+        .storage-title{font-family:'Syne',sans-serif;font-weight:800;font-size:18px;margin-bottom:6px;color:var(--gold);}
+        .storage-desc{font-size:13px;color:var(--text-sec);margin-bottom:18px;line-height:1.6;}
+        .storage-steps{display:flex;flex-direction:column;gap:10px;margin-bottom:20px;}
+        .storage-step{display:flex;align-items:flex-start;gap:12px;padding:12px 14px;background:var(--surface-light);border-radius:12px;border:1px solid var(--border);}
+        .storage-step-num{width:24px;height:24px;border-radius:50%;background:var(--gold);color:#000;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;}
+        .storage-step-text{font-size:12px;color:var(--text);line-height:1.5;}
+        .storage-step-text strong{color:var(--gold);}
+        .storage-copy-box{background:#111;border:1px solid var(--gold-dim);border-radius:10px;padding:10px 12px;font-size:11px;color:#ccc;font-family:monospace;word-break:break-all;margin-top:6px;position:relative;}
+        .storage-copy-btn{position:absolute;top:6px;right:6px;background:var(--gold);color:#000;border:none;border-radius:6px;padding:3px 8px;font-size:10px;font-weight:800;cursor:pointer;}
+        .storage-note{font-size:11px;color:var(--text-sec);text-align:center;margin-top:12px;line-height:1.5;}
+
+        /* UPLOAD SIZE BADGE on preview */
+        .upload-size-warn{position:absolute;bottom:4px;left:4px;background:rgba(255,68,68,0.9);color:#fff;font-size:8px;font-weight:800;padding:2px 5px;border-radius:5px;}
         .group-actions{margin-left:auto;display:flex;gap:8px;}
         .group-del-btn{background:none;border:none;color:#ff4444;font-size:16px;cursor:pointer;padding:5px;border-radius:50%;}
         .group-del-btn:active{background:rgba(255,68,68,.15);}
@@ -585,6 +609,38 @@
         .gold-tick{display:inline-flex;align-items:center;margin-left:3px;vertical-align:middle;flex-shrink:0;}
         .gold-tick svg{width:13px;height:13px;animation:gold-shimmer 2s ease-in-out infinite;}
         .c-name-wrap{display:flex;align-items:center;gap:0;}
+
+        /* ====== EXCEL / PPTX VIEWER ====== */
+        #xlsx-viewer-modal, #pptx-viewer-modal {
+            position:absolute;inset:0;background:#1a1a1a;z-index:1500;display:none;flex-direction:column;
+        }
+        .xlsx-table-wrap { overflow:auto; flex:1; padding:12px; }
+        .xlsx-table { border-collapse:collapse; font-size:12px; font-family:'DM Sans',sans-serif; color:var(--text); white-space:nowrap; }
+        .xlsx-table th { background:#2a2a2a; color:var(--gold); font-weight:700; padding:8px 12px; border:1px solid #333; position:sticky; top:0; z-index:2; font-size:11px; }
+        .xlsx-table td { padding:7px 12px; border:1px solid #2a2a2a; font-size:12px; max-width:240px; overflow:hidden; text-overflow:ellipsis; }
+        .xlsx-table tr:nth-child(even) td { background:rgba(255,255,255,0.03); }
+        .xlsx-sheet-tabs { display:flex; gap:6px; padding:8px 12px 0; overflow-x:auto; scrollbar-width:none; flex-shrink:0; border-bottom:1px solid var(--border); }
+        .xlsx-sheet-tabs::-webkit-scrollbar { display:none; }
+        .xlsx-tab { background:var(--surface-light); border:1px solid var(--border); border-radius:8px 8px 0 0; padding:6px 14px; font-size:11px; font-weight:700; color:var(--text-sec); cursor:pointer; white-space:nowrap; transition:.15s; }
+        .xlsx-tab.active { background:var(--gold); color:#000; border-color:var(--gold); }
+
+        /* PPTX Viewer */
+        .pptx-slide-list { flex:1; overflow-y:auto; padding:12px; display:flex; flex-direction:column; gap:10px; align-items:center; }
+        .pptx-slide { background:#fff; border-radius:10px; width:100%; max-width:380px; box-shadow:0 2px 16px rgba(0,0,0,0.5); overflow:hidden; position:relative; }
+        .pptx-slide-num { position:absolute; top:6px; right:8px; font-size:10px; color:#888; background:rgba(0,0,0,0.4); padding:2px 7px; border-radius:10px; }
+        .pptx-no-preview { display:flex; flex-direction:column; align-items:center; justify-content:center; padding:60px 30px; text-align:center; }
+
+        /* ====== SHARE APP MODAL ====== */
+        #modal-share-app { z-index:999; }
+        .share-app-card { background:var(--surface); border-radius:16px; padding:20px; margin-bottom:14px; border:1px solid var(--border); text-align:center; }
+        .share-orbit-logo { width:68px; height:68px; border-radius:18px; background:var(--gold); display:flex; align-items:center; justify-content:center; margin:0 auto 14px; }
+        .share-link-box { display:flex; gap:8px; align-items:center; background:var(--surface-light); border:1px solid var(--border); border-radius:12px; padding:10px 14px; margin-bottom:14px; }
+        .share-link-txt { flex:1; font-size:12px; color:var(--text-sec); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+        .share-copy-btn { background:var(--gold); color:#000; border:none; border-radius:8px; padding:7px 14px; font-size:12px; font-weight:700; cursor:pointer; white-space:nowrap; }
+        .share-platforms { display:flex; gap:10px; justify-content:center; flex-wrap:wrap; margin-bottom:4px; }
+        .share-platform-btn { display:flex; flex-direction:column; align-items:center; gap:5px; background:var(--surface-light); border:1px solid var(--border); border-radius:12px; padding:10px 14px; cursor:pointer; transition:.15s; min-width:64px; }
+        .share-platform-btn:active { transform:scale(.95); }
+        .share-platform-btn span { font-size:10px; color:var(--text-sec); font-weight:600; }
     </style>
 </head>
 <body>
@@ -723,8 +779,11 @@
         <div class="contact-list hide" id="tab-groups"><div style="padding:12px 18px 5px;display:flex;justify-content:space-between;align-items:center;"><span style="font-size:12px;color:var(--text-sec);font-weight:700;letter-spacing:.5px;">GROUPS</span><button class="touch-fix" style="background:var(--gold);color:#000;border:none;padding:5px 12px;border-radius:15px;font-size:11px;font-weight:700;cursor:pointer;font-family:'Syne',sans-serif;" id="new-group-btn"><i class="fa-solid fa-users"></i> New</button></div><div id="groups-list"></div></div>
         <div class="contact-list hide" id="tab-global"><div style="padding:12px 18px 5px;display:flex;justify-content:space-between;align-items:center;"><span style="font-size:12px;color:var(--text-sec);font-weight:700;letter-spacing:.5px;">GLOBAL</span><div class="online-pill" id="global-pill"><i class="fa-solid fa-circle"></i><span id="global-count">0</span> online</div></div><div id="global-list"></div></div>
         <div class="contact-list hide" id="tab-notes"><div style="padding:12px 18px 5px;display:flex;justify-content:space-between;align-items:center;"><span style="font-size:12px;color:var(--text-sec);font-weight:700;letter-spacing:.5px;">NOTES</span><button class="touch-fix" style="background:var(--gold);color:#000;border:none;padding:5px 12px;border-radius:15px;font-size:11px;font-weight:700;cursor:pointer;font-family:'Syne',sans-serif;" id="new-note-btn"><i class="fa-solid fa-plus"></i> New</button></div><div id="notes-list" style="padding:10px;"></div></div>
-        <div class="app-footer">Orbit Pro · Solar OS V97<br>Developed by <strong style="color:var(--gold);">Rivaldo Rodrigues</strong><br>
-            <button onclick="document.getElementById('modal-payment').classList.add('active');orbitShowQr();" style="margin-top:8px;background:rgba(255,215,0,0.12);border:1px solid rgba(255,215,0,0.3);border-radius:20px;padding:5px 16px;font-size:11px;color:var(--gold);font-weight:700;cursor:pointer;">❤️ Support Developer</button>
+        <div class="app-footer">Orbit Pro · Solar OS V100.3<br>Developed by <strong style="color:var(--gold);">Rivaldo Rodrigues</strong><br>
+            <div style="display:flex;gap:8px;justify-content:center;margin-top:8px;flex-wrap:wrap;">
+                <button onclick="document.getElementById('modal-payment').classList.add('active');orbitShowQr();" style="background:rgba(255,215,0,0.12);border:1px solid rgba(255,215,0,0.3);border-radius:20px;padding:5px 16px;font-size:11px;color:var(--gold);font-weight:700;cursor:pointer;">❤️ Support Developer</button>
+                <button onclick="openShareAppModal();" style="background:rgba(0,230,118,0.1);border:1px solid rgba(0,230,118,0.3);border-radius:20px;padding:5px 16px;font-size:11px;color:#00E676;font-weight:700;cursor:pointer;">🔗 Share Orbit</button>
+            </div>
         </div>
     </div>
 
@@ -1047,7 +1106,46 @@
     <input type="file" id="inp-camera" accept="image/*" capture="environment" hidden>
     <input type="file" id="inp-video" accept="video/*,video/mp4,video/webm,video/quicktime,video/3gpp,video/avi" hidden>
     <input type="file" id="inp-video-record" accept="video/*" capture="environment" hidden>
-    <input type="file" id="inp-document" accept=".pdf,.doc,.docx,.txt,.rtf,.zip,.xls,.xlsx,.ppt,.pptx,.csv,.odt" multiple hidden>
+    <input type="file" id="inp-document" accept=".pdf,.doc,.docx,.txt,.rtf,.zip,.rar,.7z,.xls,.xlsx,.ods,.ppt,.pptx,.odp,.odt,.csv,.json,.xml,.html,.mp3,.wav,.ogg,.mp4,.webm,.mov,.avi,.mkv" multiple hidden>
+
+    <!-- STORAGE SETUP GUIDE MODAL -->
+    <div id="modal-storage-setup" class="storage-modal">
+        <div class="storage-box">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+                <div class="storage-title">📦 Enable Large File Uploads</div>
+                <button onclick="closeStorageModal()" style="background:none;border:none;color:var(--text-sec);font-size:22px;cursor:pointer;">✕</button>
+            </div>
+            <div class="storage-desc" id="storage-modal-desc">Set up Supabase Storage to send videos, large images and documents of any size.</div>
+            <div class="storage-steps">
+                <div class="storage-step">
+                    <div class="storage-step-num">1</div>
+                    <div class="storage-step-text">Go to your <strong>Supabase Dashboard</strong> → <strong>Storage</strong> → Create a new bucket named <strong>chat-assets</strong> (set to <strong>Public</strong>)</div>
+                </div>
+                <div class="storage-step">
+                    <div class="storage-step-num">2</div>
+                    <div class="storage-step-text">Go to <strong>Storage → Policies</strong> → Add these two policies for the <strong>chat-assets</strong> bucket:</div>
+                </div>
+                <div class="storage-step" style="flex-direction:column;gap:8px;">
+                    <div style="font-size:11px;font-weight:700;color:var(--gold);">INSERT policy (allows upload):</div>
+                    <div class="storage-copy-box">
+                        CREATE POLICY "Allow authenticated uploads" ON storage.objects FOR INSERT TO authenticated WITH CHECK (bucket_id = 'chat-assets');
+                        <button class="storage-copy-btn touch-fix" onclick="orbitCopySQL(this,'INSERT')">Copy</button>
+                    </div>
+                    <div style="font-size:11px;font-weight:700;color:var(--gold);margin-top:6px;">SELECT policy (allows view):</div>
+                    <div class="storage-copy-box">
+                        CREATE POLICY "Allow public read" ON storage.objects FOR SELECT USING (bucket_id = 'chat-assets');
+                        <button class="storage-copy-btn touch-fix" onclick="orbitCopySQL(this,'SELECT')">Copy</button>
+                    </div>
+                </div>
+                <div class="storage-step">
+                    <div class="storage-step-num">3</div>
+                    <div class="storage-step-text">Run both SQL commands in <strong>Supabase → SQL Editor</strong> → Refresh Orbit → Files will upload instantly! ✅</div>
+                </div>
+            </div>
+            <div class="storage-note">📌 This is a one-time setup. Supabase free tier gives you <strong>1GB storage</strong> — enough for hundreds of videos.</div>
+            <button onclick="closeStorageModal()" style="width:100%;margin-top:16px;background:var(--gold);color:#000;border:none;padding:14px;border-radius:14px;font-weight:800;font-size:14px;cursor:pointer;font-family:'Syne',sans-serif;">Got it</button>
+        </div>
+    </div>
 
     <!-- PDF VIEWER MODAL -->
     <div id="pdf-viewer-modal" style="position:absolute;inset:0;background:#1a1a1a;z-index:1500;display:none;flex-direction:column;">
@@ -1237,8 +1335,8 @@
             <div style="padding:28px 20px 16px;text-align:center;">
                 <div style="width:68px;height:68px;border-radius:18px;background:var(--gold);display:flex;align-items:center;justify-content:center;margin:0 auto 12px;"><i class="fa-solid fa-satellite-dish" style="font-size:30px;color:#000;"></i></div>
                 <div style="font-family:'Syne',sans-serif;font-weight:800;font-size:22px;">Orbit Pro</div>
-                <div style="font-size:12px;color:var(--text-sec);margin-top:4px;">Solar OS V92 · Next-Gen Messenger</div>
-                <span class="ver-chip">Version 92.0 · Made with ❤️ in India</span>
+                <div style="font-size:12px;color:var(--text-sec);margin-top:4px;">Solar OS V100.3 · Next-Gen Messenger</div>
+                <span class="ver-chip">Version 100.3 · Made with ❤️ in India</span>
             </div>
 
             <div class="set-section">FEATURES</div>
@@ -1253,26 +1351,36 @@
             <div style="height:1px;background:var(--border);margin:16px 20px;"></div>
             <div class="set-section">TERMS &amp; CONDITIONS</div>
             <div class="policy-box">
-                <h4>1. Acceptance</h4>By using Orbit Pro you agree to these terms. Orbit Pro is for personal and professional messaging.
-                <h4>2. User Conduct</h4>Do not use Orbit Pro for spam, illegal content, hate speech, or threats. Violations lead to account termination.
-                <h4>3. Content Ownership</h4>You own your content. You grant Orbit Pro a limited license to display it within the platform.
-                <h4>4. Service</h4>We aim for 99% uptime but cannot guarantee uninterrupted service.
-                <h4>5. Security</h4>Keep your credentials secure. Do not share your password.
+                <h4>1. Acceptance</h4>By using Orbit Pro (Version 100.0, Solar OS V100) you agree to these terms. Orbit Pro is intended for personal and professional messaging. Continued use of the app constitutes acceptance of the latest version of these terms.
+                <h4>2. User Conduct</h4>Do not use Orbit Pro for spam, illegal content, hate speech, violence, harassment, or threats. Violations lead to immediate account termination without notice.
+                <h4>3. Content Ownership</h4>You own your content. You grant Orbit Pro a limited, non-exclusive license to display and transmit it within the platform for the purpose of providing the service. We do not claim ownership of your messages, media, or files.
+                <h4>4. Media &amp; File Uploads</h4>You may send images, videos, audio, and documents through Orbit Pro. By uploading media you confirm you have the right to share it. Do not share illegal, copyrighted, or harmful content. Large media files (over 3MB) require Supabase Storage to be configured — without it, files are stored as compressed inline data and may fail if oversized. The developer is not liable for media loss during upload failures.
+                <h4>5. Premium Badges &amp; Paid Features</h4>Orbit Pro offers optional voluntary contributions via UPI. Contributors receive a verified badge (Bronze 🥉, Silver 🥈, or Gold ✨) displayed on their profile and in the Global, Friends, and chat lists — visible to all users. Badges are assigned manually by the developer after confirming payment. There are no automatic refunds. Premium status (Gold tier) unlocks additional features including video sharing. Badges are cosmetic and service-enhancing but do not guarantee any specific uptime or feature availability.
+                <h4>6. Service &amp; Uptime</h4>We aim for 99% uptime but cannot guarantee uninterrupted service. Scheduled or emergency maintenance may temporarily affect availability. We are not liable for data loss due to service interruptions.
+                <h4>7. Security &amp; Account</h4>Keep your credentials secure. Do not share your password. You are responsible for all activity under your account. Report any unauthorized access to the developer immediately.
+                <h4>8. Changes to Terms</h4>These terms may be updated as the app evolves. The current version is always displayed in Settings. Continued use after updates constitutes acceptance of the revised terms.
+                <h4>9. Governing Law</h4>These terms are governed by the laws of India. Any disputes shall be subject to the jurisdiction of courts in India.
             </div>
 
             <div style="height:1px;background:var(--border);margin:8px 20px;"></div>
             <div class="set-section">PRIVACY POLICY</div>
             <div class="policy-box">
-                <h4>Data We Collect</h4>Email, display name, profile photo, and messages to provide the service. We do not sell your data.
+                <h4>Data We Collect</h4>Email, display name, profile photo, messages, and premium tier status to provide the service. We do not sell your data to third parties.
                 <h4>Storage</h4>All data stored on Supabase servers with encryption at rest and TLS in transit.
-                <h4>Messages</h4>Stored for delivery and history. We do not read personal messages.
-                <h4>Local Storage</h4>Used to cache your profile for faster loading. No third-party tracking.
-                <h4>Your Rights</h4>You can request account deletion by contacting the developer.
+                <h4>Messages &amp; Media</h4>Stored for delivery and history. We do not read personal messages. Media files are stored in Supabase Storage or as compressed inline data when storage is not configured.
+                <h4>Premium Badges</h4>Your premium tier (Bronze/Silver/Gold) is stored in your user profile and is visible to all other Orbit Pro users in the Global, Friends, and chat list views. This is intentional — it's your public recognition for supporting the app.
+                <h4>Local Storage</h4>Used to cache your profile and chat history for faster loading. No third-party tracking or advertising cookies.
+                <h4>Your Rights</h4>You can request account deletion by contacting the developer. Upon deletion, your messages, profile, and media will be removed from our servers.
                 <h4>Contact</h4>rivaldo.a.rodrigues@oksbi · Orbit Pro, India
             </div>
 
             <div style="height:1px;background:var(--border);margin:8px 20px;"></div>
-            <div class="set-section">SUPPORT</div>
+            <div class="set-section">SHARE &amp; SUPPORT</div>
+            <div class="set-item touch-fix" onclick="openShareAppModal()">
+                <div class="set-icon">🔗</div>
+                <div class="set-info"><div class="set-title">Invite Friends to Orbit</div><div class="set-desc">Share app link via WhatsApp, Telegram, or any app</div></div>
+                <i class="fa-solid fa-chevron-right" style="color:var(--text-sec);font-size:12px;"></i>
+            </div>
             <div class="set-item touch-fix" onclick="document.getElementById('modal-payment').classList.add('active');orbitShowQr();">
                 <div class="set-icon">❤️</div>
                 <div class="set-info"><div class="set-title">Support the Developer</div><div class="set-desc">Pay via UPI · rivaldo.a.rodrigues@oksbi</div></div>
@@ -1299,6 +1407,74 @@
         </div>
     </div>
 
+    <!-- SHARE APP MODAL -->
+    <div id="modal-share-app" class="modal-overlay">
+        <div class="modal-box" style="max-width:360px;padding:20px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+                <div class="modal-title" style="margin:0;">🔗 Share Orbit Pro</div>
+                <button onclick="document.getElementById('modal-share-app').classList.remove('active')" style="background:none;border:none;color:var(--text-sec);font-size:22px;cursor:pointer;line-height:1;">✕</button>
+            </div>
+            <div class="share-app-card">
+                <div class="share-orbit-logo">
+                    <svg width="38" height="38" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="40" cy="40" r="36" stroke="#000" stroke-width="2.5" fill="none" opacity="0.35"/>
+                        <ellipse cx="40" cy="40" rx="36" ry="14" stroke="#000" stroke-width="2" fill="none" transform="rotate(-25 40 40)" opacity="0.65"/>
+                        <circle cx="40" cy="40" r="10" fill="#000"/>
+                        <circle cx="40" cy="40" r="6" fill="#FFD700"/>
+                    </svg>
+                </div>
+                <div style="font-family:'Syne',sans-serif;font-weight:800;font-size:16px;margin-bottom:4px;">Orbit Pro</div>
+                <div style="font-size:12px;color:var(--text-sec);">Solar OS V100.3 · Real-time messenger</div>
+            </div>
+            <div class="share-link-box">
+                <span class="share-link-txt" id="share-app-url">https://orbit.app</span>
+                <button class="share-copy-btn" onclick="orbitCopyShareLink()">Copy</button>
+            </div>
+            <div class="share-platforms">
+                <div class="share-platform-btn touch-fix" onclick="orbitShareVia('whatsapp')">
+                    <svg width="28" height="28" viewBox="0 0 48 48" fill="none"><circle cx="24" cy="24" r="24" fill="#25D366"/><path d="M24 10C16.27 10 10 16.27 10 24c0 2.53.68 4.9 1.85 6.94L10 38l7.31-1.82A14 14 0 0024 38c7.73 0 14-6.27 14-14S31.73 10 24 10zm0 25.5c-2.18 0-4.24-.57-6.03-1.57l-.43-.26-4.34 1.08 1.1-4.22-.28-.45A11.46 11.46 0 0112.5 24c0-6.35 5.15-11.5 11.5-11.5S35.5 17.65 35.5 24 30.35 35.5 24 35.5zm6.3-8.6c-.35-.18-2.07-1.02-2.39-1.14-.32-.11-.55-.18-.78.18-.23.35-.9 1.14-1.1 1.37-.2.23-.41.26-.76.09-.35-.18-1.46-.54-2.78-1.72-1.03-.92-1.72-2.05-1.92-2.4-.2-.35-.02-.54.15-.71.16-.16.35-.41.52-.62.18-.2.23-.35.35-.58.11-.23.06-.44-.02-.62-.09-.18-.78-1.88-1.07-2.57-.28-.68-.56-.58-.78-.59h-.66c-.23 0-.59.09-.9.44-.3.35-1.16 1.13-1.16 2.75 0 1.62 1.19 3.19 1.36 3.41.18.23 2.36 3.6 5.7 5.05.8.34 1.42.55 1.9.7.8.25 1.53.22 2.1.13.64-.1 1.97-.8 2.25-1.57.28-.77.28-1.43.2-1.57-.09-.14-.31-.23-.66-.41z" fill="#fff"/></svg>
+                    <span>WhatsApp</span>
+                </div>
+                <div class="share-platform-btn touch-fix" onclick="orbitShareVia('telegram')">
+                    <svg width="28" height="28" viewBox="0 0 48 48" fill="none"><circle cx="24" cy="24" r="24" fill="#2CA5E0"/><path d="M10.85 23.36l25.3-9.76c1.17-.43 2.2.29 1.82 2.08l-4.31 20.29c-.32 1.43-1.16 1.78-2.35 1.1l-6.51-4.8-3.14 3.02c-.35.35-.64.64-1.3.64l.46-6.58 11.96-10.81c.52-.46-.11-.72-.8-.25L15.17 28.16l-6.31-1.97c-1.37-.43-1.4-1.37.29-2.03z" fill="#fff"/></svg>
+                    <span>Telegram</span>
+                </div>
+                <div class="share-platform-btn touch-fix" onclick="orbitShareVia('native')">
+                    <div style="width:28px;height:28px;border-radius:50%;background:var(--gold);display:flex;align-items:center;justify-content:center;">
+                        <i class="fa-solid fa-share-nodes" style="color:#000;font-size:14px;"></i>
+                    </div>
+                    <span>More</span>
+                </div>
+            </div>
+            <p style="font-size:10px;color:var(--text-sec);text-align:center;margin:14px 0 0;line-height:1.6;">Invite your friends to Orbit Pro and chat in real time — anywhere, anytime.</p>
+        </div>
+    </div>
+
+    <!-- XLSX VIEWER MODAL -->
+    <div id="xlsx-viewer-modal" style="position:absolute;inset:0;background:#1a1a1a;z-index:1500;display:none;flex-direction:column;">
+        <div style="padding:calc(12px + var(--safe-top)) 16px 0;display:flex;justify-content:space-between;align-items:center;background:#111;border-bottom:1px solid rgba(255,255,255,0.08);flex-shrink:0;">
+            <button onclick="closeXlsxViewer()" style="background:none;border:none;color:#fff;font-size:20px;cursor:pointer;padding:4px 8px;"><i class="fa-solid fa-xmark"></i></button>
+            <span id="xlsx-viewer-title" style="color:#fff;font-weight:600;font-size:14px;font-family:'Syne',sans-serif;flex:1;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin:0 10px;">Spreadsheet</span>
+            <button id="xlsx-dl-btn" style="background:none;border:none;color:var(--gold);font-size:18px;cursor:pointer;padding:4px 8px;"><i class="fa-solid fa-download"></i></button>
+        </div>
+        <div class="xlsx-sheet-tabs" id="xlsx-sheet-tabs"></div>
+        <div class="xlsx-table-wrap" id="xlsx-table-wrap">
+            <div style="color:#888;padding:40px;text-align:center;"><div class="loader"></div><div style="margin-top:12px;font-size:13px;">Loading spreadsheet...</div></div>
+        </div>
+    </div>
+
+    <!-- PPTX VIEWER MODAL -->
+    <div id="pptx-viewer-modal" style="position:absolute;inset:0;background:#1a1a1a;z-index:1500;display:none;flex-direction:column;">
+        <div style="padding:calc(12px + var(--safe-top)) 16px 10px;display:flex;justify-content:space-between;align-items:center;background:#111;border-bottom:1px solid rgba(255,255,255,0.08);flex-shrink:0;">
+            <button onclick="closePptxViewer()" style="background:none;border:none;color:#fff;font-size:20px;cursor:pointer;padding:4px 8px;"><i class="fa-solid fa-xmark"></i></button>
+            <span id="pptx-viewer-title" style="color:#fff;font-weight:600;font-size:14px;font-family:'Syne',sans-serif;flex:1;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin:0 10px;">Presentation</span>
+            <button id="pptx-dl-btn" style="background:none;border:none;color:var(--gold);font-size:18px;cursor:pointer;padding:4px 8px;"><i class="fa-solid fa-download"></i></button>
+        </div>
+        <div class="pptx-slide-list" id="pptx-slide-list">
+            <div style="color:#888;padding:40px;text-align:center;"><div class="loader"></div><div style="margin-top:12px;font-size:13px;">Loading presentation...</div></div>
+        </div>
+    </div>
+
     <!-- TOAST -->
     <div id="toast" class="toast"></div>
 </div>
@@ -1313,7 +1489,7 @@ try {
     sb = supabase.createClient(SB_URL, SB_KEY, {
         auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false },
         realtime: { params: { eventsPerSecond: 25 }, heartbeatIntervalMs: 25000 },
-        global: { headers: { 'x-client-info': 'orbit-v98' } }
+        global: { headers: { 'x-client-info': 'orbit-v100' } }
     });
 } catch(e) {
     console.error('Supabase init failed:', e);
@@ -1485,21 +1661,14 @@ async function checkStorageBucket() {
         const { error } = await sb.storage.from('chat-assets').list('_probe', { limit: 1 });
         if (error && (error.message?.toLowerCase().includes('not found') || error.statusCode === 404 || error.statusCode === 400)) {
             storageAvailable = false;
-            console.error('%c⚠️ STORAGE BUCKET NOT FOUND OR INACCESSIBLE', 'color:#ff4444;font-weight:bold;font-size:14px;');
-            console.info('%c📌 To fix uploads, do ALL of these in Supabase Dashboard:', 'color:#FFD700;font-size:13px;');
-            console.info('%c1. Storage → New Bucket → Name: "chat-assets" → Toggle PUBLIC → Create', 'color:#FFD700;');
-            console.info('%c2. Storage → chat-assets → Policies → New Policy → For authenticated users → INSERT + SELECT + UPDATE → Save', 'color:#FFD700;');
-            console.info('%cOR run this SQL in Supabase → SQL Editor:', 'color:#FFD700;');
-            console.info(`%c
-CREATE POLICY "Allow authenticated uploads" ON storage.objects
-  FOR INSERT TO authenticated WITH CHECK (bucket_id = 'chat-assets');
-CREATE POLICY "Allow public reads" ON storage.objects
-  FOR SELECT TO public USING (bucket_id = 'chat-assets');
-CREATE POLICY "Allow authenticated updates" ON storage.objects
-  FOR UPDATE TO authenticated USING (bucket_id = 'chat-assets');
-CREATE POLICY "Allow authenticated deletes" ON storage.objects
-  FOR DELETE TO authenticated USING (bucket_id = 'chat-assets');
-            `, 'color:#00E676;font-family:monospace;font-size:11px;');
+            console.error('%c⚠️ STORAGE BUCKET "chat-assets" NOT FOUND OR INACCESSIBLE', 'color:#ff4444;font-weight:bold;font-size:14px;');
+            _printStorageFix();
+        } else if (error && (error.statusCode === 401 || error.statusCode === 403)) {
+            // Bucket exists but RLS blocks us — this is the most common case causing slow uploads
+            storageAvailable = false;
+            console.error('%c🔒 STORAGE RLS POLICY BLOCKING UPLOADS (HTTP 400/403)', 'color:#ff4444;font-weight:bold;font-size:14px;');
+            console.error('%cThis is why M1/M2/M3/M4 all fail with 400. Run the SQL below to fix it:', 'color:#FFD700;font-size:13px;');
+            _printStorageFix();
         } else {
             storageAvailable = true;
             console.log('%c✅ Storage "chat-assets" ready — uploads will work', 'color:#00E676;font-weight:bold;');
@@ -1510,12 +1679,36 @@ CREATE POLICY "Allow authenticated deletes" ON storage.objects
     }
 }
 
+function _printStorageFix() {
+    console.info('%c📌 Fix in Supabase Dashboard → SQL Editor:', 'color:#FFD700;font-size:13px;font-weight:bold;');
+    console.info(`%c
+-- Run ALL of these in Supabase SQL Editor:
+CREATE POLICY IF NOT EXISTS "Allow authenticated uploads"
+  ON storage.objects FOR INSERT TO authenticated
+  WITH CHECK (bucket_id = 'chat-assets');
+
+CREATE POLICY IF NOT EXISTS "Allow public reads"
+  ON storage.objects FOR SELECT TO public
+  USING (bucket_id = 'chat-assets');
+
+CREATE POLICY IF NOT EXISTS "Allow authenticated updates"
+  ON storage.objects FOR UPDATE TO authenticated
+  USING (bucket_id = 'chat-assets');
+
+CREATE POLICY IF NOT EXISTS "Allow authenticated deletes"
+  ON storage.objects FOR DELETE TO authenticated
+  USING (bucket_id = 'chat-assets');
+    `, 'color:#00E676;font-family:monospace;font-size:11px;');
+}
+
 function requestNotifPerms() {
     if (!('Notification' in window)) return;
     if (Notification.permission === 'default') {
-        // Request sooner on mobile so it's ready when first message arrives
-        const delay = /Mobi|Android|iPhone/i.test(navigator.userAgent) ? 1500 : 3000;
+        // On mobile, permission must be requested from a user gesture.
+        // We delay briefly and show a subtle prompt on first interaction.
+        const delay = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent) ? 500 : 2000;
         setTimeout(() => {
+            // Try to request — may be silently ignored on mobile without gesture
             Notification.requestPermission().then(perm => {
                 if (perm === 'granted') {
                     console.log('✅ Notifications granted');
@@ -1527,6 +1720,24 @@ function requestNotifPerms() {
         registerServiceWorker();
     }
 }
+
+// Request notification on first user tap (for mobile browsers that require gesture)
+let _notifPermRequested = false;
+function requestNotifOnGesture() {
+    if (_notifPermRequested) return;
+    if (!('Notification' in window)) return;
+    if (Notification.permission !== 'default') return;
+    _notifPermRequested = true;
+    Notification.requestPermission().then(perm => {
+        if (perm === 'granted') {
+            console.log('✅ Notifications granted via gesture');
+            registerServiceWorker();
+        }
+    }).catch(() => {});
+}
+// Attach to first user interaction for mobile
+document.addEventListener('touchend', requestNotifOnGesture, { once: true, passive: true });
+document.addEventListener('click', requestNotifOnGesture, { once: true });
 
 async function registerServiceWorker() {
     if (!('serviceWorker' in navigator)) return;
@@ -1634,6 +1845,11 @@ function showNotif(title, body, senderInfo) {
     showNotifBanner(title, body, senderInfo);
     playNotifSound();
 
+    // Vibrate on mobile — works even without notification permission
+    if ('vibrate' in navigator) {
+        try { navigator.vibrate([200, 100, 200]); } catch(e) {}
+    }
+
     if (!('Notification' in window) || Notification.permission !== 'granted') return;
 
     try {
@@ -1650,32 +1866,33 @@ function showNotif(title, body, senderInfo) {
             data: { url: window.location.href }
         };
 
+        // Try SW first (works in background on Android Chrome)
         if (window._swRegistration) {
-            // Route through SW → shows even when tab is in background / screen locked
             window._swRegistration.showNotification(notifTitle, opts).catch(() => {
                 // SW failed — fall back to direct Notification API
                 try { new Notification(notifTitle, opts); } catch(_) {}
             });
-            // Also post message to SW so it can handle it even without push server
-            if (navigator.serviceWorker.controller) {
-                navigator.serviceWorker.controller.postMessage({
-                    type: 'SHOW_NOTIF',
-                    title: notifTitle,
-                    body,
-                    icon: opts.icon,
-                    tag: opts.tag,
-                    url: window.location.href
-                });
-            }
+            // Also post message to SW
+            try {
+                if (navigator.serviceWorker.controller) {
+                    navigator.serviceWorker.controller.postMessage({
+                        type: 'SHOW_NOTIF',
+                        title: notifTitle,
+                        body,
+                        icon: opts.icon,
+                        tag: opts.tag,
+                        url: window.location.href
+                    });
+                }
+            } catch(e) {}
         } else {
             // No SW: direct Notification API — works whenever tab is open
+            // On mobile this fires even when tab is backgrounded (Android Chrome)
             try { new Notification(notifTitle, opts); } catch(_) {}
         }
     } catch(e) {
         console.warn('Notification failed:', e);
     }
-    // Vibrate on mobile regardless
-    if ('vibrate' in navigator) navigator.vibrate([200, 100, 200]);
 }
 
 // Play a subtle notification sound (mobile/PC style)
@@ -2177,6 +2394,11 @@ async function finishAppInit() {
 
     // Start background notification channel after chats loaded
     setTimeout(() => { setupBackgroundNotifChannel().catch(() => {}); }, 3000);
+    // V100.3: Friend request notifications + global message notifications
+    setTimeout(() => {
+        setupFriendRequestNotifChannel();
+        setupGlobalMsgNotifChannel();
+    }, 4000);
 }
 
 // ─── BACKGROUND NOTIFICATION CHANNEL ───
@@ -2362,10 +2584,18 @@ async function loadUserProfile() {
     // Try supabase user_profiles table first, fallback to localStorage
     try {
         const { data } = await sb.from('user_profiles').select('*').eq('user_id', currentUser.id).single();
-        if (data) { userProfile = data; localStorage.setItem('orbit_profile_' + currentUser.id, JSON.stringify(data)); return; }
+        if (data) {
+            userProfile = data;
+            // ── V99: Cache premium tier for current user ──
+            if (data.premium_tier) _premiumTierCache.set(currentUser.id, data.premium_tier);
+            else if (isOwner()) _premiumTierCache.set(currentUser.id, 'gold');
+            localStorage.setItem('orbit_profile_' + currentUser.id, JSON.stringify(data));
+            return;
+        }
     } catch(e) {}
     const cached = localStorage.getItem('orbit_profile_' + currentUser.id);
     if (cached) { userProfile = JSON.parse(cached); }
+    if (isOwner()) _premiumTierCache.set(currentUser.id, 'gold');
 }
 
 async function saveProfileToDB(profile) {
@@ -2843,7 +3073,7 @@ async function loadGlobalUsers() {
         // Get profiles from DB (names, DPs — slow-changing)
         const { data, error } = await sb
             .from('user_presence')
-            .select('user_id, email, display_name, dp_url, last_seen')
+            .select('user_id, email, display_name, dp_url, last_seen, is_online')
             .neq('user_id', currentUser.id)
             .order('last_seen', { ascending: false })
             .limit(100);
@@ -2851,12 +3081,37 @@ async function loadGlobalUsers() {
         if (error) throw error;
         if (!data?.length) { list.innerHTML = emptyState('fa-users', 'No users yet'); return; }
 
+        // ── V99: Fetch premium tiers for all visible users from user_profiles ──
+        try {
+            const uids = data.map(u => u.user_id);
+            const { data: profs } = await sb
+                .from('user_profiles')
+                .select('user_id, premium_tier')
+                .in('user_id', uids);
+            (profs || []).forEach(p => {
+                if (p.premium_tier) _premiumTierCache.set(p.user_id, p.premium_tier);
+            });
+        } catch(e) { /* user_profiles may not have premium_tier yet — silent */ }
+
+        // Fetch current user's friends to show correct button state
+        let friendStatusMap = {};
+        try {
+            const { data: fData } = await sb.from('friends').select('friend_id, user_id, status').or(`user_id.eq.${currentUser.id},friend_id.eq.${currentUser.id}`);
+            (fData || []).forEach(f => {
+                const otherId = f.user_id === currentUser.id ? f.friend_id : f.user_id;
+                friendStatusMap[otherId] = f.status; // 'pending' or 'accepted'
+            });
+        } catch(e) {}
+
         // Overlay realtime presence state (in-memory) on top of DB profiles
         const realtimeState = presenceChannel ? presenceChannel.presenceState() : {};
         const onlineUserIds = new Set(Object.keys(realtimeState));
 
         data.forEach(u => {
-            u.is_online = onlineUserIds.has(u.user_id);
+            // Use realtime presence OR DB is_online OR recent last_seen (< 90s)
+            const realtimeOnline = onlineUserIds.has(u.user_id);
+            const recentlySeen = u.last_seen && (Date.now() - new Date(u.last_seen).getTime() < 90000);
+            u.is_online = realtimeOnline || recentlySeen;
             globalUsersCache.set(u.user_id, u);
         });
 
@@ -2871,6 +3126,7 @@ async function loadGlobalUsers() {
 
         const frag = document.createDocumentFragment();
         data.forEach(u => {
+            // Show all users — even those with no display_name (show email username)
             const name = u.display_name || (u.email ? u.email.split('@')[0] : 'User');
             const initials = (name[0] || 'U').toUpperCase();
             const uTier = getVerifiedTier(u.user_id);
@@ -2878,28 +3134,83 @@ async function loadGlobalUsers() {
             const avHtml = u.dp_url
                 ? `<img src="${esc(u.dp_url)}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" loading="lazy" onerror="this.parentNode.innerHTML='<div class=\\'c-av-inner\\'>${initials}</div>'">`
                 : `<div class="c-av-inner">${initials}</div>`;
+            
+            // Build friend button based on relationship status
+            const fStatus = friendStatusMap[u.user_id];
+            let friendBtnHtml = '';
+            if (fStatus === 'accepted') {
+                // Friends — show friend icon (highlighted)
+                friendBtnHtml = `<button class="global-add-friend-btn touch-fix" data-uid="${esc(u.user_id)}" data-uname="${esc(name)}" style="background:rgba(255,215,0,0.15);border:1px solid var(--gold);color:var(--gold);border-radius:20px;padding:5px 10px;font-size:11px;font-weight:700;cursor:default;font-family:'Syne',sans-serif;white-space:nowrap;flex-shrink:0;" title="Friends"><i class="fa-solid fa-user-check" style="font-size:10px;"></i></button>`;
+            } else if (fStatus === 'pending') {
+                // Pending request
+                friendBtnHtml = `<button class="global-add-friend-btn touch-fix" data-uid="${esc(u.user_id)}" data-uname="${esc(name)}" style="background:var(--surface-light);border:1px solid var(--border);color:#aaa;border-radius:20px;padding:5px 10px;font-size:11px;font-weight:700;cursor:default;font-family:'Syne',sans-serif;white-space:nowrap;flex-shrink:0;" title="Request Pending"><i class="fa-solid fa-clock" style="font-size:10px;"></i></button>`;
+            } else {
+                // Not friends — show add button
+                friendBtnHtml = `<button class="global-add-friend-btn touch-fix" data-uid="${esc(u.user_id)}" data-uname="${esc(name)}" onclick="event.stopPropagation();sendFriendRequestById('${esc(u.user_id)}','${esc(name)}',this)" style="background:var(--surface-light);border:1px solid var(--border);color:var(--text-sec);border-radius:20px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;font-family:'Syne',sans-serif;white-space:nowrap;flex-shrink:0;"><i class="fa-solid fa-user-plus" style="font-size:10px;"></i></button>`;
+            }
+
             const el = document.createElement('div');
             el.className = 'contact-item touch-fix';
             el.dataset.uid = u.user_id;
             el.dataset.uname = name;
             el.innerHTML = `
-                <div class="c-av${uGold ? ' gold-frame-anim' : ''}" style="cursor:pointer;" onclick="previewDp('${esc(u.dp_url || '')}','${esc(initials)}',event)">${avHtml}<div class="c-status-dot ${u.is_online ? 'online' : 'offline'}"></div></div>
+                <div class="c-av${uGold ? ' gold-frame-anim' : ''}" style="cursor:pointer;position:relative;" onclick="previewDp('${esc(u.dp_url || '')}','${esc(initials)}',event)">${avHtml}<div class="c-status-dot ${u.is_online ? 'online' : 'offline'}" data-uid="${esc(u.user_id)}"></div>${uTier === 'gold' ? '<span style="position:absolute;bottom:-2px;right:-2px;font-size:10px;line-height:1;background:#000;border-radius:50%;padding:1px;" title="Gold Member">✨</span>' : uTier === 'silver' ? '<span style="position:absolute;bottom:-2px;right:-2px;font-size:10px;line-height:1;background:#000;border-radius:50%;padding:1px;" title="Silver Member">🥈</span>' : uTier === 'bronze' ? '<span style="position:absolute;bottom:-2px;right:-2px;font-size:10px;line-height:1;background:#000;border-radius:50%;padding:1px;" title="Bronze Member">🥉</span>' : ''}</div>
                 <div class="c-info">
-                    <div class="c-name">${esc(name)}${uTier ? getVerifiedBadgeHtml(uTier) : ''}</div>
-                    <div class="c-last">${u.is_online ? '🟢 Online now' : '⏱ ' + timeAgo(u.last_seen)}</div>
+                    <div class="c-name c-name-wrap">${esc(name)}${uTier ? getVerifiedBadgeHtml(uTier) : ''}${fStatus === 'accepted' ? '<span style="font-size:9px;color:var(--gold);margin-left:4px;font-weight:700;">FRIEND</span>' : ''}</div>
+                    <div class="c-last global-lastseen" data-uid="${esc(u.user_id)}" data-lastseen="${esc(u.last_seen || '')}" data-online="${u.is_online ? '1' : '0'}">${u.is_online ? '🟢 Online now' : '⏱ ' + timeAgo(u.last_seen)}</div>
                     ${u.email ? `<div style="font-size:10px;color:var(--text-sec);opacity:.75;margin-top:1px;">${esc(u.email)}</div>` : ''}
                 </div>
-                <button class="global-add-friend-btn touch-fix" data-uid="${esc(u.user_id)}" data-uname="${esc(name)}" onclick="event.stopPropagation();sendFriendRequestById('${esc(u.user_id)}','${esc(name)}',this)" style="background:var(--surface-light);border:1px solid var(--border);color:var(--text-sec);border-radius:20px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;font-family:'Syne',sans-serif;white-space:nowrap;flex-shrink:0;"><i class="fa-solid fa-user-plus" style="font-size:10px;"></i></button>`;
+                ${friendBtnHtml}`;
             el.addEventListener('click', () => startChat(el.dataset.uid, el.dataset.uname));
             frag.appendChild(el);
         });
         list.innerHTML = '';
         list.appendChild(frag);
+
+        // ── Auto-refresh last seen every 30 seconds ──
+        startGlobalLastSeenRefresh();
     } catch (e) {
         console.error('loadGlobalUsers:', e);
         list.innerHTML = emptyState('fa-users', 'Could not load users', 'Tap to retry');
         list.onclick = () => { list.onclick = null; loadGlobalUsers(); };
     }
+}
+
+// Auto-refresh last seen in global list
+let _globalLastSeenInterval = null;
+function startGlobalLastSeenRefresh() {
+    if (_globalLastSeenInterval) clearInterval(_globalLastSeenInterval);
+    _globalLastSeenInterval = setInterval(() => {
+        // Only run if global tab is visible
+        const globalTab = document.getElementById('tab-global');
+        if (!globalTab || globalTab.classList.contains('hide')) return;
+        
+        // Update online dots using realtime presence
+        const realtimeState = presenceChannel ? presenceChannel.presenceState() : {};
+        const onlineUserIds = new Set(Object.keys(realtimeState));
+        
+        document.querySelectorAll('.global-lastseen').forEach(el => {
+            const uid = el.dataset.uid;
+            const lastSeen = el.dataset.lastseen;
+            const realtimeOnline = onlineUserIds.has(uid);
+            const recentlySeen = lastSeen && (Date.now() - new Date(lastSeen).getTime() < 90000);
+            const isOnline = realtimeOnline || recentlySeen;
+            
+            // Update the last-seen text
+            el.textContent = isOnline ? '🟢 Online now' : '⏱ ' + timeAgo(lastSeen);
+            el.dataset.online = isOnline ? '1' : '0';
+            
+            // Update the status dot
+            const dot = document.querySelector(`.c-status-dot[data-uid="${uid}"]`);
+            if (dot) {
+                dot.className = `c-status-dot ${isOnline ? 'online' : 'offline'}`;
+            }
+        });
+        
+        // Update online count
+        const onlineDots = document.querySelectorAll('.c-status-dot.online');
+        updateOnlineCount(onlineDots.length);
+    }, 30000); // refresh every 30 seconds
 }
 
 async function loadNotes() {
@@ -2985,6 +3296,9 @@ async function updateChatHeaderAvatarForDM(roomId) {
         // Subscribe to real-time presence for this specific user
         subscribeToUserPresence(otherId, roomId);
         
+        // Start auto-refresh interval for "Last seen X ago" text
+        startChatLastSeenRefresh(otherId, roomId);
+        
     } catch(e) {}
 }
 
@@ -2994,14 +3308,37 @@ let _dmPresenceChannel = null;
 function updateLastSeenStatus(pres) {
     const statusEl = document.getElementById('chat-status');
     if (!statusEl) return;
-    // Only update if not showing "Live" (connected) status
-    if (statusEl.querySelector('.chat-status-dot.online')) return;
     const isOnline = pres?.is_online || (pres?.last_seen && (Date.now() - new Date(pres.last_seen).getTime() < 90000));
     if (isOnline) {
         statusEl.innerHTML = '<span class="chat-status-live"><span class="chat-status-dot online"></span>Online</span>';
     } else if (pres?.last_seen) {
         statusEl.innerHTML = `<span class="chat-status-live"><span class="chat-status-dot offline"></span>Last seen ${timeAgo(pres.last_seen)}</span>`;
+    } else {
+        statusEl.innerHTML = '<span class="chat-status-live"><span class="chat-status-dot offline"></span>Offline</span>';
     }
+}
+
+// Auto-refresh "Last seen X ago" in DM chat header every 30 seconds
+let _chatLastSeenInterval = null;
+function startChatLastSeenRefresh(userId, roomId) {
+    if (_chatLastSeenInterval) clearInterval(_chatLastSeenInterval);
+    _chatLastSeenInterval = setInterval(async () => {
+        // Stop if we've left the chat
+        if (_openingRoomId !== roomId) { clearInterval(_chatLastSeenInterval); _chatLastSeenInterval = null; return; }
+        try {
+            // Use cached data first (updates via presence channel events)
+            const cached = globalUsersCache.get(userId);
+            if (cached) {
+                const realtimeState = presenceChannel ? presenceChannel.presenceState() : {};
+                const isOnlineRT = !!realtimeState[userId];
+                updateLastSeenStatus({ ...cached, is_online: isOnlineRT || cached.is_online });
+            } else {
+                // Fetch from DB only if not in cache
+                const { data } = await sb.from('user_presence').select('is_online, last_seen').eq('user_id', userId).single();
+                if (data && _openingRoomId === roomId) updateLastSeenStatus(data);
+            }
+        } catch(e) {}
+    }, 30000);
 }
 
 function subscribeToUserPresence(userId, roomId) {
@@ -3549,14 +3886,17 @@ function buildMsgNode(msg) {
         const name = msg.text || 'Document';
         const ext = name.split('.').pop().toUpperCase();
         const isBase64 = url.startsWith('data:');
-        const iconMap = { PDF:'fa-file-pdf', DOC:'fa-file-word', DOCX:'fa-file-word', XLS:'fa-file-excel', XLSX:'fa-file-excel', PPT:'fa-file-powerpoint', PPTX:'fa-file-powerpoint', ZIP:'fa-file-zipper', TXT:'fa-file-lines', CSV:'fa-file-csv', RTF:'fa-file-lines' };
-        const colorMap = { PDF:'#FF3B30', DOC:'#007AFF', DOCX:'#007AFF', XLS:'#34C759', XLSX:'#34C759', PPT:'#FF9500', PPTX:'#FF9500', ZIP:'#8E8E93', TXT:'#636366', CSV:'#34C759', RTF:'#636366' };
+        const iconMap = { PDF:'fa-file-pdf', DOC:'fa-file-word', DOCX:'fa-file-word', ODT:'fa-file-word', XLS:'fa-file-excel', XLSX:'fa-file-excel', ODS:'fa-file-excel', PPT:'fa-file-powerpoint', PPTX:'fa-file-powerpoint', ODP:'fa-file-powerpoint', ZIP:'fa-file-zipper', RAR:'fa-file-zipper', '7Z':'fa-file-zipper', TXT:'fa-file-lines', CSV:'fa-file-csv', RTF:'fa-file-lines', MP4:'fa-file-video', WEBM:'fa-file-video', MOV:'fa-file-video', AVI:'fa-file-video', MKV:'fa-file-video', MP3:'fa-file-audio', WAV:'fa-file-audio', OGG:'fa-file-audio', JSON:'fa-file-code', XML:'fa-file-code', HTML:'fa-file-code' };
+        const colorMap = { PDF:'#FF3B30', DOC:'#007AFF', DOCX:'#007AFF', ODT:'#007AFF', XLS:'#34C759', XLSX:'#34C759', ODS:'#34C759', PPT:'#FF9500', PPTX:'#FF9500', ODP:'#FF9500', ZIP:'#8E8E93', RAR:'#8E8E93', '7Z':'#8E8E93', TXT:'#636366', CSV:'#34C759', RTF:'#636366', MP4:'#FF2D55', WEBM:'#FF2D55', MOV:'#FF2D55', AVI:'#FF2D55', MKV:'#FF2D55', MP3:'#BF5AF2', WAV:'#BF5AF2', OGG:'#BF5AF2', JSON:'#32ADE6', XML:'#32ADE6', HTML:'#32ADE6' };
         const icon = iconMap[ext] || 'fa-file';
         const color = colorMap[ext] || '#8E8E93';
         const isOwnMsg = msg.sender_id === currentUser.id;
         const rawSize = msg.metadata?.file_size || msg.file_size || null;
         const sizeLabel = rawSize ? (rawSize > 1048576 ? (rawSize/1048576).toFixed(1)+'MB' : Math.round(rawSize/1024)+'KB') : ext;
-        const actionLabel = ext === 'PDF' ? 'Preview' : (isBase64 ? 'Download' : 'Open');
+        const videoExts = ['MP4','WEBM','MOV','AVI','MKV','3GP'];
+        const audioExts = ['MP3','WAV','OGG','M4A'];
+        const actionLabel = ext === 'PDF' ? 'Preview' : (ext === 'XLSX' || ext === 'XLS' || ext === 'ODS' || ext === 'CSV') ? 'Preview' : (ext === 'PPTX' || ext === 'PPT' || ext === 'ODP') ? 'Preview' : (videoExts.includes(ext) ? 'Play' : (audioExts.includes(ext) ? 'Play' : (isBase64 ? 'Download' : 'Open')));
+        const actionIcon = videoExts.includes(ext) ? 'fa-play' : (audioExts.includes(ext) ? 'fa-play' : 'fa-arrow-down-to-line');
         content = `<div class="doc-card touch-fix" data-url="${esc(url)}" data-name="${esc(name)}" data-ext="${ext}" style="background:${isOwnMsg ? 'rgba(0,0,0,0.15)' : 'rgba(255,255,255,0.07)'}">
             <div style="width:44px;height:44px;border-radius:10px;background:${color}22;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
                 <i class="fa-solid ${icon}" style="color:${color};font-size:22px;"></i>
@@ -3566,7 +3906,7 @@ function buildMsgNode(msg) {
                 <div class="doc-sub">${sizeLabel} · Tap to ${actionLabel}</div>
             </div>
             <div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex-shrink:0;">
-                <i class="fa-solid fa-arrow-down-to-line" style="color:${color};font-size:14px;opacity:0.8;"></i>
+                <i class="fa-solid ${actionIcon}" style="color:${color};font-size:14px;opacity:0.8;"></i>
             </div>
         </div>`;
     } else if (msg.type === 'voice' && msg.attachments?.[0]) {
@@ -3685,9 +4025,20 @@ function attachMsgListeners() {
                 const name = card.dataset.name || 'document';
                 const ext = (card.dataset.ext || name.split('.').pop()).toUpperCase();
                 if (!url) return;
-                const extUpper = (card.dataset.ext || name.split('.').pop()).toUpperCase();
-                if (extUpper === 'PDF') {
+                // Video files sent via doc — open in lightbox
+                const videoExts = ['MP4','WEBM','MOV','AVI','MKV','3GP'];
+                // Audio files — open in lightbox/audio player
+                const audioExts = ['MP3','WAV','OGG','M4A'];
+                if (videoExts.includes(ext)) {
+                    openLightbox(url, 'video', name);
+                } else if (audioExts.includes(ext)) {
+                    openAudioPlayer(url, name);
+                } else if (ext === 'PDF') {
                     openPdfViewer(url, name);
+                } else if (ext === 'XLSX' || ext === 'XLS' || ext === 'ODS' || ext === 'CSV') {
+                    openXlsxViewer(url, name);
+                } else if (ext === 'PPTX' || ext === 'PPT' || ext === 'ODP') {
+                    openPptxViewer(url, name);
                 } else {
                     dlFile(url, name);
                 }
@@ -3930,18 +4281,23 @@ async function sendMessage() {
 // MIME type map used throughout upload pipeline
 const MIME_MAP = {
     jpg:'image/jpeg',jpeg:'image/jpeg',png:'image/png',gif:'image/gif',
-    webp:'image/webp',heic:'image/heic',heif:'image/heif',
+    webp:'image/webp',heic:'image/heic',heif:'image/heif',bmp:'image/bmp',svg:'image/svg+xml',
     mp4:'video/mp4',mov:'video/quicktime',avi:'video/x-msvideo',
-    mkv:'video/x-matroska',webm:'video/webm','3gp':'video/3gpp',
+    mkv:'video/x-matroska',webm:'video/webm','3gp':'video/3gpp',flv:'video/x-flv',
     pdf:'application/pdf',
     doc:'application/msword',
     docx:'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    odt:'application/vnd.oasis.opendocument.text',
     xls:'application/vnd.ms-excel',
     xlsx:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    ods:'application/vnd.oasis.opendocument.spreadsheet',
     ppt:'application/vnd.ms-powerpoint',
     pptx:'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-    zip:'application/zip',txt:'text/plain',csv:'text/csv',
-    mp3:'audio/mpeg',ogg:'audio/ogg',wav:'audio/wav',
+    odp:'application/vnd.oasis.opendocument.presentation',
+    zip:'application/zip',rar:'application/x-rar-compressed','7z':'application/x-7z-compressed',
+    txt:'text/plain',csv:'text/csv',rtf:'application/rtf',
+    mp3:'audio/mpeg',ogg:'audio/ogg',wav:'audio/wav',m4a:'audio/mp4',
+    json:'application/json',xml:'application/xml',html:'text/html',
 };
 
 function getFileMime(file) {
@@ -3952,16 +4308,45 @@ function getFileMime(file) {
     return fromExt;
 }
 
-// ── STEP 1: Read file bytes into memory immediately (before any async gap) ──
-// This must be called synchronously inside a user-gesture event handler or
-// right at the start of sendFiles, before any await.
+// ── STEP 1: Read file bytes into memory ──
+// Uses FileReader which works across all Android versions.
+// Must be called as early as possible — Android revokes File objects after user-gesture boundary.
 async function readFileToBytes(file) {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
         reader.onload = e => resolve(new Uint8Array(e.target.result));
         reader.onerror = () => reject(new Error('Cannot read file: ' + file.name));
+        // readAsArrayBuffer is more reliable than readAsDataURL on Android for large files
         reader.readAsArrayBuffer(file);
     });
+}
+
+// ── PARALLEL read: snapshot ALL files at once before any upload starts ──
+// Android Chrome revokes File handles after the first await that exits the
+// microtask queue. By firing all FileReader instances simultaneously we
+// maximise the chance of reading everything before revocation.
+async function readAllFilesParallel(files) {
+    // Fire all readers simultaneously
+    const promises = files.map(file => {
+        const mime = getFileMime(file);
+        return new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onload = e => resolve({
+                ok: true,
+                name: file.name,
+                mime,
+                size: file.size,
+                bytes: new Uint8Array(e.target.result),
+                isImage: mime.startsWith('image/'),
+                isVideo: mime.startsWith('video/') && !file._forceDoc,
+                isDoc: !mime.startsWith('image/') && (!mime.startsWith('video/') || file._forceDoc),
+            });
+            reader.onerror = () => resolve({ ok: false, name: file.name });
+            reader.readAsArrayBuffer(file);
+        });
+    });
+    // Wait for all simultaneously — much faster than sequential await
+    return Promise.all(promises);
 }
 
 // ── Quality Picker Sheet ──
@@ -3999,36 +4384,37 @@ async function sendFiles() {
     if (!selectedFiles.length || !currentRoom || uploadInProgress) return;
     uploadInProgress = true;
 
-    // Snapshot file references IMMEDIATELY - freeze the list before any async gap
+    // ── CRITICAL: Snapshot File references NOW, before ANY await ──
+    // Android Chrome revokes File handles at the first await boundary.
     const filesToSend = [...selectedFiles];
 
     showUploadOverlay(true, 'Reading files...');
-    updateProgressRing(2);
+    updateProgressRing(3);
 
-    // ── CRITICAL: Read ALL bytes into memory NOW before any await that crosses a task boundary ──
-    // Android Chrome/WebView revokes File references after async microtask boundaries.
-    // Plain Uint8Array in memory is never revoked.
+    // ── Read ALL files IN PARALLEL immediately ──
+    // Parallel reads are significantly faster than sequential and also help
+    // beat Android's file-handle revocation window.
+    let rawResults;
+    try {
+        rawResults = await readAllFilesParallel(filesToSend);
+    } catch(e) {
+        showToast('❌ Could not read files: ' + e.message);
+        hideUploadOverlay();
+        uploadInProgress = false;
+        return;
+    }
+
     const fileSnapshots = [];
-    for (const file of filesToSend) {
-        try {
-            const mime = getFileMime(file);
-            const bytes = await readFileToBytes(file);
-            fileSnapshots.push({
-                name: file.name,
-                mime,
-                size: file.size,
-                bytes,
-                isImage: mime.startsWith('image/'),
-                isVideo: mime.startsWith('video/'),
-                isDoc: !mime.startsWith('image/') && !mime.startsWith('video/'),
-            });
-        } catch(e) {
-            console.warn('Read failed:', file.name, e);
-            showToast('⚠️ Cannot read: ' + file.name);
+    for (const r of rawResults) {
+        if (!r.ok) {
+            console.warn('Read failed:', r.name);
+            showToast('⚠️ Could not read: ' + r.name);
+        } else {
+            fileSnapshots.push(r);
         }
     }
 
-    // Now safe to clear preview — bytes are in memory
+    // Safe to clear preview now — bytes are in memory
     clearMediaPreview();
 
     if (!fileSnapshots.length) {
@@ -4043,7 +4429,7 @@ async function sendFiles() {
     const totalGroups = (images.length > 0 ? 1 : 0) + videos.length + docs.length;
     let sentCount = 0;
 
-    // Refresh auth token once at start of batch
+    // ── Refresh auth token once at start ──
     let authToken = SB_KEY;
     try {
         const { data: sd } = await sb.auth.getSession();
@@ -4055,35 +4441,50 @@ async function sendFiles() {
         if (images.length > 0 && !uploadCanceled) {
             const label = images.length === 1 ? images[0].name : `${images.length} images`;
             updateUploadUI(label, 1, totalGroups, 5);
-            const mediaUrls = [];
-            for (let i = 0; i < images.length; i++) {
-                if (uploadCanceled) break;
-                const snap = images[i];
+
+            // ── For images: compress ALL in parallel first, then upload ──
+            updateUploadUI(`Compressing ${images.length} image(s)...`, 1, totalGroups, 8);
+
+            const compressedImages = await Promise.all(images.map(async (snap) => {
                 try {
-                    updateUploadUI(`Uploading ${i+1}/${images.length}...`, 1, totalGroups, 10);
-                    updateProgressRing(15);
-                    // Apply quality compression based on user choice
-                    let uploadBytes = snap.bytes;
-                    let uploadMime = snap.mime;
-                    if (_uploadQuality === 'instant' && snap.isImage) {
-                        updateUploadUI(`Compressing ${i+1}/${images.length}...`, 1, totalGroups, 8);
-                        uploadBytes = await compressBytesToJpeg(snap.bytes, 640, 0.45);
-                        uploadMime = 'image/jpeg';
-                    }
-                    const url = await uploadBytesToStorage(
-                        uploadBytes, uploadMime,
-                        snap.name,
-                        'images', authToken,
-                        p => updateProgressRing(15 + Math.round(p * 80))
-                    );
-                    if (url) mediaUrls.push(url);
+                    // Always compress — keeps uploads fast and avoids timeout
+                    // Standard quality: max 1280px, 0.82 quality (visually lossless)
+                    // Instant quality: max 640px, 0.45 quality (fast send)
+                    const maxDim = _uploadQuality === 'instant' ? 640 : 1280;
+                    const quality = _uploadQuality === 'instant' ? 0.45 : 0.82;
+                    const compressed = await compressBytesToJpeg(snap.bytes, maxDim, quality);
+                    return { ...snap, bytes: compressed, mime: 'image/jpeg' };
                 } catch(e) {
-                    console.error('Image upload failed:', snap.name, e);
-                    showToast('⚠️ ' + (e.message || 'Image upload failed').substring(0, 100));
+                    return snap; // use original if compression fails
                 }
+            }));
+
+            // ── Now upload all compressed images in parallel (up to 3 at a time) ──
+            updateUploadUI(`Uploading ${images.length} image(s)...`, 1, totalGroups, 15);
+
+            const CONCURRENCY = 3;
+            const mediaUrls = [];
+            for (let i = 0; i < compressedImages.length && !uploadCanceled; i += CONCURRENCY) {
+                const batch = compressedImages.slice(i, i + CONCURRENCY);
+                const batchResults = await Promise.all(batch.map(async (snap) => {
+                    try {
+                        const url = await uploadBytesToStorage(
+                            snap.bytes, snap.mime, snap.name, 'images', authToken,
+                            p => updateProgressRing(15 + Math.round(p * 70))
+                        );
+                        return url || null;
+                    } catch(e) {
+                        console.error('Image upload failed:', snap.name, e);
+                        showToast('⚠️ ' + (e.message || 'Image upload failed').substring(0, 80));
+                        return null;
+                    }
+                }));
+                batchResults.filter(Boolean).forEach(u => mediaUrls.push(u));
+                updateProgressRing(15 + Math.round(((i + batch.length) / compressedImages.length) * 70));
             }
+
             if (mediaUrls.length && !uploadCanceled) {
-                updateUploadUI('Sending...', 1, totalGroups, 95);
+                updateUploadUI('Sending...', 1, totalGroups, 90);
                 await insertMessage(buildFilePayload(
                     mediaUrls.length === 1 ? images[0].name : `${mediaUrls.length} images`,
                     mediaUrls, 'image'
@@ -4100,25 +4501,39 @@ async function sendFiles() {
             sentCount++;
             updateUploadUI(snap.name, sentCount, totalGroups, 5);
 
-            try {
-                // V93: Upload at ORIGINAL quality — skip canvas compression
-                const uploadBytes = snap.bytes;
-                const uploadMime = snap.mime;
+            const sizeMB = (snap.bytes.length / 1048576).toFixed(1);
 
-                // Hard size gate — base64 in Supabase DB rows is limited to ~5MB practical limit
-                const MAX_VIDEO_BYTES = 4 * 1024 * 1024; // 4MB
-                if (uploadBytes.length > MAX_VIDEO_BYTES && storageAvailable !== true) {
+            try {
+                let uploadBytes = snap.bytes;
+                let uploadMime = snap.mime;
+
+                // ── Smart video compression pipeline ──
+                // Step 1: If Supabase Storage is unavailable AND video > 8MB, try to compress it
+                if (storageAvailable !== true && snap.bytes.length > 8 * 1024 * 1024) {
+                    updateUploadUI(`Compressing video (${sizeMB}MB)...`, sentCount, totalGroups, 8);
+                    try {
+                        const compressed = await compressVideoBytes(snap.bytes, snap.mime);
+                        const compMB = (compressed.length / 1048576).toFixed(1);
+                        if (compressed.length < snap.bytes.length) {
+                            uploadBytes = compressed;
+                            uploadMime = 'video/webm';
+                            showToast(`🎥 Compressed ${sizeMB}MB → ${compMB}MB`, 'success');
+                        }
+                    } catch(ce) { console.warn('Video compression failed, using original:', ce.message); }
+                }
+
+                // Step 2: If still > 15MB with no storage, show helpful error
+                const finalMB = (uploadBytes.length / 1048576).toFixed(1);
+                if (uploadBytes.length > 15 * 1024 * 1024 && storageAvailable !== true) {
                     sentCount--;
-                    const sizeMB = (snap.bytes.length / 1048576).toFixed(1);
-                    showToast(`🎥 Video (${sizeMB}MB) too large for current setup. Configure Supabase Storage bucket to send large videos.`);
+                    showStorageSuggestion(`Video (${sizeMB}MB) too large for inline mode. ${sizeMB > 50 ? 'Please compress video before sending.' : 'Set up Supabase Storage (free) to send large videos.'}`);
                     continue;
                 }
 
+                updateUploadUI(`Uploading video (${finalMB}MB)...`, sentCount, totalGroups, 12);
                 const url = await uploadBytesToStorage(
-                    uploadBytes, uploadMime,
-                    snap.name,
-                    'videos', authToken,
-                    p => { updateProgressRing(5 + Math.round(p * 90)); updateUploadUI(snap.name, sentCount, totalGroups, 5 + Math.round(p*90)); }
+                    uploadBytes, uploadMime, snap.name, 'videos', authToken,
+                    p => { updateProgressRing(12 + Math.round(p * 83)); updateUploadUI(`Uploading video... ${Math.round(p*100)}%`, sentCount, totalGroups, 12 + Math.round(p*83)); }
                 );
                 if (!url || uploadCanceled) { sentCount--; continue; }
                 await insertMessage(buildFilePayload(snap.name, [url], 'video'));
@@ -4126,29 +4541,36 @@ async function sendFiles() {
             } catch(e) {
                 sentCount--;
                 console.error('Video upload error:', e);
-                showToast('🎥 ' + (e.message||'Video upload failed').substring(0, 120));
+                const errMsg = e.message || 'Video upload failed';
+                if (errMsg.toLowerCase().includes('large') || errMsg.toLowerCase().includes('size') || errMsg.toLowerCase().includes('timeout')) {
+                    showStorageSuggestion(`🎥 Video too large (${sizeMB}MB). Set up Supabase Storage bucket to send videos over 4MB.`);
+                } else {
+                    showToast('🎥 ' + errMsg.substring(0, 120));
+                }
             }
         }
 
-        // ── Documents / PDFs ──
+        // ── Documents ──
         for (let di = 0; di < docs.length && !uploadCanceled; di++) {
             const snap = docs[di];
             sentCount++;
             updateUploadUI(snap.name, sentCount, totalGroups, 5);
 
-            // Hard size gate for base64 fallback path
-            const MAX_DOC_BYTES = 3 * 1024 * 1024; // 3MB
-            if (snap.bytes.length > MAX_DOC_BYTES && storageAvailable !== true) {
+            const sizeMB = (snap.bytes.length / 1048576).toFixed(1);
+
+            // If Supabase Storage is confirmed unavailable and file > 3MB — show helpful error, don't waste time
+            if (snap.bytes.length > 3 * 1024 * 1024 && storageAvailable === false) {
                 sentCount--;
-                const sizeMB = (snap.bytes.length / 1048576).toFixed(1);
-                showToast(`📄 File (${sizeMB}MB) too large. Configure Supabase Storage or use files under 3MB.`);
+                showStorageSuggestion(`📄 File "${snap.name}" (${sizeMB}MB) too large for inline mode. Set up Supabase Storage to send files over 3MB.`);
                 continue;
             }
 
+            // If storage status unknown — try anyway (it might work)
             try {
+                updateUploadUI(`Uploading ${snap.name} (${sizeMB}MB)...`, sentCount, totalGroups, 8);
                 const url = await uploadBytesToStorage(
                     snap.bytes, snap.mime, snap.name, 'documents', authToken,
-                    p => { updateProgressRing(5 + Math.round(p * 90)); updateUploadUI(snap.name, sentCount, totalGroups, 5 + Math.round(p*90)); }
+                    p => { updateProgressRing(8 + Math.round(p * 87)); updateUploadUI(`Uploading... ${Math.round(p*100)}%`, sentCount, totalGroups, 8 + Math.round(p*87)); }
                 );
                 if (!url || uploadCanceled) { sentCount--; continue; }
                 const payload = buildFilePayload(snap.name, [url], 'document');
@@ -4158,7 +4580,12 @@ async function sendFiles() {
             } catch(e) {
                 sentCount--;
                 console.error('Doc upload error:', e);
-                showToast('📄 ' + (e.message||'Upload failed').substring(0, 120));
+                const errMsg = e.message || 'Upload failed';
+                if (errMsg.toLowerCase().includes('large') || errMsg.toLowerCase().includes('size') || errMsg.toLowerCase().includes('timeout')) {
+                    showStorageSuggestion(`📄 File too large (${sizeMB}MB). Set up Supabase Storage bucket "chat-assets" to send large files.`);
+                } else {
+                    showToast('📄 ' + errMsg.substring(0, 120));
+                }
             }
         }
 
@@ -4225,10 +4652,15 @@ async function compressVideoBytes(bytes, originalMime) {
         video.muted = true; video.playsInline = true; video.src = blobUrl;
 
         // Safety timeout — if anything hangs, return original
-        const bail = setTimeout(() => { URL.revokeObjectURL(blobUrl); resolve(bytes); }, 25000);
+        const bail = setTimeout(() => { URL.revokeObjectURL(blobUrl); resolve(bytes); }, 35000);
 
         video.onloadedmetadata = () => {
-            const maxDim = 480;
+            // Aggressive resize: larger videos get smaller dimensions
+            const fileMB = bytes.length / 1048576;
+            const maxDim = fileMB > 30 ? 320 : (fileMB > 15 ? 360 : (fileMB > 8 ? 420 : 480));
+            const bitrate = fileMB > 30 ? 250000 : (fileMB > 15 ? 350000 : (fileMB > 8 ? 450000 : 500000));
+            const fps = fileMB > 15 ? 12 : 15;
+
             let w = video.videoWidth || 640, h = video.videoHeight || 360;
             if (w > maxDim || h > maxDim) {
                 if (w > h) { h = Math.round(h * maxDim / w); w = maxDim; }
@@ -4239,10 +4671,10 @@ async function compressVideoBytes(bytes, originalMime) {
             const canvas = document.createElement('canvas');
             canvas.width = w; canvas.height = h;
             const ctx = canvas.getContext('2d');
-            const stream = canvas.captureStream(15);
+            const stream = canvas.captureStream(fps);
             let recorder;
             try {
-                recorder = new MediaRecorder(stream, { mimeType: 'video/webm;codecs=vp8', videoBitsPerSecond: 500000 });
+                recorder = new MediaRecorder(stream, { mimeType: 'video/webm;codecs=vp8', videoBitsPerSecond: bitrate });
             } catch(e) { clearTimeout(bail); URL.revokeObjectURL(blobUrl); resolve(bytes); return; }
 
             const chunks = [];
@@ -4272,15 +4704,12 @@ async function compressVideoBytes(bytes, originalMime) {
 }
 
 // ── UPLOAD BYTES TO SUPABASE STORAGE ──
-// Tries 4 storage methods, then falls back to base64-in-DB for ALL file types.
-// This means media ALWAYS sends even if storage is not configured.
+// V100: Smart upload — probes once, skips to base64 fast if RLS blocks all methods.
+// Detects 400/401/403 on first attempt and avoids wasting time on M2/M3/M4.
 async function uploadBytesToStorage(bytes, mime, fileName, folder, authToken, onProgress) {
-    // If storage check is still pending, wait briefly (max 1.5s instead of 4s)
+    // Wait for storage check max 1s
     if (storageAvailable === null) {
-        await Promise.race([
-            checkStorageBucket(),
-            new Promise(res => setTimeout(res, 1500))
-        ]);
+        await Promise.race([checkStorageBucket(), new Promise(res => setTimeout(res, 1000))]);
     }
 
     const ext = (fileName.split('.').pop() || 'bin').toLowerCase();
@@ -4290,7 +4719,12 @@ async function uploadBytesToStorage(bytes, mime, fileName, folder, authToken, on
 
     onProgress && onProgress(0.05);
 
-    // ── METHOD 1: SDK upload with Blob ──
+    // ── Fast path: skip all storage methods if we know bucket is unavailable ──
+    if (storageAvailable === false) {
+        return await _base64Fallback(bytes, mime, onProgress);
+    }
+
+    // ── METHOD 1: SDK Blob upload (fastest, cleanest) ──
     try {
         const blob = new Blob([bytes], { type: mime });
         const { error } = await sb.storage.from('chat-assets').upload(path, blob, {
@@ -4301,12 +4735,27 @@ async function uploadBytesToStorage(bytes, mime, fileName, folder, authToken, on
             const { data: urlData } = sb.storage.from('chat-assets').getPublicUrl(path);
             return urlData?.publicUrl || publicUrl;
         }
-        console.warn('M1 SDK Blob failed:', error.message || error.statusCode);
-    } catch(e) { console.warn('M1 exception:', e.message); }
 
-    onProgress && onProgress(0.25);
+        const sc = error.statusCode || error.status || 0;
+        const em = (error.message || '').toLowerCase();
 
-    // ── METHOD 2: PUT fetch ──
+        // ── If 400/401/403 on M1 — RLS is blocking us. Skip M2–M4 immediately. ──
+        // Trying 3 more methods that will all fail the same way just wastes seconds.
+        if (sc === 400 || sc === 401 || sc === 403 || em.includes('policy') || em.includes('unauthorized') || em.includes('not allowed')) {
+            console.warn(`M1 blocked (${sc}) — RLS policy issue. Skipping M2-M4, using base64 fallback.`);
+            console.info('%c📌 To fix: Supabase Dashboard → Storage → chat-assets → Policies → Add INSERT policy for authenticated users', 'color:#FFD700;');
+            storageAvailable = false; // mark so future uploads skip immediately
+            return await _base64Fallback(bytes, mime, onProgress);
+        }
+
+        console.warn('M1 SDK failed:', sc, error.message);
+    } catch(e) {
+        console.warn('M1 exception:', e.message);
+    }
+
+    onProgress && onProgress(0.3);
+
+    // ── METHOD 2: PUT fetch (only reached if M1 had a non-auth error) ──
     try {
         const r = await fetch(`${SB_URL}/storage/v1/object/chat-assets/${path}`, {
             method: 'PUT',
@@ -4314,11 +4763,16 @@ async function uploadBytesToStorage(bytes, mime, fileName, folder, authToken, on
             body: bytes
         });
         if (r.ok) { onProgress && onProgress(1); return publicUrl; }
-        let d = ''; try { const j = await r.clone().json(); d = j.message || j.error || r.status; } catch(_) { d = r.status; }
-        console.warn('M2 PUT failed:', d);
+        const sc = r.status;
+        if (sc === 400 || sc === 401 || sc === 403) {
+            console.warn(`M2 blocked (${sc}) — skipping M3/M4`);
+            storageAvailable = false;
+            return await _base64Fallback(bytes, mime, onProgress);
+        }
+        console.warn('M2 PUT failed:', sc);
     } catch(e) { console.warn('M2 exception:', e.message); }
 
-    onProgress && onProgress(0.45);
+    onProgress && onProgress(0.6);
 
     // ── METHOD 3: POST fetch ──
     try {
@@ -4328,13 +4782,18 @@ async function uploadBytesToStorage(bytes, mime, fileName, folder, authToken, on
             body: bytes
         });
         if (r.ok) { onProgress && onProgress(1); return publicUrl; }
-        let d = ''; try { const j = await r.clone().json(); d = j.message || j.error || String(r.status); } catch(_) { d = String(r.status); }
-        console.warn('M3 POST failed:', d);
+        const sc = r.status;
+        if (sc === 400 || sc === 401 || sc === 403) {
+            console.warn(`M3 blocked (${sc}) — skipping M4`);
+            storageAvailable = false;
+            return await _base64Fallback(bytes, mime, onProgress);
+        }
+        console.warn('M3 POST failed:', sc);
     } catch(e) { console.warn('M3 exception:', e.message); }
 
-    onProgress && onProgress(0.6);
+    onProgress && onProgress(0.75);
 
-    // ── METHOD 4: FormData multipart ──
+    // ── METHOD 4: FormData ──
     try {
         const blob = new Blob([bytes], { type: mime });
         const fd = new FormData();
@@ -4345,24 +4804,65 @@ async function uploadBytesToStorage(bytes, mime, fileName, folder, authToken, on
             body: fd
         });
         if (r.ok) { onProgress && onProgress(1); return publicUrl; }
-        let d = ''; try { const j = await r.clone().json(); d = j.message || j.error || String(r.status); } catch(_) { d = String(r.status); }
-        console.warn('M4 FormData failed:', d);
+        console.warn('M4 FormData failed:', r.status);
     } catch(e) { console.warn('M4 exception:', e.message); }
 
-    onProgress && onProgress(0.8);
+    // ── All methods failed → base64 fallback ──
+    storageAvailable = false;
+    return await _base64Fallback(bytes, mime, onProgress);
+}
 
-    // ── FALLBACK: Base64 data URL stored directly in DB ──
-    // Works for ALL file types — no storage bucket needed.
-    // Size limit: keep under 5MB total (Supabase DB row limit).
-    console.info('ℹ️ Storage unavailable — using base64 fallback (configure storage RLS policies to avoid this)');
-    try {
-        const b64 = bytesToBase64(bytes);
-        const dataUrl = `data:${mime};base64,${b64}`;
-        onProgress && onProgress(1);
-        return dataUrl;
-    } catch(e) {
-        throw new Error(`Upload failed and base64 fallback also failed: ${e.message}. File may be too large.`);
+// ── Base64 fallback — stores data URL directly in DB ──
+// Images are auto-compressed. Videos are aggressively compressed. Docs have a size cap.
+async function _base64Fallback(bytes, mime, onProgress) {
+    console.info('ℹ️ Using base64 fallback — configure Supabase Storage RLS policies for proper uploads');
+    let finalBytes = bytes;
+    let finalMime = mime;
+
+    if (mime.startsWith('image/')) {
+        if (bytes.length > 150000) {
+            try {
+                // Aggressive compression for base64 path: target <150KB
+                const maxDim = bytes.length > 2000000 ? 640 : (bytes.length > 500000 ? 800 : 960);
+                const quality = bytes.length > 2000000 ? 0.45 : (bytes.length > 500000 ? 0.60 : 0.72);
+                const compressed = await compressBytesToJpeg(bytes, maxDim, quality);
+                if (compressed && compressed.length < bytes.length) {
+                    finalBytes = compressed;
+                    finalMime = 'image/jpeg';
+                }
+            } catch(ce) { /* use original */ }
+        }
+        // Images: allow up to 2MB base64
+        if (finalBytes.length > 2 * 1024 * 1024) {
+            throw new Error(`Image too large (${(bytes.length/1048576).toFixed(1)}MB) for inline storage. Set up Supabase Storage.`);
+        }
+    } else if (mime.startsWith('video/')) {
+        // Videos: try canvas-based compression first
+        if (bytes.length > 4 * 1024 * 1024) {
+            try {
+                onProgress && onProgress(0.2);
+                const compressed = await compressVideoBytes(bytes, mime);
+                if (compressed.length < bytes.length) {
+                    finalBytes = compressed;
+                    finalMime = 'video/webm';
+                }
+            } catch(ce) { console.warn('Video compress failed in b64 path:', ce.message); }
+        }
+        // Videos: max 8MB base64 (only for small clips)
+        if (finalBytes.length > 8 * 1024 * 1024) {
+            throw new Error(`Video too large (${(bytes.length/1048576).toFixed(1)}MB) for inline storage. Set up Supabase Storage "chat-assets" bucket to send videos over 8MB.`);
+        }
+    } else {
+        // Documents/other: max 3MB base64
+        if (finalBytes.length > 3 * 1024 * 1024) {
+            throw new Error(`File too large (${(finalBytes.length/1048576).toFixed(1)}MB) for inline storage. Set up Supabase Storage bucket "chat-assets" to send files over 3MB.`);
+        }
     }
+
+    onProgress && onProgress(0.9);
+    const b64 = bytesToBase64(finalBytes);
+    onProgress && onProgress(1);
+    return `data:${finalMime};base64,${b64}`;
 }
 
 // ── Safe chunked base64 encoder — avoids call stack overflow on large files ──
@@ -4442,34 +4942,89 @@ async function insertMessage(payload) {
         const safe = {};
         Object.keys(payload).forEach(k => { if (MSG_SAFE_COLS.has(k)) safe[k] = payload[k]; });
 
-        // Check if attachments contain large base64 data URLs and warn
-        if (safe.attachments?.some(a => typeof a === 'string' && a.startsWith('data:') && a.length > 1000000)) {
-            console.warn('Large base64 attachment — configure Supabase Storage for better performance');
+        // ── V99: Large base64 guard ──
+        // If attachments are base64 data URLs > 1MB, warn and try to keep them but
+        // if the insert times out we'll strip them gracefully rather than error out.
+        const hasLargeBase64 = safe.attachments?.some(a =>
+            typeof a === 'string' && a.startsWith('data:') && a.length > 800000
+        );
+        if (hasLargeBase64) {
+            console.warn('⚠️ Large base64 attachment — configure Supabase Storage bucket "chat-assets" for best performance');
         }
 
-        let result = await sb.from(table).insert([safe]).select().single();
+        // Helper: run insert with a 12-second client-side timeout to avoid
+        // Supabase "canceling statement due to statement_timeout" (code 57014)
+        async function tryInsert(safePayload) {
+            return new Promise(async (resolve) => {
+                const timer = setTimeout(() => resolve({ data: null, error: { code: 'CLIENT_TIMEOUT', message: 'Insert timed out' } }), 12000);
+                try {
+                    const r = await sb.from(table).insert([safePayload]).select().single();
+                    clearTimeout(timer);
+                    resolve(r);
+                } catch(e) {
+                    clearTimeout(timer);
+                    resolve({ data: null, error: e });
+                }
+            });
+        }
+
+        let result = await tryInsert(safe);
+
         if (result.error) {
-            // Retry without metadata column if schema error
-            if (result.error.message?.includes('metadata') || result.error.code === 'PGRST204') {
+            const code = result.error.code;
+            const msg  = result.error.message || '';
+
+            // ① Schema errors — retry without metadata
+            if (msg.includes('metadata') || code === 'PGRST204') {
                 delete safe.metadata;
-                result = await sb.from(table).insert([safe]).select().single();
+                result = await tryInsert(safe);
             }
-            // If still failing due to row size (large base64), try sending as text-only fallback
-            if (result.error && result.error.message?.toLowerCase().includes('size')) {
-                safe.attachments = null;
-                safe.type = 'text';
-                safe.text = '[Media too large to send. Setup Supabase Storage bucket "chat-assets" with INSERT policy.]';
-                result = await sb.from(table).insert([safe]).select().single();
+
+            // ② Statement timeout (57014) or client timeout — payload too large.
+            //    Strip base64 attachments down: send each image as its own tiny message.
+            if (result.error && (code === '57014' || code === 'CLIENT_TIMEOUT' || msg.includes('timeout') || msg.includes('size'))) {
+                const attachs = safe.attachments;
+                if (hasLargeBase64 && Array.isArray(attachs) && attachs.length > 0) {
+                    // Split: send each attachment separately (avoids row-size limits)
+                    console.info('ℹ️ Splitting large base64 batch into individual messages to avoid timeout');
+                    let anyOk = false;
+                    for (const att of attachs) {
+                        const singleSafe = { ...safe, attachments: [att] };
+                        const r2 = await tryInsert(singleSafe);
+                        if (!r2.error && r2.data) {
+                            anyOk = true;
+                            if (!messageCache.has(r2.data.id)) {
+                                virtAppendMessage(r2.data);
+                                try { localStorage.removeItem('orbit_msgs_' + (isPersonalChat ? r2.data.chat_id : r2.data.room)); } catch(_) {}
+                            }
+                        } else {
+                            // Final fallback for this attachment — send placeholder text
+                            const fallback = { ...safe, attachments: null, type: 'text', text: '⚠️ Media too large to send inline. Please set up Supabase Storage bucket "chat-assets" with INSERT + SELECT policies for reliable media sharing.' };
+                            await tryInsert(fallback);
+                        }
+                    }
+                    if (anyOk) {
+                        try { localStorage.removeItem('orbit_chats_' + currentUser.id); } catch(_) {}
+                        return; // already appended above
+                    }
+                } else {
+                    // Non-base64 timeout or unknown size error
+                    safe.attachments = null;
+                    safe.type = 'text';
+                    safe.text = '⚠️ Media send timed out. Please set up Supabase Storage bucket "chat-assets" to send large files reliably.';
+                    result = await tryInsert(safe);
+                    // Show the setup guide after a short delay
+                    setTimeout(() => showStorageSuggestion('Media timed out — Storage setup needed for large files.'), 500);
+                }
             }
+
             if (result.error) throw result.error;
         }
+
         const data = result.data;
         if (data && !messageCache.has(data.id)) {
-            // Use virtAppendMessage so the virtualized scroll engine stays consistent
             virtAppendMessage(data);
-            // Invalidate msg cache so next room-open fetches fresh
             try { localStorage.removeItem('orbit_msgs_' + (isPersonalChat ? data.chat_id : data.room)); } catch(e) {}
-            // Also invalidate chat list cache so preview updates
             try { localStorage.removeItem('orbit_chats_' + currentUser.id); } catch(e) {}
         }
     } catch (e) {
@@ -4549,25 +5104,39 @@ function renderMediaPreview() {
         const thumb = document.createElement('div');
         if (file.type.startsWith('image/')) {
             thumb.className = 'media-thumb';
+            // Use createObjectURL for instant preview
             const url = URL.createObjectURL(file);
             const img = document.createElement('img');
-            img.src = url;
             img.alt = '';
-            img.style.cssText = 'width:100%;height:100%;object-fit:cover;';
-            img.onerror = () => { img.src = ''; thumb.style.background = '#222'; };
+            img.style.cssText = 'width:100%;height:100%;object-fit:cover;display:block;border-radius:10px;';
+            img.onload = () => { thumb.style.background = 'transparent'; };
+            img.onerror = () => {
+                // Fallback: try FileReader as base64
+                const fr = new FileReader();
+                fr.onload = ev => { img.src = ev.target.result; };
+                fr.onerror = () => { thumb.style.background = '#222'; thumb.innerHTML = `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;"><i class="fa-solid fa-image" style="color:#555;font-size:22px;"></i></div>`; };
+                fr.readAsDataURL(file);
+            };
+            img.src = url;
             thumb.appendChild(img);
             const sizeLabel = file.size > 1048576 ? (file.size/1048576).toFixed(1)+'MB' : Math.round(file.size/1024)+'KB';
             thumb.insertAdjacentHTML('beforeend', `<span class="quality-badge">${sizeLabel}</span><button class="remove-mb touch-fix" data-i="${i}"><i class="fa-solid fa-xmark"></i></button>`);
-        } else if (file.type.startsWith('video/')) {
+            // Warn if image > 3MB and storage likely unavailable
+            if (file.size > 3 * 1024 * 1024) {
+                thumb.insertAdjacentHTML('beforeend', `<span class="upload-size-warn">⚠️ Large</span>`);
+            }
+        } else if (file.type.startsWith('video/') && !file._forceDoc) {
             thumb.className = 'media-thumb';
             const objUrl = URL.createObjectURL(file);
             // Create canvas thumbnail — more reliable than #t=0.001 on Android
             const thumbCanvas = document.createElement('canvas');
-            thumbCanvas.style.cssText = 'width:100%;height:100%;object-fit:cover;';
+            thumbCanvas.style.cssText = 'width:100%;height:100%;object-fit:cover;display:block;border-radius:10px;';
             const playOverlay = `<div class="play-over"><i class="fa-solid fa-play"></i></div>`;
+            const sizeLabel = file.size > 1048576 ? (file.size/1048576).toFixed(1)+'MB' : Math.round(file.size/1024)+'KB';
             const removeBtn = `<button class="remove-mb touch-fix" data-i="${i}"><i class="fa-solid fa-xmark"></i></button>`;
-            // Start with poster placeholder, then capture frame
-            thumb.innerHTML = `<div style="width:100%;height:100%;background:#1a1a1a;display:flex;align-items:center;justify-content:center;"><i class="fa-solid fa-video" style="color:#555;font-size:22px;"></i></div>${playOverlay}${removeBtn}`;
+            const sizeBadge = `<span class="quality-badge">${sizeLabel}</span>`;
+            // Start with video icon placeholder, then capture frame
+            thumb.innerHTML = `<div style="width:100%;height:100%;background:#1a1a1a;display:flex;align-items:center;justify-content:center;border-radius:10px;"><i class="fa-solid fa-video" style="color:#555;font-size:22px;"></i></div>${playOverlay}${sizeBadge}${removeBtn}`;
             // Try to capture a frame for thumbnail
             const capVid = document.createElement('video');
             capVid.muted = true; capVid.playsInline = true; capVid.src = objUrl;
@@ -4578,24 +5147,25 @@ function renderMediaPreview() {
                     ctx.drawImage(capVid, 0, 0, 72, 72);
                     const img = document.createElement('img');
                     img.src = thumbCanvas.toDataURL('image/jpeg', 0.7);
-                    img.style.cssText = 'width:100%;height:100%;object-fit:cover;';
+                    img.style.cssText = 'width:100%;height:100%;object-fit:cover;display:block;border-radius:10px;';
                     thumb.innerHTML = '';
                     thumb.appendChild(img);
-                    thumb.insertAdjacentHTML('beforeend', playOverlay + removeBtn);
+                    thumb.insertAdjacentHTML('beforeend', playOverlay + sizeBadge + removeBtn);
                     thumb.querySelectorAll('.remove-mb').forEach(b => b.addEventListener('click', e => { e.stopPropagation(); removeMedia(parseInt(b.dataset.i)); }));
                 } catch(e) {}
+                URL.revokeObjectURL(objUrl);
                 capVid.src = '';
             }, { once: true });
-            capVid.addEventListener('error', () => { capVid.src = ''; }, { once: true });
+            capVid.addEventListener('error', () => { URL.revokeObjectURL(objUrl); capVid.src = ''; }, { once: true });
             capVid.load();
         } else {
             // Document — WhatsApp-style card
             thumb.className = 'doc-preview-card';
             const ext = file.name.split('.').pop().toUpperCase();
             const sizeFmt = file.size > 1048576 ? (file.size/1048576).toFixed(1)+'MB' : (file.size/1024).toFixed(0)+'KB';
-            const iconMap = { PDF:'fa-file-pdf', DOC:'fa-file-word', DOCX:'fa-file-word', XLS:'fa-file-excel', XLSX:'fa-file-excel', PPT:'fa-file-powerpoint', PPTX:'fa-file-powerpoint', ZIP:'fa-file-zipper', TXT:'fa-file-lines', CSV:'fa-file-csv' };
+            const iconMap = { PDF:'fa-file-pdf', DOC:'fa-file-word', DOCX:'fa-file-word', ODT:'fa-file-word', XLS:'fa-file-excel', XLSX:'fa-file-excel', ODS:'fa-file-excel', PPT:'fa-file-powerpoint', PPTX:'fa-file-powerpoint', ODP:'fa-file-powerpoint', ZIP:'fa-file-zipper', RAR:'fa-file-zipper', '7Z':'fa-file-zipper', TXT:'fa-file-lines', CSV:'fa-file-csv', RTF:'fa-file-lines', MP4:'fa-file-video', WEBM:'fa-file-video', MOV:'fa-file-video', AVI:'fa-file-video', MKV:'fa-file-video', MP3:'fa-file-audio', WAV:'fa-file-audio', OGG:'fa-file-audio', JSON:'fa-file-code', XML:'fa-file-code', HTML:'fa-file-code' };
             const icon = iconMap[ext] || 'fa-file';
-            const colorMap = { PDF:'#FF3B30', DOC:'#007AFF', DOCX:'#007AFF', XLS:'#34C759', XLSX:'#34C759', PPT:'#FF9500', PPTX:'#FF9500', ZIP:'#8E8E93', TXT:'#636366', CSV:'#34C759' };
+            const colorMap = { PDF:'#FF3B30', DOC:'#007AFF', DOCX:'#007AFF', ODT:'#007AFF', XLS:'#34C759', XLSX:'#34C759', ODS:'#34C759', PPT:'#FF9500', PPTX:'#FF9500', ODP:'#FF9500', ZIP:'#8E8E93', RAR:'#8E8E93', '7Z':'#8E8E93', TXT:'#636366', CSV:'#34C759', RTF:'#636366', MP4:'#FF2D55', WEBM:'#FF2D55', MOV:'#FF2D55', AVI:'#FF2D55', MKV:'#FF2D55', MP3:'#BF5AF2', WAV:'#BF5AF2', OGG:'#BF5AF2', JSON:'#32ADE6', XML:'#32ADE6', HTML:'#32ADE6' };
             const color = colorMap[ext] || '#8E8E93';
             thumb.innerHTML = `
                 <div class="doc-prev-icon" style="background:${color}20;"><i class="fa-solid ${icon}" style="color:${color};font-size:22px;"></i></div>
@@ -4668,6 +5238,9 @@ function handleDocument(e) {
     const files = Array.from(e.target.files || []);
     e.target.value = '';
     if (!files.length) return;
+    // Tag all files from document picker as _forceDoc so videos are treated as documents
+    // (They'll be stored as 'document' type with a play button, not as video stream)
+    files.forEach(f => { f._forceDoc = true; });
     selectedFiles = [...selectedFiles, ...files];
     renderMediaPreview();
     // Don't auto-send — user taps send button (WhatsApp style)
@@ -4965,8 +5538,15 @@ function getVerifiedBadgeHtml(tier) {
     return '';
 }
 
+// ── V99: Global premium tier cache (populated from DB on loadGlobalUsers) ──
+const _premiumTierCache = new Map(); // userId → 'bronze'|'silver'|'gold'|null
+
 function getVerifiedTier(userId) {
-    // Check localStorage for verified status (set by developer manually)
+    // 1. Owner always gold
+    if (userId === currentUser?.id && isOwner()) return 'gold';
+    // 2. DB-backed cache (populated by loadGlobalUsers / loadFriends)
+    if (_premiumTierCache.has(userId)) return _premiumTierCache.get(userId);
+    // 3. localStorage fallback (set manually by developer for owner device)
     try { return localStorage.getItem('orbit_vtier_' + userId) || null; } catch(e) { return null; }
 }
 
@@ -5086,11 +5666,17 @@ async function sendFriendRequestById(userId, userName, btn) {
     if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin" style="font-size:10px;"></i>'; }
     try {
         // Check if already friends or request exists
-        const { data: existing } = await sb.from('friends').select('id,status').or(`and(user_id.eq.${currentUser.id},friend_id.eq.${userId}),and(user_id.eq.${userId},friend_id.eq.${currentUser.id})`).limit(1);
+        const { data: existing } = await sb.from('friends').select('id,status,user_id,friend_id').or(`and(user_id.eq.${currentUser.id},friend_id.eq.${userId}),and(user_id.eq.${userId},friend_id.eq.${currentUser.id})`).limit(1);
         if (existing?.length) {
             const st = existing[0].status;
-            showToast(st === 'accepted' ? 'Already friends!' : 'Request already sent!');
-            if (btn) { btn.innerHTML = '<i class="fa-solid fa-check" style="font-size:10px;color:var(--gold)"></i>'; btn.disabled = true; }
+            if (st === 'accepted') {
+                showToast('Already friends! ✓', 'success');
+                if (btn) { btn.innerHTML = '<i class="fa-solid fa-user-check" style="font-size:10px;color:var(--gold)"></i>'; btn.disabled = true; btn.style.borderColor = 'var(--gold)'; btn.title = 'Friends'; }
+            } else {
+                // pending
+                showToast('Request already sent — waiting for response');
+                if (btn) { btn.innerHTML = '<i class="fa-solid fa-clock" style="font-size:10px;color:#aaa"></i>'; btn.disabled = true; btn.title = 'Pending'; }
+            }
             return;
         }
         const { error } = await sb.from('friends').insert([{
@@ -5101,7 +5687,7 @@ async function sendFriendRequestById(userId, userName, btn) {
         }]);
         if (error) throw error;
         showToast(`Friend request sent to ${userName}! ✓`, 'success');
-        if (btn) { btn.innerHTML = '<i class="fa-solid fa-check" style="font-size:10px;color:var(--gold)"></i>'; btn.disabled = true; btn.style.borderColor = 'var(--gold)'; }
+        if (btn) { btn.innerHTML = '<i class="fa-solid fa-clock" style="font-size:10px;color:#aaa"></i>'; btn.disabled = true; btn.title = 'Pending'; }
     } catch(e) {
         showToast('Failed: ' + (e.message || 'Unknown error'));
         if (btn) { btn.disabled = false; btn.innerHTML = orig; }
@@ -5197,12 +5783,14 @@ async function acceptFriend(reqId, fromUserId, btn) {
         // Update status to accepted
         const { error } = await sb.from('friends').update({ status: 'accepted' }).eq('id', reqId);
         if (error) throw error;
-        // Also create reverse record so both can see each other
+        // Also create reverse record so both can see each other as friends
         await sb.from('friends').insert([{ user_id: currentUser.id, friend_id: fromUserId, status: 'accepted', created_at: new Date().toISOString() }]).catch(() => {});
         showToast('Friend added! ✓', 'success');
         btn.closest('div[style]')?.remove();
         loadPendingRequestCount();
         loadFriends();
+        // Also refresh global so friend badge shows
+        setTimeout(() => loadGlobalUsers(), 500);
     } catch(e) { showToast('Failed: ' + e.message); btn.disabled = false; btn.innerText = 'Accept'; }
 }
 
@@ -5974,12 +6562,82 @@ function closeLightbox() {
     try { vid.pause(); vid.src = ''; vid.load(); } catch(e) {}
     document.getElementById('lb-video').style.display = 'none';
     document.getElementById('lb-img').style.display = 'none';
+    // Stop and hide audio player
+    try { const a = document.getElementById('lb-audio-el'); if (a) { a.pause(); a.src = ''; } } catch(e) {}
+    const lbAudio = document.getElementById('lb-audio-player');
+    if (lbAudio) lbAudio.style.display = 'none';
     document.getElementById('lightbox').classList.remove('active');
 }
 function downloadLb() {
     const url = document.getElementById('lightbox')._url;
     const title = document.getElementById('lightbox')._title || 'media';
     if (url) dlFile(url, title);
+}
+
+// ===================== AUDIO PLAYER =====================
+function openAudioPlayer(url, name) {
+    // Reuse lightbox but with an audio element
+    const lb = document.getElementById('lightbox');
+    const lbBody = lb.querySelector('.lb-body');
+    document.getElementById('lb-title').innerText = name || 'Audio';
+    document.getElementById('lb-img').style.display = 'none';
+    document.getElementById('lb-video').style.display = 'none';
+    // Create or reuse audio player in lightbox
+    let audioEl = document.getElementById('lb-audio-player');
+    if (!audioEl) {
+        audioEl = document.createElement('div');
+        audioEl.id = 'lb-audio-player';
+        audioEl.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:20px;width:90%;max-width:320px;';
+        lbBody.appendChild(audioEl);
+    }
+    const ext = name ? name.split('.').pop().toUpperCase() : 'AUDIO';
+    const extColors = { MP3:'#BF5AF2', WAV:'#BF5AF2', OGG:'#BF5AF2' };
+    const color = extColors[ext] || '#BF5AF2';
+    audioEl.innerHTML = `
+        <div style="width:100px;height:100px;border-radius:50%;background:${color}22;border:3px solid ${color};display:flex;align-items:center;justify-content:center;animation:pulse-brand 2.4s ease-in-out infinite;">
+            <i class="fa-solid fa-music" style="font-size:40px;color:${color};"></i>
+        </div>
+        <div style="font-size:14px;font-weight:600;color:#fff;text-align:center;max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(name || 'Audio')}</div>
+        <audio id="lb-audio-el" controls src="${url}" style="width:100%;border-radius:12px;" preload="auto"></audio>
+    `;
+    audioEl.style.display = 'flex';
+    lb._url = url;
+    lb._title = name;
+    lb.classList.add('active');
+    // Auto-play
+    const audioElem = document.getElementById('lb-audio-el');
+    audioElem?.play().catch(() => {});
+}
+
+// ===================== STORAGE SETUP GUIDE =====================
+function showStorageSuggestion(errorMsg) {
+    // Show toast with the specific error first
+    showToast(errorMsg || 'File too large — set up Supabase Storage');
+    // After a short delay, show the full setup guide modal
+    setTimeout(() => {
+        const desc = document.getElementById('storage-modal-desc');
+        if (desc) desc.innerText = errorMsg || 'Set up Supabase Storage to send large files, videos, and documents of any size.';
+        document.getElementById('modal-storage-setup').classList.add('active');
+    }, 1200);
+}
+function closeStorageModal() {
+    document.getElementById('modal-storage-setup').classList.remove('active');
+}
+function orbitCopySQL(btn, type) {
+    const box = btn.parentElement;
+    const text = box.innerText.replace('Copy','').trim();
+    navigator.clipboard?.writeText(text).then(() => {
+        btn.innerText = '✓ Copied';
+        setTimeout(() => btn.innerText = 'Copy', 1800);
+    }).catch(() => {
+        // Fallback copy
+        const el = document.createElement('textarea');
+        el.value = text; el.style.cssText = 'position:fixed;opacity:0;';
+        document.body.appendChild(el); el.select();
+        try { document.execCommand('copy'); btn.innerText = '✓ Copied'; setTimeout(() => btn.innerText = 'Copy', 1800); } catch(e) {}
+        document.body.removeChild(el);
+    });
+    showToast(`${type} policy SQL copied!`, 'success');
 }
 
 // ===================== UTILS =====================
@@ -6033,12 +6691,14 @@ function switchTab(tab) {
     const listId = listMap[tab];
     const listEl = listId ? document.getElementById(listId) : null;
     const needsLoad = !listEl || !listEl.children.length || listEl.innerHTML.includes('loader') || listEl.innerHTML.includes('Could not');
-    if (needsLoad) {
+    // Global always reloads on switch so friend status and last-seen are fresh
+    if (tab === 'global') {
+        loadGlobalUsers();
+    } else if (needsLoad) {
         if (tab === 'chats') loadChats();
         else if (tab === 'secure') loadSecureChats();
         else if (tab === 'friends') loadFriends();
         else if (tab === 'groups') loadGroups();
-        else if (tab === 'global') loadGlobalUsers();
         else if (tab === 'notes') loadNotes();
     }
 }
@@ -6189,16 +6849,29 @@ function openPdfViewer(url, name) {
     document.getElementById('pdf-dl-btn').onclick = () => dlFile(url, name || 'document.pdf');
 
     const tryRender = () => {
+        const PDFJS_CDN = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+        const PDFJS_WORKER = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
         if (window.pdfjsLib) {
-            pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+            pdfjsLib.GlobalWorkerOptions.workerSrc = PDFJS_WORKER;
             renderPdf(url);
         } else {
-            // PDF.js not yet loaded — load it now
+            // PDF.js not yet loaded — load it now synchronously
             const script = document.createElement('script');
-            script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+            script.src = PDFJS_CDN;
             script.onload = () => {
-                pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-                renderPdf(url);
+                if (window.pdfjsLib) {
+                    pdfjsLib.GlobalWorkerOptions.workerSrc = PDFJS_WORKER;
+                    renderPdf(url);
+                } else {
+                    container.innerHTML = `<div style="text-align:center;padding:40px;color:#888;">
+                        <i class="fa-solid fa-file-pdf" style="font-size:56px;color:#FF3B30;margin-bottom:16px;display:block;"></i>
+                        <div style="font-size:14px;color:#fff;margin-bottom:8px;">${esc(name)}</div>
+                        <div style="font-size:12px;color:#888;margin-bottom:24px;">PDF preview unavailable — download to view</div>
+                        <button onclick="dlFile(pdfViewerUrl,'${esc(name)}')" style="background:var(--gold);color:#000;border:none;padding:12px 24px;border-radius:12px;font-weight:700;font-size:14px;cursor:pointer;font-family:'Syne',sans-serif;">
+                            <i class="fa-solid fa-download"></i> Download PDF
+                        </button>
+                    </div>`;
+                }
             };
             script.onerror = () => {
                 container.innerHTML = `<div style="text-align:center;padding:40px;color:#888;">
@@ -6299,13 +6972,328 @@ function closePdfViewer() {
     pdfViewerUrl = null; pdfViewerName = null;
 }
 
-console.log('%c⚡ Orbit V100 — Fast Uploads · Quality Picker · Media Preview Fixed · Long Chat Speed', 'color:#FFD700;font-weight:bold;font-size:17px;');
-console.log('%c✅ Quality Picker: Standard (original) vs Instant (640px/0.45q) — 3-4× faster upload', 'color:#34C759;font-size:13px;');
-console.log('%c✅ Media Preview: canvas frame capture for video thumbnails — works on all Android', 'color:#34C759;font-size:13px;');
-console.log('%c✅ Long Chat Speed: schema cached in localStorage — instant on repeat opens', 'color:#34C759;font-size:13px;');
-console.log('%c✅ Pagination: 35 msgs on open, 40 older msgs per page', 'color:#34C759;font-size:13px;');
-console.log('%c✅ Walkie-Talkie: ping/pong handshake, both users connect reliably', 'color:#34C759;font-size:13px;');
-console.log('%c✅ Notifications: fires on all devices when permission granted, try/catch on every path', 'color:#34C759;font-size:13px;');
+// ===================== XLSX / EXCEL VIEWER =====================
+let _xlsxViewerUrl = null, _xlsxViewerName = null, _xlsxWorkbook = null;
+
+function openXlsxViewer(url, name) {
+    _xlsxViewerUrl = url;
+    _xlsxViewerName = name;
+    document.getElementById('xlsx-viewer-title').innerText = name || 'Spreadsheet';
+    document.getElementById('xlsx-viewer-modal').style.display = 'flex';
+    document.getElementById('xlsx-dl-btn').onclick = () => dlFile(url, name || 'spreadsheet.xlsx');
+    document.getElementById('xlsx-table-wrap').innerHTML = '<div style="color:#888;padding:40px;text-align:center;"><div class="loader"></div><div style="margin-top:12px;font-size:13px;">Loading spreadsheet...</div></div>';
+    document.getElementById('xlsx-sheet-tabs').innerHTML = '';
+    _renderXlsx(url, name);
+}
+
+async function _renderXlsx(url, name) {
+    const wrap = document.getElementById('xlsx-table-wrap');
+    const tabsEl = document.getElementById('xlsx-sheet-tabs');
+    try {
+        let data;
+        if (url.startsWith('data:')) {
+            const base64 = url.split(',')[1];
+            if (!base64) throw new Error('Invalid data URL');
+            const binaryStr = atob(base64);
+            const bytes = new Uint8Array(binaryStr.length);
+            for (let i = 0; i < binaryStr.length; i++) bytes[i] = binaryStr.charCodeAt(i);
+            data = bytes.buffer;
+        } else {
+            const resp = await fetch(url);
+            if (!resp.ok) throw new Error('HTTP ' + resp.status);
+            data = await resp.arrayBuffer();
+        }
+
+        // Check if XLSX is available
+        if (typeof XLSX === 'undefined') {
+            throw new Error('XLSX library not loaded');
+        }
+
+        const wb = XLSX.read(new Uint8Array(data), { type: 'array' });
+        _xlsxWorkbook = wb;
+
+        // Render sheet tabs
+        tabsEl.innerHTML = '';
+        wb.SheetNames.forEach((sheetName, idx) => {
+            const tab = document.createElement('div');
+            tab.className = 'xlsx-tab' + (idx === 0 ? ' active' : '');
+            tab.textContent = sheetName;
+            tab.onclick = () => {
+                tabsEl.querySelectorAll('.xlsx-tab').forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                _renderXlsxSheet(wb, sheetName, wrap);
+            };
+            tabsEl.appendChild(tab);
+        });
+
+        if (wb.SheetNames.length > 0) {
+            _renderXlsxSheet(wb, wb.SheetNames[0], wrap);
+        } else {
+            throw new Error('No sheets found');
+        }
+    } catch(err) {
+        console.error('XLSX render error:', err);
+        wrap.innerHTML = `<div style="text-align:center;padding:40px;color:#888;">
+            <i class="fa-solid fa-file-excel" style="font-size:56px;color:#34C759;margin-bottom:16px;display:block;"></i>
+            <div style="font-size:14px;color:#fff;margin-bottom:8px;">${esc(name || 'Spreadsheet')}</div>
+            <div style="font-size:12px;color:#888;margin-bottom:20px;">Could not preview this file — download to open in Excel or Google Sheets</div>
+            <button onclick="dlFile(_xlsxViewerUrl,_xlsxViewerName)" style="background:var(--gold);color:#000;border:none;padding:12px 24px;border-radius:12px;font-weight:700;font-size:14px;cursor:pointer;font-family:'Syne',sans-serif;">
+                <i class="fa-solid fa-download"></i> Download
+            </button>
+        </div>`;
+    }
+}
+
+function _renderXlsxSheet(wb, sheetName, wrap) {
+    const ws = wb.Sheets[sheetName];
+    if (!ws) { wrap.innerHTML = '<div style="padding:40px;text-align:center;color:#888;">Empty sheet</div>'; return; }
+
+    const range = XLSX.utils.decode_range(ws['!ref'] || 'A1:A1');
+    const maxRows = Math.min(range.e.r + 1, 500); // cap at 500 rows for performance
+    const maxCols = Math.min(range.e.c + 1, 52);  // cap at 52 cols
+
+    let html = '<table class="xlsx-table"><thead><tr><th style="min-width:36px;color:#555;font-size:10px;">#</th>';
+    // Column headers (A, B, C...)
+    for (let c = range.s.c; c < range.s.c + maxCols; c++) {
+        html += `<th>${XLSX.utils.encode_col(c)}</th>`;
+    }
+    html += '</tr></thead><tbody>';
+
+    for (let r = range.s.r; r < range.s.r + maxRows; r++) {
+        html += `<tr><td style="color:#555;font-size:10px;text-align:right;background:#1a1a1a;">${r + 1}</td>`;
+        for (let c = range.s.c; c < range.s.c + maxCols; c++) {
+            const cellAddr = XLSX.utils.encode_cell({ r, c });
+            const cell = ws[cellAddr];
+            const val = cell ? (cell.w || cell.v || '') : '';
+            html += `<td title="${esc(String(val))}">${esc(String(val))}</td>`;
+        }
+        html += '</tr>';
+    }
+    html += '</tbody></table>';
+    if (maxRows < range.e.r + 1) {
+        html += `<div style="text-align:center;padding:12px;font-size:11px;color:#888;">Showing first ${maxRows} of ${range.e.r + 1} rows · Download to see all</div>`;
+    }
+    wrap.innerHTML = html;
+}
+
+function closeXlsxViewer() {
+    document.getElementById('xlsx-viewer-modal').style.display = 'none';
+    document.getElementById('xlsx-table-wrap').innerHTML = '';
+    document.getElementById('xlsx-sheet-tabs').innerHTML = '';
+    _xlsxViewerUrl = null; _xlsxViewerName = null; _xlsxWorkbook = null;
+}
+
+// ===================== PPTX / PRESENTATION VIEWER =====================
+let _pptxViewerUrl = null, _pptxViewerName = null;
+
+function openPptxViewer(url, name) {
+    _pptxViewerUrl = url;
+    _pptxViewerName = name;
+    document.getElementById('pptx-viewer-title').innerText = name || 'Presentation';
+    document.getElementById('pptx-viewer-modal').style.display = 'flex';
+    document.getElementById('pptx-dl-btn').onclick = () => dlFile(url, name || 'presentation.pptx');
+    document.getElementById('pptx-slide-list').innerHTML = '<div style="color:#888;padding:40px;text-align:center;"><div class="loader"></div><div style="margin-top:12px;font-size:13px;">Loading presentation...</div></div>';
+    _renderPptx(url, name);
+}
+
+async function _renderPptx(url, name) {
+    const list = document.getElementById('pptx-slide-list');
+    try {
+        let data;
+        if (url.startsWith('data:')) {
+            const base64 = url.split(',')[1];
+            if (!base64) throw new Error('Invalid data URL');
+            const binaryStr = atob(base64);
+            const bytes = new Uint8Array(binaryStr.length);
+            for (let i = 0; i < binaryStr.length; i++) bytes[i] = binaryStr.charCodeAt(i);
+            data = bytes.buffer;
+        } else {
+            const resp = await fetch(url);
+            if (!resp.ok) throw new Error('HTTP ' + resp.status);
+            data = await resp.arrayBuffer();
+        }
+
+        // Use XLSX library to parse PPTX (it's a ZIP file with XML)
+        if (typeof XLSX === 'undefined') throw new Error('XLSX library not loaded');
+
+        const zip = XLSX.read(new Uint8Array(data), { type: 'array', bookType: 'pptx' });
+
+        // Try to extract slide text from PPTX XML
+        const slideFiles = Object.keys(zip.files || {}).filter(f => f.match(/ppt\/slides\/slide\d+\.xml/i)).sort((a, b) => {
+            const na = parseInt(a.match(/\d+/)?.[0] || 0);
+            const nb = parseInt(b.match(/\d+/)?.[0] || 0);
+            return na - nb;
+        });
+
+        if (!slideFiles.length) throw new Error('No slides found');
+
+        list.innerHTML = '';
+        let slideNum = 0;
+        for (const slideFile of slideFiles.slice(0, 30)) { // max 30 slides
+            slideNum++;
+            let text = '';
+            try {
+                const xmlContent = zip.files[slideFile].asText ? zip.files[slideFile].asText() : (new TextDecoder()).decode(zip.files[slideFile].asUint8Array());
+                // Extract text from XML (strip tags)
+                const lines = [];
+                const matches = xmlContent.matchAll(/<a:t[^>]*>([^<]+)<\/a:t>/g);
+                for (const m of matches) {
+                    const txt = m[1].trim();
+                    if (txt) lines.push(txt);
+                }
+                text = lines.join(' · ');
+            } catch(e) {}
+
+            const slide = document.createElement('div');
+            slide.className = 'pptx-slide';
+            slide.innerHTML = `
+                <div style="background:linear-gradient(135deg,#1a1a3e,#2a2a5e);padding:24px 20px 36px;min-height:180px;position:relative;">
+                    <div class="pptx-slide-num">Slide ${slideNum}</div>
+                    ${text
+                        ? `<div style="color:#fff;font-size:13px;line-height:1.6;font-family:'DM Sans',sans-serif;">${esc(text.substring(0,200))}${text.length>200?'...':''}</div>`
+                        : `<div style="color:#555;font-size:12px;font-style:italic;margin-top:40px;text-align:center;">Slide ${slideNum} — contains images or shapes</div>`
+                    }
+                </div>`;
+            list.appendChild(slide);
+        }
+
+        if (slideFiles.length > 30) {
+            const note = document.createElement('div');
+            note.style.cssText = 'text-align:center;padding:12px;font-size:11px;color:#888;';
+            note.textContent = `Showing first 30 of ${slideFiles.length} slides · Download to see all`;
+            list.appendChild(note);
+        }
+    } catch(err) {
+        console.error('PPTX render error:', err);
+        list.innerHTML = `<div class="pptx-no-preview">
+            <i class="fa-solid fa-file-powerpoint" style="font-size:60px;color:#FF9500;margin-bottom:18px;display:block;"></i>
+            <div style="font-size:14px;color:#fff;margin-bottom:8px;">${esc(name || 'Presentation')}</div>
+            <div style="font-size:12px;color:#888;margin-bottom:24px;">Full slide preview coming soon — download to open in PowerPoint</div>
+            <button onclick="dlFile(_pptxViewerUrl,_pptxViewerName)" style="background:var(--gold);color:#000;border:none;padding:12px 24px;border-radius:12px;font-weight:700;font-size:14px;cursor:pointer;font-family:'Syne',sans-serif;">
+                <i class="fa-solid fa-download"></i> Download
+            </button>
+        </div>`;
+    }
+}
+
+function closePptxViewer() {
+    document.getElementById('pptx-viewer-modal').style.display = 'none';
+    document.getElementById('pptx-slide-list').innerHTML = '';
+    _pptxViewerUrl = null; _pptxViewerName = null;
+}
+
+// ===================== SHARE APP =====================
+function openShareAppModal() {
+    const url = window.location.href.split('?')[0].split('#')[0];
+    const shareEl = document.getElementById('share-app-url');
+    if (shareEl) shareEl.textContent = url;
+    document.getElementById('modal-share-app').classList.add('active');
+}
+
+function orbitCopyShareLink() {
+    const url = window.location.href.split('?')[0].split('#')[0];
+    const txt = `🪐 Join me on Orbit Pro — the next-gen real-time messenger!\n${url}`;
+    if (navigator.clipboard) {
+        navigator.clipboard.writeText(txt).then(() => showToast('Link copied! Share with friends ✓', 'success')).catch(() => { orbitFallbackCopy(txt); });
+    } else { orbitFallbackCopy(txt); }
+    document.getElementById('modal-share-app').classList.remove('active');
+}
+
+function orbitShareVia(platform) {
+    const url = encodeURIComponent(window.location.href.split('?')[0].split('#')[0]);
+    const text = encodeURIComponent('🪐 Join me on Orbit Pro — the next-gen real-time messenger! ');
+    document.getElementById('modal-share-app').classList.remove('active');
+    if (platform === 'native' && navigator.share) {
+        navigator.share({
+            title: 'Orbit Pro — Next-Gen Messenger',
+            text: '🪐 Join me on Orbit Pro — the next-gen real-time messenger!',
+            url: decodeURIComponent(url)
+        }).catch(() => {});
+        return;
+    }
+    const links = {
+        whatsapp: `https://api.whatsapp.com/send?text=${text}${url}`,
+        telegram: `https://t.me/share/url?url=${url}&text=${text}`
+    };
+    if (links[platform]) window.open(links[platform], '_blank');
+    else {
+        // Fallback: copy link
+        const fullUrl = decodeURIComponent(url);
+        const copyTxt = `🪐 Join me on Orbit Pro — the next-gen real-time messenger!\n${fullUrl}`;
+        if (navigator.clipboard) navigator.clipboard.writeText(copyTxt).then(() => showToast('Link copied!', 'success'));
+    }
+}
+
+// ===================== GLOBAL + FRIEND REQUEST PUSH NOTIFICATIONS =====================
+// Subscribe to new friend requests for current user (realtime)
+let _friendReqNotifChannel = null;
+function setupFriendRequestNotifChannel() {
+    if (!currentUser) return;
+    if (_friendReqNotifChannel) { try { sb.removeChannel(_friendReqNotifChannel); } catch(e) {} _friendReqNotifChannel = null; }
+    _friendReqNotifChannel = sb.channel('orbit_friend_req_notif_' + currentUser.id.slice(0,8))
+        .on('postgres_changes', {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'friends',
+            filter: `friend_id=eq.${currentUser.id}`
+        }, async payload => {
+            const req = payload?.new;
+            if (!req || req.status !== 'pending') return;
+            // Get sender info
+            let senderName = 'Someone';
+            let senderDp = null;
+            try {
+                const { data } = await sb.from('user_presence').select('display_name, dp_url, email').eq('user_id', req.user_id).single();
+                if (data) {
+                    senderName = data.display_name || data.email?.split('@')[0] || 'Someone';
+                    senderDp = data.dp_url || null;
+                }
+            } catch(e) {}
+            showNotif('👤 Friend Request', `${senderName} sent you a friend request`, { dpUrl: senderDp, userId: req.user_id });
+            // Update pending badge
+            loadPendingRequestCount().catch(() => {});
+        })
+        .subscribe();
+}
+
+// Global message notification (fires when user is NOT inside the global chat but it's active)
+let _globalMsgNotifChannel = null;
+function setupGlobalMsgNotifChannel() {
+    if (!currentUser) return;
+    if (_globalMsgNotifChannel) { try { sb.removeChannel(_globalMsgNotifChannel); } catch(e) {} _globalMsgNotifChannel = null; }
+    // Global chat is typically a special room — we detect messages from non-self in global rooms
+    // This fires notifications for global room messages when the user is on dashboard
+    _globalMsgNotifChannel = sb.channel('orbit_global_msg_notif_' + currentUser.id.slice(0,8))
+        .on('postgres_changes', {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'messages'
+        }, payload => {
+            const msg = payload?.new;
+            if (!msg) return;
+            if (msg.sender_id === currentUser.id) return; // own message
+            if (msg.room === currentRoom) return; // already viewing this room
+            if (_bgNotifRoomIds.includes(msg.room)) return; // handled by bgNotif channel
+            // If this is a global/public room, notify
+            const u = globalUsersCache.get(msg.sender_id);
+            const name = msg.username || u?.display_name || 'User';
+            const body = msg.type === 'text' ? (msg.text || '') :
+                         msg.type === 'image' ? '📷 Photo' :
+                         msg.type === 'video' ? '📹 Video' :
+                         msg.type === 'voice' ? '🎤 Voice message' :
+                         msg.type === 'document' ? '📄 Document' : '💬 New message';
+            showNotif(name, body, { dpUrl: u?.dp_url, userId: msg.sender_id });
+        })
+        .subscribe();
+}
+
+console.log('%c⚡ Orbit V100.3 — XLSX/PPTX Preview · Share App · Friend Request Notifications · Global Notifications', 'color:#FFD700;font-weight:bold;font-size:17px;');
+console.log('%c✅ Video: Auto-compress before upload — adaptive res/bitrate based on file size', 'color:#34C759;font-size:13px;');
+console.log('%c✅ Videos: up to 15MB inline (base64) | unlimited with Supabase Storage', 'color:#34C759;font-size:13px;');
+console.log('%c✅ Docs: up to 3MB inline | unlimited with Supabase Storage', 'color:#34C759;font-size:13px;');
+console.log('%c✅ Storage Setup Guide: shows step-by-step SQL when file is too large', 'color:#34C759;font-size:13px;');
+console.log('%c✅ Image compression: smarter adaptive quality/resolution for base64 path', 'color:#34C759;font-size:13px;');
+console.log('%c✅ V100.3: XLSX/Excel preview · PPTX preview · Share App · Friend Request Push · Global Push', 'color:#34C759;font-size:13px;');
 /*
   ╔══════════════════════════════════════════════════════════════════════════════╗
   ║         ORBIT V85 — SUPABASE SQL MIGRATION (Run in SQL Editor)             ║
@@ -6407,6 +7395,14 @@ console.log('%c✅ Notifications: fires on all devices when permission granted, 
   );
   ALTER TABLE secure_notes ENABLE ROW LEVEL SECURITY;
   CREATE POLICY IF NOT EXISTS "Users own their notes" ON secure_notes FOR ALL USING (auth.uid() = user_id);
+
+  -- ⑨ V99: PREMIUM TIER COLUMN — Run this to enable global badge visibility
+  -- premium_tier values: 'bronze' | 'silver' | 'gold' | null
+  ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS premium_tier text;
+  -- To grant a badge to a user after payment, run:
+  -- UPDATE user_profiles SET premium_tier = 'gold' WHERE user_id = '<uuid>';
+  -- UPDATE user_profiles SET premium_tier = 'silver' WHERE user_id = '<uuid>';
+  -- UPDATE user_profiles SET premium_tier = 'bronze' WHERE user_id = '<uuid>';
 
   -- ⑧ SERVICE WORKER FILE (save as /public/sw.js or /sw.js in your hosting):
   -- self.addEventListener('push', e => {
