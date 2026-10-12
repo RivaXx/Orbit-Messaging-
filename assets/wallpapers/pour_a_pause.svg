@@ -1,0 +1,75 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 1280" width="720" height="1280">
+  <defs>
+    <!-- Paper Texture Tone -->
+    <radialGradient id="paperGrad" cx="50%" cy="40%" r="70%">
+      <stop offset="0%" stop-color="#F9F6F0" />
+      <stop offset="100%" stop-color="#ECE5DA" />
+    </radialGradient>
+    <filter id="grain" x="0%" y="0%" width="100%" height="100%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" result="noise" />
+      <feColorMatrix type="matrix" values="0 0 0 0 0   0 0 0 0 0   0 0 0 0 0  0 0 0 0.04 0" />
+      <feComposite in2="SourceGraphic" in="gl" operator="over" />
+    </filter>
+  </defs>
+  <rect width="720" height="1280" fill="url(#paperGrad)"/>
+
+  <!-- Arching Stylized Arm Holding Teapot -->
+  <!-- Upper Arm Arch (Vibrant Magenta/Coral Pink) -->
+  <path d="M 280 800 C 140 760 12 560 12 360 C 12 180 140 40 340 40 C 400 40 460 70 510 120 C 480 150 430 180 370 120 C 230 120 120 220 120 360 C 120 500 200 660 310 740 Z" fill="#E61A66" />
+  
+  <!-- Hand at Top Holding Teapot Handle -->
+  <path d="M 380 90 C 410 70 470 60 500 110 C 510 130 490 160 460 170 C 430 180 390 140 380 90 Z" fill="#E61A66" />
+  <circle cx="430" cy="110" r="14" fill="#D0175B" />
+  <circle cx="460" cy="125" r="13" fill="#D0175B" />
+  <circle cx="485" cy="145" r="12" fill="#D0175B" />
+
+  <!-- Teapot (Deep Cobalt Blue) -->
+  <!-- Teapot Body -->
+  <ellipse cx="450" cy="230" rx="140" ry="115" fill="#1557A6" />
+  <!-- Teapot Highlight -->
+  <path d="M 400 150 C 480 160 540 200 550 260 C 530 200 470 160 400 150 Z" fill="#2E7AD6" opacity="0.6" />
+  <!-- Teapot Lid & Knob -->
+  <ellipse cx="440" cy="135" rx="55" ry="20" fill="#0D3B73" />
+  <circle cx="440" cy="115" r="16" fill="#1557A6" />
+  <!-- Handle -->
+  <path d="M 390 135 C 330 90 280 160 340 220 C 350 210 320 170 360 145 Z" fill="#D6D1C4" stroke="#9C9585" stroke-width="3" />
+  <!-- Spout -->
+  <path d="M 560 250 C 610 240 640 260 635 285 C 625 295 605 280 575 280 Z" fill="#104A8F" />
+
+  <!-- Coffee/Tea Stream Pouring Vertically Down -->
+  <path d="M 622 284 C 620 380 560 680 555 905 L 570 905 C 576 680 634 380 632 284 Z" fill="#2E1609" />
+
+  <!-- Head & Torso of Figure -->
+  <!-- Torso (Rich Forest Emerald Green) -->
+  <path d="M 80 1280 C 60 1000 70 700 320 530 C 440 620 480 780 470 1000 C 420 1140 320 1280 80 1280 Z" fill="#087555" />
+
+  <!-- Head with Relaxed Expression -->
+  <ellipse cx="370" cy="460" rx="70" ry="85" fill="#E61A66" />
+  <!-- Stylized Black Hair -->
+  <path d="M 300 430 C 300 360 380 340 440 380 C 470 410 460 480 430 480 C 400 480 390 420 340 430 C 320 435 305 450 300 480 Z" fill="#18181B" />
+  <!-- Serene Closed Eyes & Smile -->
+  <path d="M 350 455 Q 365 465 375 455" stroke="#18181B" stroke-width="4.5" fill="none" stroke-linecap="round" />
+  <path d="M 395 440 Q 410 450 420 440" stroke="#18181B" stroke-width="4.5" fill="none" stroke-linecap="round" />
+  <path d="M 385 480 Q 400 495 410 480" stroke="#18181B" stroke-width="4" fill="none" stroke-linecap="round" />
+
+  <!-- Lower Arm in Emerald & Magenta Resting on Bottom -->
+  <path d="M 120 1280 C 220 1100 360 900 620 980 C 580 1150 400 1280 120 1280 Z" fill="#087555" />
+  <!-- Hand Supporting Teacup Saucer -->
+  <path d="M 410 1050 C 450 960 570 940 650 980 C 630 1040 520 1080 410 1050 Z" fill="#E61A66" />
+
+  <!-- Turquoise / Teal Cup & Saucer -->
+  <!-- Saucer -->
+  <ellipse cx="560" cy="1030" rx="145" ry="32" fill="#088A6E" />
+  <!-- Cup Body -->
+  <path d="M 440 910 L 460 1020 C 480 1050 630 1050 660 1020 L 680 910 Z" fill="#0EA583" />
+  <!-- Cup Inner Coffee Pool -->
+  <ellipse cx="560" cy="915" rx="118" ry="32" fill="#1E0E05" />
+  <!-- Cup Handle -->
+  <path d="M 670 920 C 720 930 730 1000 665 1010 C 685 990 690 945 660 940 Z" fill="#088A6E" />
+
+  <!-- Bold Modern Editorial Typography -->
+  <g font-family="-apple-system, BlinkMacSystemFont, 'Space Grotesk', 'Plus Jakarta Sans', sans-serif" font-weight="900" font-size="34" letter-spacing="1.5" fill="#18181B">
+    <text x="590" y="630">POUR A</text>
+    <text x="590" y="670">PAUSE</text>
+  </g>
+</svg>
