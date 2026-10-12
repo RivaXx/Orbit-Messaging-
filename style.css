@@ -6221,7 +6221,20 @@ body.amoled-dark:not(.light-mode) .settings-modal-box { background:#000!importan
 }
 
 /* Original Orbit branding and layout, with additional banner height. */
-.dash-header { overflow:visible; flex:0 0 auto; }
+.dash-header { overflow:visible; flex:0 0 auto; gap:12px; }
+.dash-header .dash-brand { flex:0 0 auto; }
+.dash-header .header-actions { flex:1 1 0; min-width:0; justify-content:flex-end; }
+.dash-header .user-chip-wrap { flex:0 1 auto; min-width:0; }
+.dash-header .user-chip { min-width:0; }
+.dash-header .user-chip-name { flex:1 1 auto; min-width:0; }
+.dash-header .user-chip-label { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.dash-header .online-dot-mini,.dash-header .glass-icon-btn { flex-shrink:0; }
+@media (max-width:360px) {
+    .dash-header .user-chip { gap:4px; }
+    .dash-header .user-chip-name { display:flex; }
+    .dash-header .user-chip-label { display:none; }
+    .dash-header .user-chip .online-dot-mini { display:block; }
+}
 
 /* Admin console styling shared by account review and storage controls. */
 .admin-panel-modal {

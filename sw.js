@@ -1,5 +1,5 @@
 // Orbit Messenger — messaging delivery and storage policy repair
-const CACHE_NAME = 'orbit-delivery-20261011-r21';
+const CACHE_NAME = 'orbit-banner-20261012-r22';
 const PRECACHE_URLS = [
     "./",
     "./index.html",
@@ -8,9 +8,9 @@ const PRECACHE_URLS = [
     "./assets/vendor/tus.min.js",
     "./js/logger.js?v=authenticated-20261011",
     "./assets/vendor/supabase.min.js?v=2.117.3",
-    "./style.css?v=glass-20261011-liquid-settings-r14",
+    "./style.css?v=banner-20261012-r15",
     "./tools.css",
-    "./js/config.js?v=delivery-20261011-r14",
+    "./js/config.js?v=banner-20261012-r15",
     "./js/rooms.js?v=delivery-20261011-r11",
     "./js/chat-actions.js",
     "./js/actions/media-lightbox.js",

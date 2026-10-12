@@ -392,7 +392,7 @@ function updateUserHeaderUI() {
     const name = userProfile?.first_name ? `${userProfile.first_name} ${userProfile.last_name || ''}`.trim() : currentUser.email.split('@')[0];
     const isUserAdmin = isAdmin();
     const verifiedBadge = getVerifiedBadgeHtml(isUserAdmin);
-    document.getElementById('dash-id').innerHTML = `${escapeHtml(name)}${verifiedBadge}`;
+    document.getElementById('dash-id').innerHTML = `<span class="user-chip-label">${escapeHtml(name)}</span>${verifiedBadge}`;
     
     const av = document.getElementById('dash-av');
     if (userProfile?.dp_url) {
