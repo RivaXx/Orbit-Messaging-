@@ -1,0 +1,2 @@
+[functions.orbit-message-push]
+verify_jwt = true

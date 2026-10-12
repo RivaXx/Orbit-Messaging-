@@ -1087,8 +1087,8 @@ function updateNotificationSettingsUI() {
     }
     enableButton.disabled = false;
     if (Notification.permission === 'granted' && notificationPreference('orbit_device_notifications', true)) {
-        status.textContent = 'System alerts are enabled on this device. Browser settings can still control sound and display.';
-        enableButton.innerHTML = '<i class="fa-solid fa-bell"></i> System alerts enabled';
+        status.textContent = typeof orbitPushStatus !== 'undefined' && orbitPushStatus ? orbitPushStatus : 'System alerts are enabled while Orbit is running. Enable background alerts to receive messages after closing the app.';
+        enableButton.innerHTML = '<i class="fa-solid fa-bell"></i> ' + (typeof orbitPushStatus !== 'undefined' && orbitPushStatus.startsWith('Background notifications connected.') ? 'Background alerts enabled' : 'Enable alerts when Orbit is closed');
     } else if (Notification.permission === 'denied') {
         status.textContent = 'Notifications are blocked for this site. Allow them in your browser or device settings, then reload Orbit.';
         enableButton.innerHTML = '<i class="fa-solid fa-gear"></i> Notifications blocked — see browser settings';
@@ -1100,12 +1100,14 @@ function updateNotificationSettingsUI() {
 
 async function setNotificationDevicePreference(enabled) {
     if (!enabled) {
+        if (typeof disableOrbitBackgroundPush === 'function' && !await disableOrbitBackgroundPush()) { showToast('Could not turn off background alerts. Reconnect and try again.', 'error'); return; }
         try { localStorage.setItem('orbit_device_notifications', 'false'); } catch(e) {}
         updateNotificationSettingsUI();
         showToast('System alerts turned off for Orbit.');
         return;
     }
     const granted = await requestNotificationPermission();
+    if (granted && typeof enableOrbitBackgroundPush === 'function') await enableOrbitBackgroundPush(true);
     if (!granted) {
         try { localStorage.setItem('orbit_device_notifications', 'false'); } catch(e) {}
     }
@@ -1114,6 +1116,7 @@ async function setNotificationDevicePreference(enabled) {
 
 function setNotificationPreviewPreference(enabled) {
     try { localStorage.setItem('orbit_notification_previews', enabled ? 'true' : 'false'); } catch(e) {}
+    if (typeof enableOrbitBackgroundPush === 'function') enableOrbitBackgroundPush();
     showToast(enabled ? 'Message previews are shown in alerts.' : 'Message previews are hidden in alerts.');
 }
 
@@ -1149,6 +1152,7 @@ async function requestNotificationPermission() {
         return false;
     }
     if (Notification.permission === 'granted') {
+        if (typeof enableOrbitBackgroundPush === 'function') await enableOrbitBackgroundPush(true);
         try { localStorage.setItem('orbit_device_notifications', 'true'); } catch(e) {}
         updateNotificationSettingsUI();
         showToast('Device notifications are enabled.', 'success');
@@ -1161,6 +1165,7 @@ async function requestNotificationPermission() {
     try {
         const permission = await Notification.requestPermission();
         const granted = permission === 'granted';
+        if (granted && typeof enableOrbitBackgroundPush === 'function') await enableOrbitBackgroundPush(true);
         try { localStorage.setItem('orbit_device_notifications', granted ? 'true' : 'false'); } catch(e) {}
         if (granted && typeof initServiceWorker === 'function') await initServiceWorker();
         updateNotificationSettingsUI();
@@ -1180,8 +1185,8 @@ async function showNativeOrbitNotification(title, body, roomId, msgId) {
         body: showPreview ? body : 'You have a new message.',
         icon: new URL('./orbit-icon.svg', location.href).href,
         badge: new URL('./orbit-icon.svg', location.href).href,
-        tag: `orbit-room-${roomId || 'chat'}`,
-        renotify: true,
+        tag: msgId ? `orbit-message-${msgId}` : `orbit-room-${roomId || 'chat'}`,
+        renotify: false,
         timestamp: Date.now(),
         actions: [
             { action: 'open', title: 'Open chat' },
@@ -1229,7 +1234,7 @@ async function testNotificationLive() {
 function updateTabUnreadBadges() {
     const badge = document.getElementById('tab-badge-chats');
     if (badge) {
-        const count = unreadRoomsSet.size;
+        const count = typeof orbitUnreadCounts !== 'undefined' ? [...orbitUnreadCounts.values()].reduce((sum, value) => sum + value, 0) : unreadRoomsSet.size;
         if (count > 0) {
             badge.innerText = count;
             badge.classList.remove('hide');
@@ -1276,13 +1281,16 @@ function triggerMessageNotification(msg) {
     if (notifiedMessageKeys.has(notificationKey)) return;
     notifiedMessageKeys.add(notificationKey);
     if (notifiedMessageKeys.size > 300) notifiedMessageKeys.delete(notifiedMessageKeys.values().next().value);
-    const isVisibleChat = currentRoom === msg.room && !document.hidden;
+    const isVisibleChat = typeof isOrbitChatVisible === 'function' ? isOrbitChatVisible(msg.room) : currentRoom === msg.room && !document.hidden;
     if (isVisibleChat) return;
+    if (typeof recordOrbitUnread === 'function') recordOrbitUnread(msg);
+    const muted = window.OrbitChatSelect?.getMutedRooms() || [];
+    if (resolveRoomAliases(msg.room).some(room => muted.includes(room))) return;
     if (!document.hidden) playNotificationChime();
     showDynamicIslandNotification(msg);
     unreadRoomsSet.add(msg.room);
     updateTabUnreadBadges();
-    if (document.hidden) {
+    {
         const sender = msg.username || 'New message';
         const body = msg.text || (msg.attachments?.length ? 'Sent an attachment' : 'You have a new message');
         showNativeOrbitNotification(sender, body, msg.room, msg.id);

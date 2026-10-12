@@ -6,9 +6,14 @@ async function initServiceWorker() {
         try {
             // Only the worker's activate handler knows the current cache name.
             // Deleting caches here used to erase the current offline shell.
-            const reg = await navigator.serviceWorker.register('./sw.js?v=delivery-20261011-r11', { scope: './' });
+            const reg = await navigator.serviceWorker.register('./sw.js?v=notifications-20261012-r23', { scope: './' });
             reg.update().catch(() => {});
             navigator.serviceWorker.addEventListener('message', event => {
+                if (event.data?.type === 'ORBIT_PUSH_VISIBLE_QUERY') {
+                    const active = isOrbitChatVisible(event.data.roomId);
+                    event.ports[0]?.postMessage({active});
+                    if (currentUser && !active) syncOrbitUnreadCounts();
+                }
                 if (event.data && event.data.type === 'NOTIFICATION_NAVIGATE') {
                     handleDeepLinkNavigation(event.data.roomId, event.data.msgId, event.data.timestamp);
                 }
@@ -561,6 +566,11 @@ async function handleVerifyForgotOtpAndReset() {
 
 async function signOut() {
     if (confirm('Sign out of Orbit?')) {
+        if (typeof disableOrbitBackgroundPush === 'function') {
+            const disconnected = await disableOrbitBackgroundPush();
+            if (!disconnected) { showToast('Reconnect so Orbit can turn off notifications before signing out.', 'error'); return; }
+        }
+        if (typeof resetOrbitTyping === 'function') resetOrbitTyping();
         try {
             await updatePresenceStatus(false);
             await sb.auth.signOut();
@@ -571,6 +581,8 @@ async function signOut() {
         if (typeof _messageOutbox !== 'undefined') _messageOutbox.clear();
         if (typeof _inflightMessages !== 'undefined') _inflightMessages.clear();
         if (typeof unreadRoomsSet !== 'undefined') unreadRoomsSet.clear();
+        if (typeof orbitUnreadCounts !== 'undefined') orbitUnreadCounts.clear();
+        if (globalRealtimeChannel) { try { await sb.removeChannel(globalRealtimeChannel); } catch (_) {} globalRealtimeChannel = null; }
         currentUser = null;
         userProfile = null;
         currentRoom = null;

@@ -26,6 +26,7 @@ async function openChatRoom(roomId, roomTitle, avatarUrl, isSelf = false, peerUs
     chatHistoryController?.abort();
     const viewEpoch = ++_chatViewEpoch;
     const previousRoom = currentRoom;
+    if (typeof resetOrbitTyping === 'function') resetOrbitTyping();
     if (typeof _activeCallRoom !== 'undefined' && _activeCallRoom && _activeCallRoom !== roomId && typeof endVoiceCall === 'function') endVoiceCall(true);
     currentRoom = roomId;
     isSelfChat = isSelf;
@@ -119,6 +120,7 @@ async function openChatRoom(roomId, roomTitle, avatarUrl, isSelf = false, peerUs
 
     // Clear unread state for this room and update tab badges safely
     try {
+        if (typeof clearOrbitRoomUnread === 'function') clearOrbitRoomUnread(roomId);
         unreadRoomsSet.delete(roomId);
         if (typeof resolveRoomAliases === 'function') {
             resolveRoomAliases(roomId, activeChatPeerId).forEach(a => unreadRoomsSet.delete(a));
@@ -296,7 +298,7 @@ function navBackFromChat() {
 
     // Hide mention autocomplete
     hideMentionAutocomplete();
-    stopTypingBroadcast();
+    resetOrbitTyping();
 
     if (typeof endVoiceCall === 'function' && typeof _activeCallRoom !== 'undefined' && _activeCallRoom === currentRoom) endVoiceCall(true);
     currentRoom = null;
@@ -319,6 +321,8 @@ function navBackFromChat() {
 
 async function markRoomAsRead(roomId) {
     if (!roomId || !currentUser) return;
+    if (typeof isOrbitChatVisible === 'function' && !isOrbitChatVisible(roomId)) return;
+    if (typeof clearOrbitRoomUnread === 'function') clearOrbitRoomUnread(roomId);
     try {
         const msgs = messageCache.get(roomId) || [];
         const unreadMsgs = msgs.filter(m => {
@@ -328,9 +332,15 @@ async function markRoomAsRead(roomId) {
             if (m.read_by && typeof m.read_by === 'object') return !m.read_by[currentUser.id];
             return true;
         });
-        if (unreadMsgs.length > 0) {
+        if (msgs.some(m => !m.broadcast_pending && m.created_at)) {
+            const owner = currentUser.id;
+            const aliases = resolveRoomAliases(roomId,activeChatPeerId);
+            const client = await ensureSupabase();
+            if (currentUser?.id !== owner) return;
+            const readBefore = msgs.filter(m => !m.broadcast_pending).reduce((latest,m) => Date.parse(m.created_at)>Date.parse(latest) ? m.created_at : latest, msgs[0]?.created_at || new Date().toISOString());
+            const results = await Promise.all(aliases.map(alias => client.rpc('orbit_mark_room_read', {chat_room:alias,read_before:readBefore})));
+            if (results.some(result => result.error) || currentUser?.id !== owner) return;
             const nowIso = new Date().toISOString();
-            const unreadIds = unreadMsgs.map(m => m.id);
             unreadMsgs.forEach(m => {
                 if (Array.isArray(m.read_by)) {
                     if (!m.read_by.includes(currentUser.id)) m.read_by.push(currentUser.id);
@@ -340,11 +350,7 @@ async function markRoomAsRead(roomId) {
                 }
             });
             messageCache.set(roomId, msgs);
-            const client = await ensureSupabase();
-            client.from('messages')
-                .update({ read_by: [currentUser.id] })
-                .in('id', unreadIds)
-                .then(() => {}).catch(() => {});
+            if (typeof syncOrbitUnreadCounts === 'function') syncOrbitUnreadCounts();
         }
     } catch(e) {}
 }

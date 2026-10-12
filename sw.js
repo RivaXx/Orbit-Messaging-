@@ -1,6 +1,7 @@
 // Orbit Messenger — messaging delivery and storage policy repair
-const CACHE_NAME = 'orbit-banner-20261012-r22';
+const CACHE_NAME = 'orbit-notifications-20261012-r23';
 const PRECACHE_URLS = [
+    "./js/messaging-notifications.js?v=notifications-20261012-r2",
     "./",
     "./index.html",
     "./manifest.json",
@@ -8,29 +9,29 @@ const PRECACHE_URLS = [
     "./assets/vendor/tus.min.js",
     "./js/logger.js?v=authenticated-20261011",
     "./assets/vendor/supabase.min.js?v=2.117.3",
-    "./style.css?v=banner-20261012-r15",
+    "./style.css?v=notifications-20261012-r2",
     "./tools.css",
     "./js/config.js?v=banner-20261012-r15",
-    "./js/rooms.js?v=delivery-20261011-r11",
+    "./js/rooms.js?v=notifications-20261012-r2",
     "./js/chat-actions.js",
     "./js/actions/media-lightbox.js",
     "./js/actions/media-preview.js?v=delivery-20261011-r11",
     "./js/actions/file-viewer.js?v=delivery-20261011-r11",
     "./js/actions/voice-recorder.js",
-    "./js/actions/chat-extras.js",
+    "./js/actions/chat-extras.js?v=notifications-20261012-r2",
     "./js/chat-gestures.js",
     "./js/chat-select.js",
     "./js/chat-share.js",
-    "./js/chat/chat-history.js?v=delivery-20261011-r11",
+    "./js/chat/chat-history.js?v=notifications-20261012-r2",
     "./js/chat/chat-feed.js?v=media-route-20261011",
     "./js/chat/chat-dispatcher.js?v=delivery-20261011-r11",
-    "./js/chat/chat-realtime.js?v=delivery-20261011-r11",
+    "./js/chat/chat-realtime.js?v=notifications-20261012-r2",
     "./js/chat.js",
     "./js/calculator.js",
     "./js/tools.js",
     "./js/celestial.js",
-    "./js/ui/ui-auth.js?v=delivery-20261011-r11",
-    "./js/ui/ui-navigation.js?v=delivery-20261011-r16",
+    "./js/ui/ui-auth.js?v=notifications-20261012-r2",
+    "./js/ui/ui-navigation.js?v=notifications-20261012-r2",
     "./js/ui/ui-modals.js?v=delivery-20261011-r16",
     "./js/ui/ui-notifications.js",
     "./js/ui.js",
@@ -102,11 +103,11 @@ self.addEventListener('push', event => {
         icon: data.icon || './orbit-icon.svg',
         badge: './orbit-icon.svg',
         tag: data.tag || `orbit-${Date.now()}`,
-        renotify: true,
+        renotify: false,
         vibrate: [200, 100, 200],
         silent: false,
         data: {
-            url: self.location.origin + self.location.pathname,
+            url: self.registration.scope,
             roomId: data.roomId || null,
             msgId: data.msgId || null,
             timestamp: data.timestamp || Date.now()
@@ -117,7 +118,16 @@ self.addEventListener('push', event => {
         ]
     };
 
-    event.waitUntil(self.registration.showNotification(title, options));
+    event.waitUntil((async () => {
+        const clients = await self.clients.matchAll({type:'window',includeUncontrolled:true});
+        const states = await Promise.all(clients.map(client => new Promise(resolve => {
+            const channel = new MessageChannel();
+            const timer = setTimeout(() => {channel.port1.close(); resolve(false);}, 500);
+            channel.port1.onmessage = reply => {clearTimeout(timer);channel.port1.close();resolve(reply.data?.active === true);};
+            client.postMessage({type:'ORBIT_PUSH_VISIBLE_QUERY',roomId:data.roomId},[channel.port2]);
+        })));
+        if (!states.some(Boolean)) await self.registration.showNotification(title, options);
+    })());
 });
 
 // Handle notification click -> Open app, open exact room, and focus the specific message with ms timestamp
@@ -126,7 +136,7 @@ self.addEventListener('notificationclick', event => {
     if (event.action === 'dismiss') return;
 
     const notifData = event.notification.data || {};
-    const baseTarget = notifData.url || (self.location.origin + self.location.pathname);
+    const baseTarget = notifData.url || self.registration.scope;
     const targetUrl = new URL(baseTarget, self.location.origin);
     if (notifData.roomId) targetUrl.searchParams.set('openRoom', notifData.roomId);
     if (notifData.msgId) targetUrl.searchParams.set('focusMsg', notifData.msgId);
@@ -135,7 +145,7 @@ self.addEventListener('notificationclick', event => {
     event.waitUntil(
         self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clientList => {
             for (const client of clientList) {
-                if (client.url.includes('Orbit') || client.url.startsWith(self.location.origin)) {
+                if (new URL(client.url).origin === self.location.origin) {
                     if ('focus' in client) {
                         client.postMessage({
                             type: 'NOTIFICATION_NAVIGATE',

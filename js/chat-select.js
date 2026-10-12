@@ -229,6 +229,7 @@
     function saveMutedRooms(list) {
         if (!currentUser) return;
         localStorage.setItem(`orbit_muted_rooms_${currentUser.id}`, JSON.stringify(list));
+        if (typeof enableOrbitBackgroundPush === 'function') enableOrbitBackgroundPush();
     }
 
     function getArchivedRooms() {
