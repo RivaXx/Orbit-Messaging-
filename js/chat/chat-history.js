@@ -26,7 +26,6 @@ async function openChatRoom(roomId, roomTitle, avatarUrl, isSelf = false, peerUs
     chatHistoryController?.abort();
     const viewEpoch = ++_chatViewEpoch;
     const previousRoom = currentRoom;
-    if (typeof resetOrbitTyping === 'function') resetOrbitTyping();
     if (typeof _activeCallRoom !== 'undefined' && _activeCallRoom && _activeCallRoom !== roomId && typeof endVoiceCall === 'function') endVoiceCall(true);
     currentRoom = roomId;
     isSelfChat = isSelf;
@@ -120,7 +119,6 @@ async function openChatRoom(roomId, roomTitle, avatarUrl, isSelf = false, peerUs
 
     // Clear unread state for this room and update tab badges safely
     try {
-        if (typeof clearOrbitRoomUnread === 'function') clearOrbitRoomUnread(roomId);
         unreadRoomsSet.delete(roomId);
         if (typeof resolveRoomAliases === 'function') {
             resolveRoomAliases(roomId, activeChatPeerId).forEach(a => unreadRoomsSet.delete(a));
@@ -298,7 +296,7 @@ function navBackFromChat() {
 
     // Hide mention autocomplete
     hideMentionAutocomplete();
-    resetOrbitTyping();
+    stopTypingBroadcast();
 
     if (typeof endVoiceCall === 'function' && typeof _activeCallRoom !== 'undefined' && _activeCallRoom === currentRoom) endVoiceCall(true);
     currentRoom = null;
@@ -322,7 +320,6 @@ function navBackFromChat() {
 async function markRoomAsRead(roomId) {
     if (!roomId || !currentUser) return;
     if (typeof isOrbitChatVisible === 'function' && !isOrbitChatVisible(roomId)) return;
-    if (typeof clearOrbitRoomUnread === 'function') clearOrbitRoomUnread(roomId);
     try {
         const msgs = messageCache.get(roomId) || [];
         const unreadMsgs = msgs.filter(m => {
@@ -350,7 +347,6 @@ async function markRoomAsRead(roomId) {
                 }
             });
             messageCache.set(roomId, msgs);
-            if (typeof syncOrbitUnreadCounts === 'function') syncOrbitUnreadCounts();
         }
     } catch(e) {}
 }

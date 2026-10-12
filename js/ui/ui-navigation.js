@@ -26,8 +26,6 @@ async function _prewarmRecentMessages() {
 }
 
 async function launchApp() {
-    if (typeof hydrateOrbitUnread === 'function') hydrateOrbitUnread();
-    if (typeof syncOrbitUnreadCounts === 'function') syncOrbitUnreadCounts();
     if (typeof enableOrbitBackgroundPush === 'function' && notificationPreference('orbit_device_notifications', true)) enableOrbitBackgroundPush();
     document.getElementById('screen-auth').classList.remove('active');
     document.getElementById('screen-dash').classList.add('active');

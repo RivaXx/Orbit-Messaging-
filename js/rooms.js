@@ -281,7 +281,6 @@ function renderRecentChatsFromCache(cachedItems, list) {
                 </div>
                 <div class="c-preview-row">
                     <span class="c-last-msg">${escapeHtml(item.msgPreview || 'Message')}</span>
-                    ${orbitUnreadBadgeHtml(item.roomId)}
                 </div>
             </div>
         `;
@@ -511,7 +510,6 @@ async function loadMainChats(fromCacheFirst = false) {
 
             const card = document.createElement('div');
             card.className = 'contact-glass-card touch-fix';
-            card.dataset.roomId = roomId;
             card.onclick = () => {
                 if (window.isInChatSelectionMode && window.isInChatSelectionMode()) return;
                 if (typeof unreadRoomsSet !== 'undefined') unreadRoomsSet.delete(roomId);
@@ -532,7 +530,6 @@ async function loadMainChats(fromCacheFirst = false) {
                     </div>
                     <div class="c-preview-row">
                         <span class="c-last-msg">${escapeHtml(msgPreview)}</span>
-                        ${orbitUnreadBadgeHtml(roomId)}
                     </div>
                 </div>
             `;

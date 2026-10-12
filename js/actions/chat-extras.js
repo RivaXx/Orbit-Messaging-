@@ -1234,7 +1234,7 @@ async function testNotificationLive() {
 function updateTabUnreadBadges() {
     const badge = document.getElementById('tab-badge-chats');
     if (badge) {
-        const count = typeof orbitUnreadCounts !== 'undefined' ? [...orbitUnreadCounts.values()].reduce((sum, value) => sum + value, 0) : unreadRoomsSet.size;
+        const count = unreadRoomsSet.size;
         if (count > 0) {
             badge.innerText = count;
             badge.classList.remove('hide');
@@ -1283,7 +1283,6 @@ function triggerMessageNotification(msg) {
     if (notifiedMessageKeys.size > 300) notifiedMessageKeys.delete(notifiedMessageKeys.values().next().value);
     const isVisibleChat = typeof isOrbitChatVisible === 'function' ? isOrbitChatVisible(msg.room) : currentRoom === msg.room && !document.hidden;
     if (isVisibleChat) return;
-    if (typeof recordOrbitUnread === 'function') recordOrbitUnread(msg);
     const muted = window.OrbitChatSelect?.getMutedRooms() || [];
     if (resolveRoomAliases(msg.room).some(room => muted.includes(room))) return;
     if (!document.hidden) playNotificationChime();
