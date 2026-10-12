@@ -91,7 +91,10 @@ async function orbitPushApi(path, body, method = 'POST') {
     let result;
     if (method === 'DELETE') result = await client.from('orbit_push_subscriptions').delete().eq('user_id',currentUser.id).eq('endpoint',body.endpoint);
     else result = await client.from('orbit_push_subscriptions').upsert({user_id:currentUser.id,endpoint:body.subscription.endpoint,subscription:body.subscription,previews:body.previews,muted_rooms:body.mutedRooms,updated_at:new Date().toISOString()}, {onConflict:'endpoint'});
-    if (result.error) throw new Error('Background notifications could not connect. Please try again.');
+    if (result.error) {
+        console.warn('[Orbit] Push subscription save failed:',result.error.code || 'network',result.error.message);
+        throw new Error(`Background notifications could not connect (${result.error.code || 'network'}). Please try again.`);
+    }
     return result;
 }
 async function enableOrbitBackgroundPush(prompt = false) {
