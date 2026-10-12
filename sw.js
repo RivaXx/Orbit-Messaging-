@@ -1,7 +1,7 @@
 // Orbit Messenger — messaging delivery and storage policy repair
-const CACHE_NAME = 'orbit-notifications-20261012-r23';
+const CACHE_NAME = 'orbit-notifications-20261012-r24';
 const PRECACHE_URLS = [
-    "./js/messaging-notifications.js?v=notifications-20261012-r2",
+    "./js/messaging-notifications.js?v=notifications-20261012-r3",
     "./",
     "./index.html",
     "./manifest.json",
@@ -9,29 +9,29 @@ const PRECACHE_URLS = [
     "./assets/vendor/tus.min.js",
     "./js/logger.js?v=authenticated-20261011",
     "./assets/vendor/supabase.min.js?v=2.117.3",
-    "./style.css?v=notifications-20261012-r2",
+    "./style.css?v=notifications-20261012-r3",
     "./tools.css",
     "./js/config.js?v=banner-20261012-r15",
-    "./js/rooms.js?v=notifications-20261012-r2",
+    "./js/rooms.js?v=notifications-20261012-r3",
     "./js/chat-actions.js",
     "./js/actions/media-lightbox.js",
     "./js/actions/media-preview.js?v=delivery-20261011-r11",
     "./js/actions/file-viewer.js?v=delivery-20261011-r11",
     "./js/actions/voice-recorder.js",
-    "./js/actions/chat-extras.js?v=notifications-20261012-r2",
+    "./js/actions/chat-extras.js?v=notifications-20261012-r3",
     "./js/chat-gestures.js",
     "./js/chat-select.js",
     "./js/chat-share.js",
-    "./js/chat/chat-history.js?v=notifications-20261012-r2",
+    "./js/chat/chat-history.js?v=notifications-20261012-r3",
     "./js/chat/chat-feed.js?v=media-route-20261011",
     "./js/chat/chat-dispatcher.js?v=delivery-20261011-r11",
-    "./js/chat/chat-realtime.js?v=notifications-20261012-r2",
+    "./js/chat/chat-realtime.js?v=notifications-20261012-r3",
     "./js/chat.js",
     "./js/calculator.js",
     "./js/tools.js",
     "./js/celestial.js",
-    "./js/ui/ui-auth.js?v=notifications-20261012-r2",
-    "./js/ui/ui-navigation.js?v=notifications-20261012-r2",
+    "./js/ui/ui-auth.js?v=notifications-20261012-r3",
+    "./js/ui/ui-navigation.js?v=notifications-20261012-r3",
     "./js/ui/ui-modals.js?v=delivery-20261011-r16",
     "./js/ui/ui-notifications.js",
     "./js/ui.js",
@@ -78,12 +78,7 @@ self.addEventListener('fetch', event => {
         event.waitUntil(network.catch(() => {}));
         if (cached && !navigation) return cached;
         if (cached && !self.navigator.onLine) return cached;
-        if (cached) {
-            return Promise.race([
-                network.catch(() => cached),
-                new Promise(resolve => setTimeout(() => resolve(cached), 1500))
-            ]);
-        }
+        if (cached) return network.catch(() => cached);
         return network.catch(() => new Response('Offline. Open Orbit once while connected to save this app on your device.', { status: 503 }));
     })());
 });
