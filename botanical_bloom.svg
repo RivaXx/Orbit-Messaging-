@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 1280" width="720" height="1280">
+  <rect width="720" height="1280" fill="#F8F4EE"/>
+  <!-- Minimalist Terracotta Sun -->
+  <circle cx="520" cy="380" r="140" fill="#E89874" opacity="0.85"/>
+  <!-- Arch Geometry -->
+  <path d="M 100 850 L 100 480 A 180 180 0 0 1 460 480 L 460 850 Z" fill="#D36B4D" opacity="0.9"/>
+  <!-- Inner Arch Contrast -->
+  <path d="M 160 850 L 160 520 A 120 120 0 0 1 400 520 L 400 850 Z" fill="#EADBC8"/>
+
+  <!-- Sage & Emerald Palm / Monstera Leaves -->
+  <g fill="#3E5F4D">
+    <!-- Big Palm Leaf on Right -->
+    <path d="M 380 1280 C 440 1020 620 820 700 750 C 650 850 640 1020 540 1280 Z" />
+    <path d="M 520 920 C 580 840 680 810 720 800 C 680 870 630 920 540 940 Z" fill="#527863" />
+    <path d="M 470 980 C 550 930 630 930 670 935 C 620 990 560 1010 490 1000 Z" fill="#527863" />
+
+    <!-- Left Palm Fronds -->
+    <path d="M 40 1280 C 80 1080 140 920 260 820 C 220 920 180 1080 160 1280 Z" fill="#324F3F" />
+    <path d="M 140 960 C 180 900 280 880 320 890 C 270 930 220 960 150 970 Z" fill="#476A56" />
+  </g>
+
+  <!-- Clean Floating Abstract Rings -->
+  <circle cx="280" cy="300" r="50" fill="none" stroke="#3E5F4D" stroke-width="6" opacity="0.6"/>
+  <circle cx="580" cy="740" r="30" fill="none" stroke="#D36B4D" stroke-width="4" opacity="0.5"/>
+</svg>

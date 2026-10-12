@@ -1,0 +1,9 @@
+supabase.min.js
+Source: https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2
+Version: 2.117.3
+License: MIT
+
+tus.min.js
+Source: https://cdn.jsdelivr.net/npm/tus-js-client@4.3.1/dist/tus.min.js
+Version: 4.3.1
+License: MIT

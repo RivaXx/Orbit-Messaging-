@@ -1,0 +1,817 @@
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+   ORBIT PRO TOOLS SUITE STYLESHEET (tools.css)
+   Includes: iOS Clock Suite, Pro Calculator, Calendar & Holidays, Compass & Level
+   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+
+        /* ══════════════════════════════════════════════════════════════════════════
+           iOS CLOCK SUITE (#tab-clock)
+           ══════════════════════════════════════════════════════════════════════════ */
+        .clock-sub-nav {
+            display: flex;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--glass-border);
+            border-radius: 18px;
+            padding: 4px;
+            gap: 4px;
+            margin-bottom: 14px;
+        }
+        .clock-sub-btn {
+            flex: 1;
+            padding: 8px 4px;
+            border-radius: 14px;
+            border: none;
+            background: none;
+            color: var(--text-secondary);
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            transition: all 0.2s ease;
+        }
+        .clock-sub-btn.active {
+            background: var(--accent);
+            color: #08080A;
+            box-shadow: 0 4px 14px rgba(255, 215, 0, 0.35);
+        }
+        .clock-view-panel {
+            display: none;
+        }
+        .clock-view-panel.active {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .world-clock-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 14px 18px;
+            background: var(--glass-card);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            box-shadow: var(--glass-specular);
+        }
+        .analog-mini-canvas {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+        }
+        .stopwatch-big-display {
+            font-size: 52px;
+            font-weight: 800;
+            font-family: 'Space Grotesk', monospace;
+            text-align: center;
+            padding: 24px 0 10px;
+            letter-spacing: -1px;
+            color: var(--text-primary);
+        }
+        .stopwatch-ctrl-row {
+            display: flex;
+            justify-content: space-around;
+            padding: 12px 0;
+        }
+        .stopwatch-btn {
+            width: 76px;
+            height: 76px;
+            border-radius: 50%;
+            border: 2px solid rgba(255, 255, 255, 0.15);
+            font-size: 14px;
+            font-weight: 800;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.15s ease;
+        }
+        .stopwatch-btn.start { background: rgba(0, 230, 118, 0.2); color: #00E676; border-color: #00E676; }
+        .stopwatch-btn.stop { background: rgba(255, 59, 48, 0.2); color: #FF3B30; border-color: #FF3B30; }
+        .stopwatch-btn.lap { background: rgba(255, 255, 255, 0.12); color: var(--text-primary); }
+        .stopwatch-laps-table {
+            max-height: 240px;
+            overflow-y: auto;
+            border-top: 1px solid var(--glass-border);
+            margin-top: 8px;
+        }
+        .stopwatch-lap-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 14px;
+            border-bottom: 1px solid var(--glass-border-light);
+            font-size: 13px;
+            font-family: monospace;
+        }
+        .stopwatch-lap-row.fastest { color: #00E676; font-weight: 700; }
+        .stopwatch-lap-row.slowest { color: #FF3B30; font-weight: 700; }
+
+        .timer-circular-wrap {
+            position: relative;
+            width: 220px;
+            height: 220px;
+            margin: 10px auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .timer-svg {
+            transform: rotate(-90deg);
+            width: 100%;
+            height: 100%;
+        }
+        .timer-time-text {
+            position: absolute;
+            font-size: 38px;
+            font-weight: 800;
+            font-family: monospace;
+            color: var(--text-primary);
+        }
+
+        /* ══════════════════════════════════════════════════════════════════════════
+           PRO iOS CALCULATOR (#tab-calculator)
+           ══════════════════════════════════════════════════════════════════════════ */
+        .calc-container {
+            max-width: 100%;
+            width: 100%;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            padding: 0 4px;
+            box-sizing: border-box;
+        }
+        .calc-screen {
+            background: rgba(0, 0, 0, 0.55);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            padding: 16px 20px;
+            text-align: right;
+            box-shadow: var(--glass-specular);
+            transition: all 0.3s var(--ease-spring);
+        }
+        .calc-screen-expr {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text-muted);
+            min-height: 22px;
+            word-break: break-all;
+            font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif;
+            letter-spacing: 0.5px;
+        }
+        .calc-screen-val {
+            font-size: 56px;
+            font-weight: 800;
+            color: var(--text-primary);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            line-height: 1.05;
+            font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;
+            letter-spacing: -1.5px;
+        }
+        .calc-keypad {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+        }
+        .calc-btn {
+            aspect-ratio: 1;
+            width: 100%;
+            height: auto;
+            min-height: 58px;
+            border-radius: 50%;
+            border: none;
+            font-size: 26px;
+            font-weight: 800;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.12s var(--ease-spring), background 0.2s, box-shadow 0.2s;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        .calc-btn:active, .calc-btn.calc-key-pressed {
+            transform: scale(0.92);
+            filter: brightness(1.3);
+        }
+        .calc-btn.num {
+            background: #2C2C2E;
+            color: #FFFFFF;
+        }
+        .light-mode .calc-btn.num {
+            background: #E5E5EA;
+            color: #000000;
+        }
+        .calc-btn.mod {
+            background: #48484A;
+            color: #FFFFFF;
+            font-size: 20px;
+        }
+        .light-mode .calc-btn.mod {
+            background: #D1D1D6;
+            color: #000000;
+        }
+        .calc-btn.op {
+            background: #FF9F0A;
+            color: #FFFFFF;
+            font-size: 28px;
+        }
+        .calc-btn.op.active {
+            background: #FFFFFF;
+            color: #FF9F0A;
+        }
+
+        /* ── VisionOS Liquid Glass Theme for Calculator ── */
+        .calc-theme-glass .calc-screen {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(28px) saturate(190%);
+            -webkit-backdrop-filter: blur(28px) saturate(190%);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25), 0 12px 36px rgba(0, 0, 0, 0.55);
+        }
+        .calc-theme-glass .calc-btn.num {
+            background: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(20px) saturate(180%);
+            -webkit-backdrop-filter: blur(20px) saturate(180%);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2), 0 4px 14px rgba(0, 0, 0, 0.3);
+            color: #FFFFFF;
+        }
+        .calc-theme-glass .calc-btn.mod {
+            background: rgba(255, 255, 255, 0.16);
+            backdrop-filter: blur(20px) saturate(180%);
+            -webkit-backdrop-filter: blur(20px) saturate(180%);
+            border: 1px solid rgba(255, 255, 255, 0.24);
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3), 0 4px 14px rgba(0, 0, 0, 0.35);
+            color: #FFFFFF;
+        }
+        .calc-theme-glass .calc-btn.op {
+            background: rgba(255, 159, 10, 0.32);
+            backdrop-filter: blur(20px) saturate(180%);
+            -webkit-backdrop-filter: blur(20px) saturate(180%);
+            border: 1px solid rgba(255, 159, 10, 0.65);
+            box-shadow: 0 0 20px rgba(255, 159, 10, 0.38), inset 0 1px 0 rgba(255, 255, 255, 0.4);
+            color: #FFB340;
+        }
+        .calc-theme-glass .calc-btn.op.active {
+            background: rgba(255, 255, 255, 0.9);
+            color: #FF9F0A;
+            box-shadow: 0 0 24px rgba(255, 255, 255, 0.8);
+        }
+
+        /* ── VisionOS Glass Light Mode High-Contrast Fix ── */
+        .light-mode .calc-theme-glass .calc-screen {
+            background: rgba(255, 255, 255, 0.88);
+            border: 1px solid rgba(0, 0, 0, 0.12);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+        }
+        .light-mode .calc-theme-glass .calc-screen-val {
+            color: #000000 !important;
+        }
+        .light-mode .calc-theme-glass .calc-screen-expr {
+            color: #636366 !important;
+        }
+        .light-mode .calc-theme-glass .calc-btn.num {
+            background: rgba(255, 255, 255, 0.85);
+            border: 1.5px solid rgba(0, 0, 0, 0.16);
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.95);
+            color: #000000 !important;
+            font-weight: 800;
+        }
+        .light-mode .calc-theme-glass .calc-btn.mod {
+            background: rgba(0, 0, 0, 0.09);
+            border: 1.5px solid rgba(0, 0, 0, 0.18);
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.8);
+            color: #000000 !important;
+            font-weight: 800;
+        }
+        .light-mode .calc-theme-glass .calc-btn.op {
+            background: #FF9F0A;
+            border: 1px solid rgba(255, 159, 10, 0.9);
+            box-shadow: 0 4px 14px rgba(255, 159, 10, 0.4);
+            color: #FFFFFF !important;
+        }
+        .light-mode .calc-theme-glass .calc-btn.op.active {
+            background: #000000;
+            color: #FF9F0A !important;
+        }
+
+        /* ── Dynamic Calculator Font Sizing & Boldness ── */
+        .calc-font-xs .calc-btn { font-size: 18px !important; }
+        .calc-font-xs .calc-screen-val { font-size: 32px !important; }
+        .calc-font-sm .calc-btn { font-size: 21px !important; }
+        .calc-font-sm .calc-screen-val { font-size: 38px !important; }
+        .calc-font-md .calc-btn { font-size: 25px !important; }
+        .calc-font-md .calc-screen-val { font-size: 48px !important; }
+        .calc-font-lg .calc-btn { font-size: 29px !important; }
+        .calc-font-lg .calc-screen-val { font-size: 56px !important; }
+        .calc-font-xl .calc-btn { font-size: 33px !important; }
+        .calc-font-xl .calc-screen-val { font-size: 64px !important; }
+        .calc-font-normal .calc-btn { font-weight: 500 !important; }
+        .calc-font-normal .calc-screen-val { font-weight: 500 !important; }
+        .calc-font-bold .calc-btn { font-weight: 800 !important; }
+        .calc-font-bold .calc-screen-val { font-weight: 800 !important; }
+
+        /* ── Fit Screen / Anti-Scroll Mode ── */
+        .calc-container.calc-fit-screen {
+            max-width: 330px !important;
+            width: 100% !important;
+            margin: 0 auto !important;
+            gap: 6px !important;
+            padding: 0 4px !important;
+        }
+        .calc-container.calc-fit-screen .calc-screen {
+            padding: 8px 14px !important;
+            border-radius: 18px !important;
+        }
+        .calc-container.calc-fit-screen .calc-screen-val {
+            font-size: 36px !important;
+            line-height: 1.05 !important;
+        }
+        .calc-container.calc-fit-screen .calc-keypad {
+            gap: 8px !important;
+            grid-template-columns: repeat(4, 1fr) !important;
+        }
+        .calc-container.calc-fit-screen .calc-btn {
+            min-height: unset !important;
+            max-height: none !important;
+            width: 100% !important;
+            height: auto !important;
+            aspect-ratio: 1 / 1 !important;
+            border-radius: 50% !important;
+        }
+
+        .calc-sci-drawer {
+            display: none;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+            margin-bottom: 8px;
+            background: rgba(0, 0, 0, 0.25);
+            border-radius: 18px;
+            padding: 8px;
+            border: 1px solid var(--glass-border-light);
+        }
+        .calc-sci-drawer.active, .calc-sci-drawer.open {
+            display: grid;
+        }
+        .calc-sci-drawer.open {
+            display: grid;
+        }
+        .calc-sci-btn {
+            height: 38px;
+            border-radius: 14px;
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid var(--glass-border);
+            color: var(--text-primary);
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        /* ══════════════════════════════════════════════════════════════════════════
+           FEATURE-RICH CALENDAR (#tab-calendar)
+           ══════════════════════════════════════════════════════════════════════════ */
+        .cal-header-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 16px;
+            padding: 0 2px;
+        }
+        .cal-month-title {
+            font-size: 22px;
+            font-weight: 800;
+            color: var(--text-primary);
+            letter-spacing: -0.3px;
+        }
+        .cal-view-switch {
+            display: flex;
+            background: rgba(255, 255, 255, 0.07);
+            border-radius: 12px;
+            padding: 3px;
+            border: 1px solid var(--glass-border);
+        }
+        .cal-view-btn {
+            padding: 5px 13px;
+            border-radius: 10px;
+            border: none;
+            background: none;
+            color: var(--text-secondary);
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .cal-view-btn.active {
+            background: var(--accent);
+            color: #08080A;
+            box-shadow: 0 2px 8px rgba(255,215,0,0.35);
+        }
+        .cal-grid-weekdays {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            text-align: center;
+            font-size: 11px;
+            font-weight: 800;
+            color: var(--text-muted);
+            margin-bottom: 10px;
+            letter-spacing: 0.4px;
+        }
+        .show-week-nums .cal-grid-weekdays {
+            grid-template-columns: 28px repeat(7, 1fr);
+        }
+        .cal-grid-weekdays > div:first-child { color: #FF453A; }
+        .show-week-nums .cal-grid-weekdays > div:first-child { color: var(--accent); }
+        .show-week-nums .cal-grid-weekdays > div:nth-child(2) { color: #FF453A; }
+        .cal-grid-weekdays > div:last-child  { color: #0A84FF; }
+        .cal-grid-days {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 4px;
+            row-gap: 6px;
+        }
+        .show-week-nums .cal-grid-days {
+            grid-template-columns: 28px repeat(7, 1fr);
+        }
+        .cal-week-badge {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 9.5px;
+            font-weight: 800;
+            color: var(--accent);
+            opacity: 0.75;
+            background: rgba(255, 215, 0, 0.08);
+            border: 1px solid rgba(255, 215, 0, 0.2);
+            border-radius: 6px;
+            height: 28px;
+            margin: auto 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;
+            user-select: none;
+        }
+        /* JS renders .cal-day class */
+        .cal-day {
+            aspect-ratio: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-primary);
+            cursor: pointer;
+            position: relative;
+            background: transparent;
+            border-radius: 50%;
+            transition: background 0.15s ease;
+            min-height: 34px;
+        }
+        .cal-day > span {
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            line-height: 1;
+        }
+        .cal-day:hover > span {
+            background: rgba(255,255,255,0.1);
+        }
+        .cal-day.today > span {
+            background: var(--accent);
+            color: #08080A;
+            font-weight: 800;
+            box-shadow: 0 2px 10px rgba(255,215,0,0.5);
+        }
+        .cal-day.selected > span {
+            background: rgba(255,215,0,0.22);
+            border: 2px solid var(--accent);
+            color: var(--text-primary);
+            font-weight: 700;
+        }
+        .cal-day.today.selected > span {
+            background: var(--accent);
+            color: #08080A;
+            border: none;
+        }
+        .cal-day.other-month {
+            opacity: 0.2;
+        }
+        .cal-event-dot {
+            width: 5px;
+            height: 5px;
+            border-radius: 50%;
+            margin-top: 2px;
+            flex-shrink: 0;
+        }
+        .cal-dot-wrap {
+            display: flex;
+            gap: 2px;
+            position: absolute;
+            bottom: 2px;
+        }
+        .cal-dot {
+            width: 5px;
+            height: 5px;
+            border-radius: 50%;
+            background: var(--accent);
+        }
+        /* Google Calendar Style Indian Holiday Indicators */
+        .cal-holiday-dot {
+            width: 5px;
+            height: 5px;
+            border-radius: 50%;
+            background: #FF9F0A !important;
+            box-shadow: 0 0 6px rgba(255, 159, 10, 0.85);
+            flex-shrink: 0;
+        }
+        .cal-holiday-card {
+            background: linear-gradient(135deg, rgba(255, 159, 10, 0.16) 0%, rgba(255, 59, 48, 0.12) 100%) !important;
+            border-left: 4px solid #FF9F0A !important;
+            border-radius: 14px;
+            padding: 12px 14px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 159, 10, 0.28);
+            box-shadow: 0 4px 18px rgba(255, 159, 10, 0.12);
+            flex-shrink: 0;
+            min-height: 64px;
+            box-sizing: border-box;
+        }
+        .cal-holiday-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            background: rgba(255, 159, 10, 0.22);
+            color: #FFB340;
+            font-size: 10.5px;
+            font-weight: 800;
+            padding: 2px 8px;
+            border-radius: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        /* Also keep .cal-day-cell for any backward-compat usage */
+        .cal-day-cell {
+            aspect-ratio: 1;
+            border-radius: 50%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-primary);
+            cursor: pointer;
+            position: relative;
+            transition: all 0.18s ease;
+        }
+        .cal-day-cell.today { background: var(--accent); color: #08080A; font-weight: 800; border-radius: 50%; }
+        .cal-day-cell.selected { background: rgba(255,215,0,0.18); border-radius: 50%; }
+        .cal-day-cell.other-month { opacity: 0.22; }
+        .cal-agenda-list {
+            margin-top: 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            flex-shrink: 0;
+            min-height: 120px;
+            overflow: visible;
+            padding-bottom: 40px;
+        }
+        .cal-agenda-card {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 14px 16px;
+            background: rgba(255,255,255,0.04);
+            border: 1px solid var(--glass-border);
+            border-left: 4px solid var(--accent);
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+            gap: 10px;
+            transition: background 0.15s ease;
+            flex-shrink: 0;
+            min-height: 60px;
+            box-sizing: border-box;
+        }
+        .cal-agenda-card:hover {
+            background: rgba(255,255,255,0.07);
+        }
+        .cal-agenda-title {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 4px;
+            line-height: 1.3;
+        }
+        .cal-agenda-time {
+            font-size: 12px;
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .cal-event-card {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 16px;
+            background: var(--glass-card);
+            border: 1px solid var(--glass-border);
+            border-radius: 18px;
+            box-shadow: var(--glass-specular);
+        }
+
+        /* ══════════════════════════════════════════════════════════════════════════
+           APPLE COMPASS & DIGITAL LEVEL SUITE (#tab-compass)
+           ══════════════════════════════════════════════════════════════════════════ */
+        .compass-container {
+            max-width: 380px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            padding: 0 4px 24px;
+        }
+        .compass-dial-wrapper {
+            position: relative;
+            width: 280px;
+            height: 280px;
+            margin: 10px auto 14px;
+            border-radius: 50%;
+            background: radial-gradient(circle at 50% 50%, rgba(30, 30, 44, 0.7) 0%, rgba(10, 10, 16, 0.98) 75%);
+            border: 2px solid rgba(255, 255, 255, 0.14);
+            box-shadow: 0 16px 48px rgba(0, 0, 0, 0.65), inset 0 2px 6px rgba(255, 255, 255, 0.12);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: grab;
+            touch-action: none;
+            user-select: none;
+        }
+        .compass-dial-wrapper:active {
+            cursor: grabbing;
+        }
+        .compass-rose-disc {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            transition: transform 0.1s linear;
+        }
+        .compass-svg {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+        .compass-top-marker {
+            position: absolute;
+            top: -7px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border-left: 7px solid transparent;
+            border-right: 7px solid transparent;
+            border-top: 14px solid #FF3B30;
+            z-index: 10;
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.6));
+        }
+        .compass-center-level {
+            position: relative;
+            width: 72px;
+            height: 72px;
+            border-radius: 50%;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1.5px solid rgba(255, 255, 255, 0.22);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 5;
+            box-shadow: inset 0 2px 6px rgba(0,0,0,0.7);
+        }
+        .level-crosshair-h {
+            position: absolute;
+            width: 34px;
+            height: 1.5px;
+            background: rgba(255, 255, 255, 0.4);
+            pointer-events: none;
+        }
+        .level-crosshair-v {
+            position: absolute;
+            height: 34px;
+            width: 1.5px;
+            background: rgba(255, 255, 255, 0.4);
+            pointer-events: none;
+        }
+        .level-bubble-target {
+            position: absolute;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            border: 2px solid #00E676;
+            background: rgba(0, 230, 118, 0.2);
+            transition: transform 0.08s linear, border-color 0.2s, background 0.2s;
+            pointer-events: none;
+        }
+        .level-bubble-target.unleveled {
+            border-color: rgba(255, 255, 255, 0.6);
+            background: rgba(255, 255, 255, 0.08);
+        }
+        .compass-info-card {
+            background: var(--glass-card);
+            backdrop-filter: var(--blur-deep);
+            -webkit-backdrop-filter: var(--blur-deep);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            padding: 14px 16px;
+            box-shadow: var(--glass-specular);
+        }
+
+        /* ══════════════════════════════════════════════════════════════════════════
+           TAB SETTINGS iOS TOGGLE SWITCHES
+           ══════════════════════════════════════════════════════════════════════════ */
+        .ios-toggle-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 14px;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid var(--glass-border-light);
+            border-radius: 16px;
+            margin-bottom: 6px;
+        }
+        .ios-switch {
+            position: relative;
+            display: inline-block;
+            width: 46px;
+            height: 26px;
+            flex-shrink: 0;
+        }
+        .ios-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        .ios-slider {
+            position: absolute;
+            cursor: pointer;
+            inset: 0;
+            background-color: rgba(255, 255, 255, 0.2);
+            transition: 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            border-radius: 26px;
+        }
+        .ios-slider:before {
+            position: absolute;
+            content: "";
+            height: 20px;
+            width: 20px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            border-radius: 50%;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+        }
+        .ios-switch input:checked + .ios-slider {
+            background-color: #34C759;
+        }
+        .ios-switch input:checked + .ios-slider:before {
+            transform: translateX(20px);
+        }
+
+        /* Tactile Active Feedback */
+        .touch-fix:active,
+        .liquid-tab-btn:active,
+        .calc-btn:active,
+        .glass-btn-primary:active,
+        .glass-icon-btn:active {
+            transform: scale(0.96) !important;
+            transition: transform 0.12s cubic-bezier(0.32, 0.72, 0, 1) !important;
+        }
+
+
+/* Fit the whole calculator into its flex viewport with measured circular keys. */
+#tab-calculator.calc-fit-mode { flex:1 1 0; min-height:0; overflow:hidden; gap:6px; padding:6px 12px; }
+#tab-calculator .calc-submode-bar { flex:0 0 auto; margin-bottom:0 !important; gap:6px !important; }
+#tab-calculator.calc-fit-mode #calc-submode-calc { flex:1 1 0; min-height:0; display:flex; overflow:hidden; }
+#tab-calculator.calc-fit-mode .calc-container { flex:1 1 0; min-height:0; max-width:460px !important; height:auto; padding:6px !important; gap:6px !important; overflow:hidden; }
+#tab-calculator.calc-fit-mode .calc-container > div:first-child { flex:0 0 auto; margin:0 !important; gap:5px !important; }
+#tab-calculator.calc-fit-mode .calc-screen { flex:0 0 auto; padding:7px 14px !important; border-radius:18px !important; }
+#tab-calculator.calc-fit-mode .calc-screen-expr { font-size:12px; min-height:16px; max-height:32px; overflow:hidden; }
+#tab-calculator.calc-fit-mode .calc-screen-val { font-size:clamp(28px,5vh,42px) !important; line-height:1.1; }
+#tab-calculator.calc-fit-mode .calc-keypad { flex:1 1 0; min-height:0; width:100%; gap:6px !important; grid-template-columns:repeat(4,var(--calc-key-size,48px)) !important; grid-template-rows:repeat(5,var(--calc-key-size,48px)); justify-content:center; align-content:center; }
+#tab-calculator.calc-fit-mode .calc-btn { width:var(--calc-key-size,48px) !important; height:var(--calc-key-size,48px) !important; min-height:0 !important; max-height:none !important; aspect-ratio:1 !important; border-radius:50% !important; padding:0; font-size:clamp(16px,3.5vh,28px) !important; }
+#tab-calculator.calc-fit-mode .calc-sci-drawer:is(.active,.open) { flex:0 0 auto; grid-template-columns:repeat(8,minmax(0,1fr)); gap:3px; margin:0; padding:4px; }
+#tab-calculator.calc-fit-mode .calc-sci-btn { height:24px; padding:0; font-size:10px; }
+#tab-calculator.calc-fit-mode #calc-history-box { flex:0 1 80px; min-height:0; padding:7px !important; }
+#calc-wallpaper-btn,#calc-wallpaper-clear { border:1px solid var(--glass-border); border-radius:8px; padding:3px 7px; font-size:11px; font-weight:700; color:var(--text-secondary); background:rgba(255,255,255,.08); }
+#tab-calculator.calc-has-wallpaper { background-size:cover; background-position:center; border-radius:18px; }
+#tab-calculator.calc-has-wallpaper .calc-container { background:transparent !important; }
+@media(max-height:600px) { #tab-calculator.calc-fit-mode .calc-screen-expr { display:none; } #tab-calculator.calc-fit-mode { gap:3px; padding:2px 8px; } }

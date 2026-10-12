@@ -1,0 +1,33 @@
+Orbit fixes — calculator, startup viewer, chat history
+
+Install
+1. Back up your existing Orbit 26.0.0 folder.
+2. Extract Orbit-fixes.zip into C:\Users\Lenovo\Desktop\Orbit 26.0.0.
+3. Accept replacement of the 12 files with the same paths. Keep the js subfolders.
+4. Reload the app. If you use a hosted version, upload these same replacement files there.
+
+The current Codex session could read the Desktop project but could only write within Documents/Codex. These are corrected replacement files; the Desktop folder was not modified during this update.
+
+Changes
+- The View Once Photo overlay starts hidden in both HTML and CSS. It appears only after a photo tap and closes correctly.
+- Calculator Fit View measures the available keypad space and assigns every main key equal width and height. Both classic and glass themes fit without calculator-tab scrolling, including scientific mode.
+- Wallpaper lets you choose an image; it is resized and saved locally, restored on reload, and removable using Reset wallpaper.
+- Chat cache reads require a matching room and, for direct chats, one of the exact participant IDs.
+- Latest history uses a bounded request with cancellation. Old room responses cannot overwrite current-room caches, rendering, or pagination state.
+- Recent chat previews are sorted together before choosing each room's latest message. Independent preview queries run in parallel.
+- Preview-only message rows do not seed transcript caches. Recent transcript prefetch includes attachments.
+- The next older page is prefetched, and pagination uses timestamp plus ID so equal timestamps do not skip messages.
+- Late realtime inserts render in date order. Render callbacks from a previous chat cannot scroll the newly opened chat.
+- Future-dated messages show their actual date instead of Today. Existing stored timestamps are preserved.
+- Service worker cache version is advanced for this update.
+
+Verification
+- All 25 locally referenced JS modules parsed together and loaded sequentially in headless Microsoft Edge with no page runtime errors.
+- No duplicate declarations found in the top-level declaration scan; combined compilation also rejects duplicate lexical declarations.
+- 20 layout combinations: 600x960, 390x844, 360x640, 768x1024, 1280x800, each with classic/glass themes and scientific mode on/off. All keys were circular and remained inside a calculator tab with zero scroll overflow.
+- Initial load and reload both hid the photo viewer. Explicit photo opening and closing worked.
+- Wallpaper upload, persistence, reload restoration, and removal passed.
+- Simulated query checks passed for room isolation, stale response cancellation, same-timestamp pagination, preserved media, delayed realtime ordering, future date labels, latest chat preview selection, and three parallel preview queries.
+- Original check_depth0_decls.ps1 and test_all_load.ps1 files were absent from the source project; equivalent checks above were used.
+
+Live authenticated Supabase data and network latency were not tested. Actual fetch time still depends on the connection, server indexes, and Supabase policies. No database credentials, stored messages, or RLS policies were changed.
