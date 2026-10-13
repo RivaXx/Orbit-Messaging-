@@ -26,6 +26,7 @@ async function _prewarmRecentMessages() {
 }
 
 async function launchApp() {
+    initOrbitWeather().catch(()=>{});
     initOrbitChatServices().catch(error=>console.warn('[Orbit Services]',error.message));
     if (typeof enableOrbitBackgroundPush === 'function' && notificationPreference('orbit_device_notifications', true)) enableOrbitBackgroundPush();
     document.getElementById('screen-auth').classList.remove('active');

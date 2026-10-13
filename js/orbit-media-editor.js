@@ -68,7 +68,7 @@ async function downloadPreviewMedia(){
 function toggleViewOnceMode(){
     const item=mediaPreviewList[currentPreviewIndex];if(!item)return;
     if(item.type!=='image'||isGroupChat||isSelfChat){showToast('View once is available for photos in direct chats.');return;}
-    item.viewOnce=!item.viewOnce;isViewOnceActive=item.viewOnce;document.getElementById('btn-view-once-toggle').classList.toggle('active',item.viewOnce);
+    item.viewOnce=!item.viewOnce;isViewOnceActive=item.viewOnce;document.getElementById('btn-view-once-toggle').classList.toggle('active',item.viewOnce);document.getElementById('btn-view-once-toggle').setAttribute('aria-pressed',String(item.viewOnce));document.getElementById('preview-view-once-hint').classList.toggle('hide',!item.viewOnce);
 }
 async function sendPreviewMediaBatch(){
     if(isSendingPreviewMediaBatch)return;orbitSaveCaption();
@@ -101,3 +101,6 @@ window.openViewOnceMedia=async function(msgId,url,isOwn=false){
     }catch(error){showToast(`Could not open photo: ${error.message}`,'error');}
     finally{orbitViewOnceBusy=false;}
 };
+
+function orbitFitPhotoPreview(){const modal=document.getElementById('modal-media-preview');if(!modal?.classList.contains('active'))return;modal.style.setProperty('--orbit-preview-height',`${window.visualViewport?.height||window.innerHeight}px`);modal.style.setProperty('--orbit-preview-top',`${window.visualViewport?.offsetTop||0}px`);}
+window.visualViewport?.addEventListener('resize',orbitFitPhotoPreview);window.visualViewport?.addEventListener('scroll',orbitFitPhotoPreview);window.addEventListener('resize',orbitFitPhotoPreview);

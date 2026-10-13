@@ -1,2 +1,5 @@
 [functions.orbit-message-push]
 verify_jwt = true
+
+[functions.orbit-view-once]
+verify_jwt = true

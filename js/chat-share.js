@@ -73,6 +73,7 @@
     function contextShareExternal() {
         const msg = window.contextActiveMessage;
         if (!msg) return;
+        if(orbitIsViewOnceMessage(msg)){showToast("View-once photos cannot be shared or forwarded.","error");return;}
         if (typeof closeMsgContextModal === 'function') closeMsgContextModal();
 
         if (msg.attachments && msg.attachments.length > 0) {
@@ -98,6 +99,7 @@
     function contextForwardMsg() {
         const msg = window.contextActiveMessage;
         if (!msg) return;
+        if(orbitIsViewOnceMessage(msg)){showToast("View-once photos cannot be shared or forwarded.","error");return;}
         if (typeof closeMsgContextModal === 'function') closeMsgContextModal();
         openForwardModal(msg);
     }
@@ -271,6 +273,7 @@
         if (!messageToForward || forwardSelectedRoomIds.size === 0 || !currentUser) return;
         // Cache message copy BEFORE closing modal which sets messageToForward = null
         const msg = { ...messageToForward };
+        if(orbitIsViewOnceMessage(msg)){showToast('View-once photos cannot be forwarded.','error');return;}
         const targetRooms = Array.from(forwardSelectedRoomIds);
         closeForwardModal();
         showToast(`Forwarding to ${targetRooms.length} chat${targetRooms.length > 1 ? 's' : ''}...`);

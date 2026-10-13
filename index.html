@@ -33,9 +33,10 @@
     <script src="assets/vendor/supabase.min.js?v=2.117.3"></script>
     <!-- Document, crop and resumable upload tools load only when needed. -->
 
-    <link rel="stylesheet" href="style.css?v=chat-upgrades-20261013-r3">
+    <link rel="stylesheet" href="style.css?v=photo-weather-20261013-r1">
     <link rel="stylesheet" href="tools.css">
-<link rel="stylesheet" href="chat-upgrades.css?v=chat-upgrades-20261013-r3">
+<link rel="stylesheet" href="chat-upgrades.css?v=photo-weather-20261013-r1">
+<link rel="stylesheet" href="photo-weather.css?v=photo-weather-20261013-r1">
 </head>
 <body>
 
@@ -364,7 +365,10 @@
                     <i class="fa-solid fa-gear" style="color:var(--accent);"></i>
                 </button>
             </div>
-        </div>
+        <button type="button" id="orbit-banner-weather" class="orbit-weather-pill" data-weather="idle" onclick="openOrbitWeatherConsent()" aria-label="Local weather and location settings">
+ <span class="orbit-weather-glow" aria-hidden="true"></span><span id="orbit-weather-icon" class="orbit-weather-symbol" aria-hidden="true">⌖</span><span class="orbit-weather-copy"><strong id="orbit-weather-label">Enable local weather</strong><small id="orbit-weather-details"></small></span><span class="orbit-weather-settings" aria-hidden="true">›</span>
+</button>
+</div>
 
         <!-- Search Bar -->
         <div class="search-container">
@@ -2421,10 +2425,11 @@
                         <span class="view-once-badge">1</span>
                     </button>
                 </div>
-                <button class="preview-send-circle-btn touch-fix" onclick="sendPreviewMediaBatch()" title="Send">
-                    <i class="fa-solid fa-paper-plane"></i>
+                <button type="button" id="preview-send-button" class="preview-send-circle-btn touch-fix" onclick="sendPreviewMediaBatch()" title="Send photo" aria-label="Send photo">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3l19 9-19 9 4-9-4-9zm4.2 8h9.3L6.7 6.4 8.8 11H7.2zm0 2l1.6 4.6 9.7-4.6H7.2z" fill="currentColor"/></svg>
                 </button>
             </div>
+            <p id="preview-view-once-hint" class="hide">View once · Recipient can open this photo once</p>
         </div>
     </div>
 
@@ -2551,27 +2556,27 @@
 </div>
 
 <script src="js/config.js?v=banner-20261012-r15"></script>
-<script src="js/rooms.js?v=chat-upgrades-20261013-r3"></script>
+<script src="js/rooms.js?v=photo-weather-20261013-r1"></script>
     <script src="js/chat-actions.js"></script>
-    <script src="js/actions/media-lightbox.js"></script>
-    <script src="js/actions/media-preview.js?v=chat-upgrades-20261013-r3"></script>
-    <script src="js/actions/file-viewer.js?v=chat-upgrades-20261013-r3"></script>
+    <script src="js/actions/media-lightbox.js?v=photo-weather-20261013-r1"></script>
+    <script src="js/actions/media-preview.js?v=photo-weather-20261013-r1"></script>
+    <script src="js/actions/file-viewer.js?v=photo-weather-20261013-r1"></script>
     <script src="js/actions/voice-recorder.js"></script>
-    <script src="js/actions/chat-extras.js?v=chat-upgrades-20261013-r3"></script>
-    <script src="js/messaging-notifications.js?v=chat-upgrades-20261013-r3"></script>
+    <script src="js/actions/chat-extras.js?v=photo-weather-20261013-r1"></script>
+    <script src="js/messaging-notifications.js?v=photo-weather-20261013-r1"></script>
     <script src="js/chat-gestures.js"></script>
     <script src="js/chat-select.js"></script>
-    <script src="js/chat-share.js"></script>
-    <script src="js/chat/chat-history.js?v=chat-upgrades-20261013-r3"></script>
-    <script src="js/chat/chat-feed.js?v=chat-upgrades-20261013-r3"></script>
-    <script src="js/chat/chat-dispatcher.js?v=chat-upgrades-20261013-r3"></script>
-    <script src="js/chat/chat-realtime.js?v=chat-upgrades-20261013-r3"></script>
+    <script src="js/chat-share.js?v=photo-weather-20261013-r1"></script>
+    <script src="js/chat/chat-history.js?v=photo-weather-20261013-r1"></script>
+    <script src="js/chat/chat-feed.js?v=photo-weather-20261013-r1"></script>
+    <script src="js/chat/chat-dispatcher.js?v=photo-weather-20261013-r1"></script>
+    <script src="js/chat/chat-realtime.js?v=photo-weather-20261013-r1"></script>
     <script src="js/chat.js"></script>
 <script src="js/calculator.js"></script>
     <script src="js/tools.js"></script>
     <script src="js/celestial.js"></script>
-    <script src="js/ui/ui-auth.js?v=chat-upgrades-20261013-r3"></script>
-    <script src="js/ui/ui-navigation.js?v=chat-upgrades-20261013-r3"></script>
+    <script src="js/ui/ui-auth.js?v=photo-weather-20261013-r1"></script>
+    <script src="js/ui/ui-navigation.js?v=photo-weather-20261013-r1"></script>
     <script src="js/ui/ui-modals.js?v=delivery-20261011-r16"></script>
     <script src="js/ui/ui-notifications.js"></script>
 <script src="js/ui.js"></script>
@@ -2607,8 +2612,18 @@
  <div id="orbit-editor-filters" class="hide"><button type="button" onclick="applyOrbitMediaFilter('vivid')">Vivid</button><button type="button" onclick="applyOrbitMediaFilter('mono')">Mono</button><button type="button" onclick="applyOrbitMediaFilter('warm')">Warm</button><button type="button" onclick="applyOrbitMediaFilter('bright')">Bright</button></div>
  <div class="orbit-editor-stage"><canvas id="orbit-editor-canvas"></canvas></div>
 </div>
-<script src="js/orbit-chat-services.js?v=chat-upgrades-20261013-r3"></script>
-<script src="js/orbit-media-editor.js?v=chat-upgrades-20261013-r3"></script>
+<script src="js/orbit-chat-services.js?v=photo-weather-20261013-r1"></script>
+<script src="js/orbit-media-editor.js?v=photo-weather-20261013-r1"></script>
+<div id="modal-orbit-weather" class="glass-modal-overlay"><div class="glass-modal-box">
+ <div class="modal-header-row"><strong>Weather near you</strong><button type="button" class="btn-reset" onclick="closeOrbitWeatherConsent()" aria-label="Close weather settings">✕</button></div>
+ <p>Allow device location to show nearby weather below the Orbit logo. Orbit requests a fresh, high-accuracy location and shows the accuracy your device reports.</p>
+ <p class="orbit-weather-privacy">Your coordinates go directly to Open-Meteo for weather and BigDataCloud for the place name. BigDataCloud uses anonymous location and network signals to improve its data. Orbit does not save your precise location.</p>
+ <p id="orbit-weather-updated"></p><button type="button" class="glass-btn-primary" onclick="enableOrbitWeather()">Allow location &amp; show weather</button>
+ <button type="button" id="orbit-weather-disable" class="glass-btn-secondary hide" onclick="disableOrbitWeather()">Turn off local weather</button>
+ <p class="orbit-weather-attribution">Weather by <a href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer">Open-Meteo</a> · Places by <a href="https://www.bigdatacloud.com/" target="_blank" rel="noopener noreferrer">BigDataCloud</a></p>
+</div></div>
+<script src="js/orbit-private-photos.js?v=photo-weather-20261013-r1"></script>
+<script src="js/orbit-banner-weather.js?v=photo-weather-20261013-r1"></script>
 <script src="js/liquid-glass.js?v=4"></script>
 </body>
 </html>

@@ -421,7 +421,7 @@ function createMessageDOMNode(msg, isConsecutive = false) {
                     } catch(e) {}
                 }
                 const rawUrl = att.url || att.publicUrl || att.storage_path || att.path || (typeof att === 'string' ? att : '');
-                const cleanUrl = formatMediaUrl(rawUrl);
+                const cleanUrl = att.view_once && att.storage_bucket==='orbit-view-once' ? rawUrl : formatMediaUrl(rawUrl);
                 if (!cleanUrl) return;
 
                 const cleanUrlNoQuery = cleanUrl.split('?')[0].split('#')[0];
@@ -455,7 +455,7 @@ function createMessageDOMNode(msg, isConsecutive = false) {
                 if (msg.type === 'poll') return;
 
                 if (isImage) {
-                    images.push({ url: cleanUrl, name: fileName });
+                    images.push({ url: cleanUrl, name: fileName, view_once: att.view_once===true || att.view_once==='true', storage_bucket:att.storage_bucket });
                 } else {
                     files.push({ url: cleanUrl, name: fileName, isVideo, isAudio, type: att.type || msg.type, size: att.size });
                 }
@@ -511,18 +511,18 @@ function createMessageDOMNode(msg, isConsecutive = false) {
         // WhatsApp-Style Multi-Image Bunch / Collage Grid (1, 2, 3, 4, 4+ with +N overlay)
         let mediaGridHtml = '';
         // Check for View Once Photo
-        const hasViewOnce = images.some(im => im.view_once) || (Array.isArray(attList) && attList.some(a => a && a.view_once));
+        const hasViewOnce = orbitIsViewOnceMessage(msg);
         if (hasViewOnce) {
             const voImg = images[0] || (Array.isArray(attList) ? attList.find(a => a && a.view_once) : null);
-            const isOpened = localStorage.getItem(`orbit_view_once_${msg.id}`) === 'opened' || msg.view_status === 'opened';
+            const isOpened = localStorage.getItem(orbitViewOnceKey(msg.id)) === 'opened' || msg.view_status === 'opened';
             mediaGridHtml = `
-                <div class="view-once-bubble-card ${isOpened ? 'opened' : 'unopened'}" data-view-once-id="${msg.id}" onclick="${isOpened ? '' : `if(typeof openViewOnceMedia==='function') openViewOnceMedia('${msg.id}', '${voImg?.url || ''}', ${isOwn})`}">
+                <div class="view-once-bubble-card ${isOpened ? 'opened' : 'unopened'}" data-view-once-id="${msg.id}" onclick="${isOpened || isOwn ? '' : `openViewOnceMedia('${msg.id}')`}">
                     <div class="view-once-icon-ring ${isOpened ? 'opened' : ''}">
                         <span class="view-once-badge">1</span>
                     </div>
                     <div class="view-once-info">
                         <div class="view-once-title">${isOpened ? 'Opened' : 'Photo'}</div>
-                        <div class="view-once-subtitle">${isOpened ? 'View once photo expired' : 'View once · Tap to view'}</div>
+                        <div class="view-once-subtitle">${isOpened ? 'This photo cannot be reopened' : isOwn ? 'View once · Sent' : 'View once · Tap to open'}</div>
                     </div>
                 </div>
             `;

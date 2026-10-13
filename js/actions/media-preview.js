@@ -188,6 +188,7 @@ function openMediaPreviewScreen(items) {
     document.getElementById('preview-hd-check')?.classList.add('hide');
     renderPreviewCarousel();
     renderPreviewThumbStrip();
+    if(typeof orbitFitPhotoPreview==='function')orbitFitPhotoPreview();
 }
 
 function closeMediaPreviewScreen() {
@@ -226,6 +227,8 @@ function renderPreviewCarousel() {
     if (captionInput) captionInput.value = current.caption || '';
     isViewOnceActive=!!current.viewOnce;
     document.getElementById('btn-view-once-toggle')?.classList.toggle('active',isViewOnceActive);
+    document.getElementById('btn-view-once-toggle')?.setAttribute('aria-pressed',String(isViewOnceActive));
+    document.getElementById('preview-view-once-hint')?.classList.toggle('hide',!isViewOnceActive);
     document.querySelectorAll('.preview-top-actions button').forEach(button=>{if(['openImageCropper()','rotateCurrentPreviewMedia()','openOrbitStickerEditor()','promptPreviewTextOverlay()','togglePreviewDoodle()'].includes(button.getAttribute('onclick')))button.disabled=current.type!=='image';});
     document.getElementById('preview-restyle-badge').classList.toggle('hide',current.type!=='image');
 

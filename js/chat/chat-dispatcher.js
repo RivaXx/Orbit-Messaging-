@@ -616,7 +616,7 @@ async function _uploadQueuedMedia(item) {
     for (const info of item.mediaUploadInfo) {
         if (item.cancelled) return;
         const saved = item.payload.attachments[info.index];
-        if (saved?.upload_pending === false && /^https?:\/\//.test(saved.url || '')) {
+        if (saved?.upload_pending === false && (/^https?:\/\//.test(saved.url || '') || saved.storage_bucket==='orbit-view-once')) {
             completedCount++;
             uploadBytes.set(info.index, uploadTotals.get(info.index));
             reportProgress();
@@ -671,9 +671,11 @@ async function _uploadQueuedMedia(item) {
             _persistMessageOutbox(item.payload.sender_id);
         }
 
-        let url = null;
+        let url = null, privatePhoto = null;
         try {
-            url = await uploadMediaToStorage(uploadBody, info.name, mime, info.subfolder, progress => {
+            if(attachment?.view_once){
+                privatePhoto=await uploadOrbitPrivatePhoto(uploadBody,info.name,item.payload.id,info.index,progress=>{uploadTotals.set(info.index,progress.total||uploadBody.size);uploadBytes.set(info.index,progress.loaded||0);reportProgress();});url=privatePhoto.url;
+            } else url = await uploadMediaToStorage(uploadBody, info.name, mime, info.subfolder, progress => {
                 updateChatMediaUploadProgress(info.name, progress.percent, completedCount, totalUploads);
                 uploadTotals.set(info.index, progress.total);
                 uploadBytes.set(info.index, progress.loaded);
@@ -700,7 +702,7 @@ async function _uploadQueuedMedia(item) {
         if (attachment?.url?.startsWith('blob:')) {
             try { URL.revokeObjectURL(attachment.url); } catch (_) {}
         }
-        item.payload.attachments[info.index] = { name: info.name, url, storage_path: getOrbitStorageObjectPath(url), type: info.type, size: attachment?.size || file.size, upload_pending: false, view_once: !!attachment?.view_once };
+        item.payload.attachments[info.index] = { name: info.name, url, storage_path: privatePhoto?.storage_path || getOrbitStorageObjectPath(url), storage_bucket: privatePhoto?.storage_bucket, type: info.type, size: attachment?.size || file.size, upload_pending: false, view_once: !!attachment?.view_once };
         
         // Update bubble DOM element directly so the permanent URL is immediately active
         const bubbleNode = document.getElementById(`msg-${item.payload.id}`) ||

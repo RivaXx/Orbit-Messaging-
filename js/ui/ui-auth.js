@@ -6,7 +6,7 @@ async function initServiceWorker() {
         try {
             // Only the worker's activate handler knows the current cache name.
             // Deleting caches here used to erase the current offline shell.
-            const reg = await navigator.serviceWorker.register('./sw.js?v=chat-upgrades-20261013-r27', { scope: './' });
+            const reg = await navigator.serviceWorker.register('./sw.js?v=photo-weather-20261013-sw1', { scope: './' });
             reg.update().catch(() => {});
             navigator.serviceWorker.addEventListener('message', event => {
                 if (event.data?.type === 'ORBIT_PUSH_VISIBLE_QUERY') {
@@ -569,6 +569,7 @@ async function signOut() {
             const disconnected = await disableOrbitBackgroundPush();
             if (!disconnected) { showToast('Reconnect so Orbit can turn off notifications before signing out.', 'error'); return; }
         }
+        stopOrbitWeather();closeViewOnceViewer();
         await stopOrbitChatServices();
         try {
             await updatePresenceStatus(false);

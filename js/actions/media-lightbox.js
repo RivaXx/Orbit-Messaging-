@@ -243,6 +243,7 @@ function openChatMediaGallery() {
     if (typeof messageCache !== 'undefined' && messageCache.has(currentRoom)) {
         const msgs = messageCache.get(currentRoom) || [];
         msgs.forEach(m => {
+            if(orbitIsViewOnceMessage(m))return;
             if (Array.isArray(m.attachments) && m.attachments.length > 0) {
                 m.attachments.forEach(att => {
                     const u = typeof att === 'string' ? att : (att.url || att.file_url);
@@ -361,6 +362,7 @@ function renderFilteredGallery(tab) {
 
     if (tab === 'media') {
         msgs.forEach(m => {
+            if(orbitIsViewOnceMessage(m))return;
             if (Array.isArray(m.attachments)) {
                 m.attachments.forEach(att => {
                     const u = typeof att === 'string' ? att : (att.url || att.file_url);
@@ -387,6 +389,7 @@ function renderFilteredGallery(tab) {
         }
     } else if (tab === 'docs') {
         msgs.forEach(m => {
+            if(orbitIsViewOnceMessage(m))return;
             if (Array.isArray(m.attachments)) {
                 m.attachments.forEach(att => {
                     const u = typeof att === 'string' ? att : (att.url || att.file_url);
@@ -412,6 +415,7 @@ function renderFilteredGallery(tab) {
     } else if (tab === 'links') {
         const urlRegex = /(https?:\/\/[^\s<]+)/g;
         msgs.forEach(m => {
+            if(orbitIsViewOnceMessage(m))return;
             if (m.text && typeof m.text === 'string') {
                 const matches = m.text.match(urlRegex);
                 if (matches) {
