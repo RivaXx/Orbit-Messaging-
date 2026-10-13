@@ -50,6 +50,9 @@ returns boolean language sql immutable set search_path='' as $$
  select public.orbit_attachments_need_private(to_jsonb(value));
 $$;
 revoke all on function public.orbit_attachments_need_private_text(text[]) from public,anon,authenticated;
+-- Pure metadata predicates must also run during authenticated message inserts.
+grant execute on function public.orbit_attachments_need_private(jsonb) to authenticated;
+grant execute on function public.orbit_attachments_need_private_text(text[]) to authenticated;
 create index orbit_legacy_private_photos_idx on public.messages(created_at desc)
 where public.orbit_attachments_need_private_text(attachments);
 create function public.orbit_legacy_private_photos()
