@@ -173,7 +173,8 @@ function openMediaPreviewScreen(items) {
         name: item.name || 'media',
         type: item.type || 'image',
         rotation: 0,
-        caption: item.caption || ''
+        caption: item.caption || '',
+        viewOnce: !!item.viewOnce
     }));
     currentPreviewIndex = 0;
 
@@ -181,7 +182,10 @@ function openMediaPreviewScreen(items) {
     if (!modal) return;
     modal.classList.remove('hide');
     modal.classList.add('active');
-
+    modal.setAttribute('aria-hidden','false');
+    isPreviewHdQuality=false;isViewOnceActive=false;
+    document.getElementById('preview-hd-toggle-btn')?.classList.remove('active');
+    document.getElementById('preview-hd-check')?.classList.add('hide');
     renderPreviewCarousel();
     renderPreviewThumbStrip();
 }
@@ -220,6 +224,10 @@ function renderPreviewCarousel() {
 
     if (counter) counter.textContent = `${currentPreviewIndex + 1} of ${mediaPreviewList.length}`;
     if (captionInput) captionInput.value = current.caption || '';
+    isViewOnceActive=!!current.viewOnce;
+    document.getElementById('btn-view-once-toggle')?.classList.toggle('active',isViewOnceActive);
+    document.querySelectorAll('.preview-top-actions button').forEach(button=>{if(['openImageCropper()','rotateCurrentPreviewMedia()','openOrbitStickerEditor()','promptPreviewTextOverlay()','togglePreviewDoodle()'].includes(button.getAttribute('onclick')))button.disabled=current.type!=='image';});
+    document.getElementById('preview-restyle-badge').classList.toggle('hide',current.type!=='image');
 
     const recPill = document.getElementById('preview-recipient-name');
     if (recPill) {
@@ -264,6 +272,7 @@ function selectPreviewThumb(idx) {
 }
 
 function rotateCurrentPreviewMedia() {
+    orbitSaveCaption();
     if (!mediaPreviewList[currentPreviewIndex]) return;
     mediaPreviewList[currentPreviewIndex].rotation = (mediaPreviewList[currentPreviewIndex].rotation + 90) % 360;
     renderPreviewCarousel();
@@ -623,7 +632,7 @@ function toggleHdQuality() {
     const check = document.getElementById('preview-hd-check');
     if (btn) btn.classList.toggle('active', isPreviewHdQuality);
     if (check) check.classList.toggle('hide', !isPreviewHdQuality);
-    showToast(isPreviewHdQuality ? 'HD Quality enabled (Full Resolution)' : 'Standard Quality enabled (Compressed)', 'info');
+    showToast(isPreviewHdQuality ? 'HD quality enabled (up to 2560 pixels)' : 'Standard Quality enabled (Compressed)', 'info');
 }
 window.toggleHdQuality = toggleHdQuality;
 
@@ -648,7 +657,7 @@ async function openImageCropper() {
     catch (error) { showToast(error.message, 'error'); return; }
     if (mediaPreviewList[currentPreviewIndex] !== current) return;
 
-    targetImg.src = current.url;
+    targetImg.src = current.rotation ? await bakeImageRotation(current.url,current.rotation) : current.url;
     modal.classList.add('active');
 
     // Initialize Cropper.js with 3x3 rule-of-thirds grid
@@ -710,7 +719,7 @@ function applyImageCrop() {
     });
     if (canvas) {
         const croppedDataUrl = canvas.toDataURL('image/jpeg', isPreviewHdQuality ? 0.95 : 0.82);
-        mediaPreviewList[currentPreviewIndex].url = croppedDataUrl;
+        orbitUpdateEditedImage(mediaPreviewList[currentPreviewIndex],canvas);
         renderPreviewCarousel();
         renderPreviewThumbStrip();
     }

@@ -796,6 +796,11 @@ function createMessageDOMNode(msg, isConsecutive = false) {
             }
         }
 
+        if (msg.type==='call') {
+            const detail=formatOrbitCallDetail(msg.text);
+            extraCardHtml=`<div class="orbit-call-message"><span class="orbit-call-message-icon"><i class="fa-solid fa-phone"></i></span><div><strong>Voice call</strong><small>${escapeHtml(detail)}</small></div></div>`;
+        }
+
         // ── Text with Markdown, URLs & @Friend Mentions Formatting ──────
         let formattedTextHtml = '';
         const isMsgDeleted = msg.is_deleted || msg.text === '🚫 This message was deleted' || msg.text === '🚫 You deleted this message';
@@ -807,7 +812,7 @@ function createMessageDOMNode(msg, isConsecutive = false) {
             filesHtml = '';
             replyHtml = '';
             formattedTextHtml = `<div class="msg-deleted-bubble" style="display:flex; align-items:center; gap:6px; font-style:italic; opacity:0.68; color:var(--text-muted); font-size:13px; padding:3px 2px;"><i class="fa-solid fa-ban" style="font-size:12px;"></i> <span>${deletedNotice}</span></div>`;
-        } else if (msg.text && msg.type !== 'location' && msg.type !== 'poll' && msg.type !== 'contact') {
+        } else if (msg.text && msg.type !== 'location' && msg.type !== 'poll' && msg.type !== 'contact' && msg.type !== 'call') {
             const rawTextTrimmed = msg.text.trim();
             // Check if text is a placeholder that shouldn't be duplicated when attachments are rendered
             const isImagePlaceholder = (images.length > 0) && (
@@ -823,17 +828,7 @@ function createMessageDOMNode(msg, isConsecutive = false) {
             );
 
             if (!isImagePlaceholder && !isFilePlaceholder) {
-                let text = escapeHtml(msg.text);
-                // Markdown bold: *text*
-                text = text.replace(/\*([^*\n]+)\*/g, '<strong>$1</strong>');
-                // Markdown italic: _text_
-                text = text.replace(/_([^_\n]+)_/g, '<em>$1</em>');
-                // Markdown strike: ~text~
-                text = text.replace(/~([^~\n]+)~/g, '<del>$1</del>');
-                // URLs to clickable links
-                text = text.replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" rel="noopener" class="msg-content-link">$1</a>');
-                // Highlight @mentions in gold
-                text = text.replace(/@([a-zA-Z0-9_\.\-]+)/g, '<span class="mention-tag">@$1</span>');
+                let text = formatOrbitMessageText(msg.text);
                 if (msg.is_edited) {
                     text += '<span class="msg-edited-badge">(edited)</span>';
                 }

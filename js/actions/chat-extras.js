@@ -1276,6 +1276,8 @@ function onDynamicIslandClick() {
 
 const notifiedMessageKeys = new Set();
 function triggerMessageNotification(msg) {
+    if (isUserBlocked(msg?.sender_id)) return;
+    if (msg?.type==='call') return; // The call inbox handles ringing and system alerts.
     if (!msg || msg.sender_id === currentUser?.id) return;
     const notificationKey = `${msg.room || ''}:${msg.id || msg.created_at || ''}`;
     if (notifiedMessageKeys.has(notificationKey)) return;

@@ -26,7 +26,7 @@ async function openChatRoom(roomId, roomTitle, avatarUrl, isSelf = false, peerUs
     chatHistoryController?.abort();
     const viewEpoch = ++_chatViewEpoch;
     const previousRoom = currentRoom;
-    if (typeof _activeCallRoom !== 'undefined' && _activeCallRoom && _activeCallRoom !== roomId && typeof endVoiceCall === 'function') endVoiceCall(true);
+
     currentRoom = roomId;
     isSelfChat = isSelf;
     isUserInteractingWithFeed = false;
@@ -298,7 +298,7 @@ function navBackFromChat() {
     hideMentionAutocomplete();
     stopTypingBroadcast();
 
-    if (typeof endVoiceCall === 'function' && typeof _activeCallRoom !== 'undefined' && _activeCallRoom === currentRoom) endVoiceCall(true);
+
     currentRoom = null;
     activeChatPeerId = null;
     _isSendingMessage = false;

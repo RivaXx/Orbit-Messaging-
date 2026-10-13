@@ -29,7 +29,7 @@ function expireFastPreviewLater(id, roomId, aliases) {
 async function setupFastMessageChannel(client, roomId, aliases, setupEpoch, viewEpoch) {
     if (_fastMessageChannel) client.removeChannel(_fastMessageChannel).catch(() => {});
     _fastMessageChannel = null;
-    if (isSelfChat || !currentUser?.id) return;
+    if (isSelfChat || !currentUser?.id || !isGroupChat) return; // Direct messages use server-confirmed delivery so blocks cannot be bypassed.
     const selfId = currentUser.id;
     const peerId = activeChatPeerId;
     const topicRoom = !isGroupChat && peerId ? getDeterministicDMId(selfId, peerId) : roomId;
@@ -39,6 +39,7 @@ async function setupFastMessageChannel(client, roomId, aliases, setupEpoch, view
         const channel = client.channel(`orbit_fast_${topicRoom}`, { config: { private: true } })
             .on('broadcast', { event: 'new_message' }, event => {
                 const message = event.payload;
+                if(isUserBlocked(message?.sender_id))return;
                 if (currentRoom !== roomId || currentUser?.id !== selfId || !message?.id || message.sender_id === selfId) return;
                 if (!aliases.includes(message.room) || typeof message.text !== 'string' || !message.text || message.text.length > 32768) return;
                 if (!/^[0-9a-f-]{36}$/i.test(message.id) || (message.attachments?.length || 0) > 0 || message.type !== 'text') return;
@@ -282,6 +283,7 @@ window.handleRemotePollVote = handleRemotePollVote;
 window.handleMessageDeleted = handleMessageDeleted;
 
 function handleRealtimeInsert(payload, primaryRoomId, aliases) {
+    if(isUserBlocked(payload?.new?.sender_id)) return;
     const newMsg = payload.new;
     if (!newMsg) return;
     if (!aliases.includes(newMsg.room)) return;
@@ -401,6 +403,7 @@ function handleRealtimeUpdate(payload, primaryRoomId, aliases) {
             // Update node in-place to completely prevent screen flashing or scroll jumps
             const existingNode = document.getElementById(`msg-${updated.id}`);
             if (existingNode) {
+                if(updated.type==='call'){const detail=existingNode.querySelector('.orbit-call-message small');if(detail)detail.textContent=formatOrbitCallDetail(updated.text);}
                 const meta = existingNode.querySelector('.msg-meta-row');
                 if (meta) {
                     const tickEl = meta.querySelector('.msg-status-indicator, .msg-tick, .msg-status-tick');

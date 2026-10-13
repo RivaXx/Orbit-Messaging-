@@ -33,8 +33,9 @@
     <script src="assets/vendor/supabase.min.js?v=2.117.3"></script>
     <!-- Document, crop and resumable upload tools load only when needed. -->
 
-    <link rel="stylesheet" href="style.css?v=notifications-20261012-r5">
+    <link rel="stylesheet" href="style.css?v=chat-upgrades-20261013-r3">
     <link rel="stylesheet" href="tools.css">
+<link rel="stylesheet" href="chat-upgrades.css?v=chat-upgrades-20261013-r3">
 </head>
 <body>
 
@@ -430,7 +431,8 @@
 
         <!-- Tab 1: MAIN CHATS (Includes Self Chat & All Recents) -->
         <div id="tab-main-chats" class="contact-feed">
-            <!-- Pinned Self Chat (Note to Self) -->
+            <div class="orbit-conversations-heading"><div><span>YOUR SPACE</span><h2>Messages</h2></div><button type="button" class="glass-icon-btn" onclick="switchTab('global')" title="Find people"><i class="fa-solid fa-pen-to-square"></i></button></div>
+<!-- Pinned Self Chat (Note to Self) -->
             <div id="self-chat-pill" class="contact-glass-card self-chat-card touch-fix" onclick="openSelfChat()">
                 <div class="c-av-wrap" style="border-color:var(--self-chat-blue); background:rgba(10,132,255,0.15);">
                     <i class="fa-solid fa-cloud-arrow-up" style="color:var(--self-chat-blue); font-size:18px;"></i>
@@ -1191,7 +1193,14 @@
             <span style="font-size:11px; opacity:0.85;">View <i class="fa-solid fa-chevron-right" style="font-size:9px;"></i></span>
         </div>
 
-        <!-- Attached Media Preview Strip -->
+        <div class="orbit-format-toolbar" aria-label="Message formatting">
+<button type="button" onmousedown="event.preventDefault()" onclick="applyOrbitTextFormat('bold')" title="Bold (Ctrl+B)"><strong>B</strong></button>
+<button type="button" onmousedown="event.preventDefault()" onclick="applyOrbitTextFormat('italic')" title="Italic (Ctrl+I)"><em>I</em></button>
+<button type="button" onmousedown="event.preventDefault()" onclick="applyOrbitTextFormat('strike')" title="Strikethrough"><del>S</del></button>
+<button type="button" onmousedown="event.preventDefault()" onclick="applyOrbitTextFormat('code')" title="Monospace (Ctrl+E)"><i class="fa-solid fa-code"></i></button>
+<button type="button" onclick="openScheduleModal()" class="orbit-format-schedule" title="Schedule message"><i class="fa-regular fa-clock"></i><span>Schedule</span></button>
+</div>
+<!-- Attached Media Preview Strip -->
         <div id="media-preview-strip" class="media-preview-strip hide"></div>
 
         <!-- Mention Friends Autocomplete Popover -->
@@ -2266,7 +2275,7 @@
                 <button class="btn-reset" onclick="closeScheduleModal()" style="font-size:18px; color:var(--text-muted);"><i class="fa-solid fa-xmark"></i></button>
             </div>
             
-            <div style="font-size:12px; color:var(--text-secondary); margin-bottom:12px;">Choose a preset or exact time for Orbit to auto-dispatch your message:</div>
+            <div style="font-size:12px; color:var(--text-secondary); margin-bottom:12px;">Choose when to send. Scheduling works even with Orbit closed; delivery may take up to a minute.</div>
             
             <textarea id="schedule-msg-text" class="glass-input" rows="2" style="margin-bottom:12px; resize:none;" placeholder="Your message..."></textarea>
 
@@ -2306,6 +2315,7 @@
     <!-- WebRTC Voice Call Beta Modal -->
     <div id="modal-voice-call" class="glass-modal-overlay">
         <div class="call-modal-box">
+<button type="button" class="orbit-call-minimize btn-reset" onclick="minimizeOrbitCall()" aria-label="Minimize call"><i class="fa-solid fa-chevron-down"></i></button>
             <div id="call-avatar-wrap" class="call-avatar-pulse">
                 <i class="fa-solid fa-user"></i>
             </div>
@@ -2323,7 +2333,8 @@
                     <i class="fa-solid fa-phone-slash"></i>
                 </button>
             </div>
-            <audio id="remote-call-audio" autoplay playsinline></audio>
+            <div class="orbit-call-devices"><label>Microphone<select id="orbit-call-input" onchange="changeOrbitCallDevice('input',this.value)"><option value="default">Device default</option></select></label><label>Speaker / headphones<select id="orbit-call-output" onchange="changeOrbitCallDevice('output',this.value)"><option value="default">Device default</option></select></label><small id="orbit-output-note"></small></div>
+<audio id="remote-call-audio" autoplay playsinline></audio>
         </div>
     </div>
 
@@ -2336,6 +2347,7 @@
             </button>
             <div id="media-preview-counter" class="media-preview-counter">1 of 1</div>
             <div class="preview-top-actions">
+                <button type="button" class="btn-reset touch-fix preview-top-btn" onclick="downloadPreviewMedia()" title="Download photo"><i class="fa-solid fa-download"></i></button>
                 <!-- HD Quality Toggle -->
                 <button type="button" id="preview-hd-toggle-btn" class="btn-reset touch-fix preview-hd-badge" onclick="toggleHdQuality()" title="Toggle HD Quality">
                     <span>HD</span>
@@ -2350,7 +2362,7 @@
                     <i class="fa-solid fa-rotate-right"></i>
                 </button>
                 <!-- Stickers / Emoji -->
-                <button type="button" class="btn-reset touch-fix preview-top-btn" onclick="openEmojiPickerModal()" title="Add Stickers">
+                <button type="button" class="btn-reset touch-fix preview-top-btn" onclick="openOrbitStickerEditor()" title="Add Stickers">
                     <i class="fa-regular fa-face-smile"></i>
                 </button>
                 <!-- Text (Aa) Overlay -->
@@ -2383,7 +2395,7 @@
             <!-- AI Restyle Badge floating over media -->
             <div id="preview-restyle-badge" class="preview-restyle-badge" onclick="triggerAiRestyle()">
                 <i class="fa-solid fa-wand-magic-sparkles"></i>
-                <span>Restyle with AI</span>
+                <span>Photo filters</span>
             </div>
         </div>
 
@@ -2539,27 +2551,27 @@
 </div>
 
 <script src="js/config.js?v=banner-20261012-r15"></script>
-<script src="js/rooms.js?v=notifications-20261012-r5"></script>
+<script src="js/rooms.js?v=chat-upgrades-20261013-r3"></script>
     <script src="js/chat-actions.js"></script>
     <script src="js/actions/media-lightbox.js"></script>
-    <script src="js/actions/media-preview.js?v=delivery-20261011-r11"></script>
-    <script src="js/actions/file-viewer.js?v=delivery-20261011-r11"></script>
+    <script src="js/actions/media-preview.js?v=chat-upgrades-20261013-r3"></script>
+    <script src="js/actions/file-viewer.js?v=chat-upgrades-20261013-r3"></script>
     <script src="js/actions/voice-recorder.js"></script>
-    <script src="js/actions/chat-extras.js?v=notifications-20261012-r5"></script>
-    <script src="js/messaging-notifications.js?v=notifications-20261012-r5"></script>
+    <script src="js/actions/chat-extras.js?v=chat-upgrades-20261013-r3"></script>
+    <script src="js/messaging-notifications.js?v=chat-upgrades-20261013-r3"></script>
     <script src="js/chat-gestures.js"></script>
     <script src="js/chat-select.js"></script>
     <script src="js/chat-share.js"></script>
-    <script src="js/chat/chat-history.js?v=notifications-20261012-r5"></script>
-    <script src="js/chat/chat-feed.js?v=media-route-20261011"></script>
-    <script src="js/chat/chat-dispatcher.js?v=delivery-20261011-r11"></script>
-    <script src="js/chat/chat-realtime.js?v=notifications-20261012-r5"></script>
+    <script src="js/chat/chat-history.js?v=chat-upgrades-20261013-r3"></script>
+    <script src="js/chat/chat-feed.js?v=chat-upgrades-20261013-r3"></script>
+    <script src="js/chat/chat-dispatcher.js?v=chat-upgrades-20261013-r3"></script>
+    <script src="js/chat/chat-realtime.js?v=chat-upgrades-20261013-r3"></script>
     <script src="js/chat.js"></script>
 <script src="js/calculator.js"></script>
     <script src="js/tools.js"></script>
     <script src="js/celestial.js"></script>
-    <script src="js/ui/ui-auth.js?v=notifications-20261012-r5"></script>
-    <script src="js/ui/ui-navigation.js?v=notifications-20261012-r5"></script>
+    <script src="js/ui/ui-auth.js?v=chat-upgrades-20261013-r3"></script>
+    <script src="js/ui/ui-navigation.js?v=chat-upgrades-20261013-r3"></script>
     <script src="js/ui/ui-modals.js?v=delivery-20261011-r16"></script>
     <script src="js/ui/ui-notifications.js"></script>
 <script src="js/ui.js"></script>
@@ -2585,6 +2597,18 @@
         </div>
     </div>
 
+
+<div id="orbit-call-mini" class="orbit-call-mini hide"><button type="button" onclick="restoreOrbitCall()"><i class="fa-solid fa-phone"></i> Return to voice call</button><button type="button" onclick="endVoiceCall(true)" aria-label="End call"><i class="fa-solid fa-phone-slash"></i></button></div>
+<div id="modal-orbit-editor" class="media-viewer-modal">
+ <div class="orbit-editor-header"><button type="button" onclick="closeOrbitMediaEditor()">Cancel</button><strong>Edit photo</strong><button type="button" onclick="applyOrbitMediaEdits()">Done</button></div>
+ <div class="orbit-editor-tools"><button type="button" data-editor-mode="draw" onclick="setOrbitEditorMode('draw')">Draw</button><button type="button" data-editor-mode="text" onclick="setOrbitEditorMode('text')">Text</button><button type="button" data-editor-mode="sticker" onclick="setOrbitEditorMode('sticker')">Stickers</button><button type="button" data-editor-mode="filter" onclick="setOrbitEditorMode('filter')">Filters</button><button type="button" onclick="undoOrbitMediaEdit()">Undo</button><input id="orbit-editor-color" type="color" value="#ffd700" aria-label="Drawing and text color"></div>
+ <p id="orbit-editor-help"></p><input id="orbit-editor-text" class="glass-input hide" type="text" maxlength="120" placeholder="Text to place on photo" aria-label="Photo overlay text">
+ <div id="orbit-editor-stickers" class="hide"><label>Sticker <select id="orbit-editor-emoji"><option>😀</option><option>❤️</option><option>🔥</option><option>⭐</option><option>👍</option><option>🎉</option><option>😎</option><option>🚀</option></select></label></div>
+ <div id="orbit-editor-filters" class="hide"><button type="button" onclick="applyOrbitMediaFilter('vivid')">Vivid</button><button type="button" onclick="applyOrbitMediaFilter('mono')">Mono</button><button type="button" onclick="applyOrbitMediaFilter('warm')">Warm</button><button type="button" onclick="applyOrbitMediaFilter('bright')">Bright</button></div>
+ <div class="orbit-editor-stage"><canvas id="orbit-editor-canvas"></canvas></div>
+</div>
+<script src="js/orbit-chat-services.js?v=chat-upgrades-20261013-r3"></script>
+<script src="js/orbit-media-editor.js?v=chat-upgrades-20261013-r3"></script>
 <script src="js/liquid-glass.js?v=4"></script>
 </body>
 </html>

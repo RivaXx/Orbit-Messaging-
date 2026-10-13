@@ -645,8 +645,8 @@ async function _uploadQueuedMedia(item) {
         if (!info.prepared && info.type === 'image' && !/image\/(gif|svg\+xml)/i.test(info.mime) && typeof compressImageForUpload === 'function') {
             const isHd = info.hdQuality;
             const slowLink = ['slow-2g', '2g', '3g'].includes(navigator.connection?.effectiveType) || navigator.connection?.saveData;
-            const targetDim = isHd ? 1600 : slowLink ? 720 : 1080;
-            const targetQuality = isHd ? 0.80 : slowLink ? 0.58 : 0.70;
+            const targetDim = isHd ? 2560 : slowLink ? 720 : 1080;
+            const targetQuality = isHd ? 0.92 : slowLink ? 0.58 : 0.70;
             const compressed = await compressImageForUpload(uploadBody, targetDim, targetQuality);
             if (compressed?.startsWith('data:image/')) {
                 uploadBody = compressed;
