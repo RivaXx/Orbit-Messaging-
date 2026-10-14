@@ -789,7 +789,7 @@ async function checkAndDispatchScheduledMessages() {
 
 // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 // WEBRTC VOICE CALLS (Peer to Peer)
-// The two configured admin accounts can start calls; the peer can answer from the incoming-call dialog.
+// The configured primary admin can start calls; the peer can answer from the incoming-call dialog.
 let peerConnection = null;
 let localAudioStream = null;
 let callDurationTimer = null;
