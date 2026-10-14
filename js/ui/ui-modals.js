@@ -465,6 +465,9 @@ function openSettingsModal() {
     if (sqlButton) sqlButton.classList.toggle('hide', typeof isPrimaryAdmin !== 'function' || !isPrimaryAdmin());
     const email = document.getElementById('settings-account-email');
     if (email) email.textContent = currentUser?.email || 'Customize your Orbit experience';
+    syncOrbitSettingsControls();
+    document.getElementById('admin-storage-section')?.classList.toggle('hide', !isPrimaryAdmin());
+    if (isPrimaryAdmin()) loadOrbitCleanupSettings();
     document.getElementById('modal-settings').classList.add('active');
     if (typeof updateNotificationSettingsUI === 'function') updateNotificationSettingsUI();
 }
@@ -498,7 +501,8 @@ function handleBlurSlider(val) {
         document.documentElement.style.setProperty('--blur-deep', `blur(${val}px) saturate(180%)`);
         document.documentElement.style.setProperty('--blur-light', `blur(${Math.round(val/2)}px)`);
     }
-    try { localStorage.setItem('orbit_pref_blur', val); } catch(e) {}
+    try { localStorage.setItem('orbit_pref_blur', val); localStorage.removeItem('orbit_pref_glass_preset'); } catch(e) {}
+    window.refreshOrbitLiquidGlass?.();
 }
 
 function handleOpacitySlider(val) {
@@ -514,7 +518,8 @@ function handleOpacitySlider(val) {
     } else {
         document.documentElement.style.setProperty('--glass-card', `rgba(18, 18, 24, ${alpha})`);
     }
-    try { localStorage.setItem('orbit_pref_opacity', val); } catch(e) {}
+    try { localStorage.setItem('orbit_pref_opacity', val); localStorage.removeItem('orbit_pref_glass_preset'); } catch(e) {}
+    window.refreshOrbitLiquidGlass?.();
 }
 
 function handleGlowSlider(val) {
@@ -527,41 +532,84 @@ function handleGlowSlider(val) {
     document.querySelectorAll('.ambient-glow, .ambient-glow-2').forEach(elem => {
         elem.style.opacity = opacity;
     });
-    try { localStorage.setItem('orbit_pref_glow', val); } catch(e) {}
+    try { localStorage.setItem('orbit_pref_glow', val); localStorage.removeItem('orbit_pref_glass_preset'); } catch(e) {}
 }
 
 function setLiquidBlur(mode, btn) {
-    document.querySelectorAll('#modal-settings .news-filter-chip').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('#settings-glass .news-filter-chip').forEach(b => b.classList.remove('active'));
     if (btn) {
         btn.classList.add('active');
     } else {
-        const matchingBtn = Array.from(document.querySelectorAll('#modal-settings .news-filter-chip')).find(b => 
+        const matchingBtn = Array.from(document.querySelectorAll('#settings-glass .news-filter-chip')).find(b => 
             b.innerText.toLowerCase().includes(mode === 'ultra' ? 'ultra' : mode === 'balanced' ? 'balanced' : 'fast')
         );
         if (matchingBtn) matchingBtn.classList.add('active');
     }
     
     if (mode === 'ultra') {
-        handleBlurSlider(32);
-        handleOpacitySlider(85);
+        handleBlurSlider(8);
+        handleOpacitySlider(35);
         handleGlowSlider(75);
+        handleRefractionSlider(80);
     } else if (mode === 'balanced') {
-        handleBlurSlider(20);
-        handleOpacitySlider(75);
+        handleBlurSlider(12);
+        handleOpacitySlider(50);
         handleGlowSlider(50);
+        handleRefractionSlider(45);
     } else {
         handleBlurSlider(0);
         handleOpacitySlider(95);
         handleGlowSlider(0);
+        handleRefractionSlider(0);
     }
     try { localStorage.setItem('orbit_pref_glass_preset', mode); } catch(e) {}
 }
 
+function handleRefractionSlider(value) {
+    const amount = Math.max(0, Math.min(100, Number(value) || 0));
+    const input = document.getElementById('slider-refraction');
+    const label = document.getElementById('val-refraction');
+    if (input) input.value = String(amount);
+    if (label) label.textContent = `${amount}%`;
+    try {
+        localStorage.setItem('orbit_pref_refraction', String(amount));
+        localStorage.removeItem('orbit_pref_glass_preset');
+    } catch (_) {}
+    window.refreshOrbitLiquidGlass?.();
+}
+
 function setLiquidAccent(hex, quiet = false) {
-    document.documentElement.style.setProperty('--accent', hex);
-    document.documentElement.style.setProperty('--accent-gradient', `linear-gradient(135deg, ${hex} 0%, ${hex}CC 100%)`);
-    try { localStorage.setItem('orbit_pref_accent', hex); } catch(e) {}
+    if (!/^#[0-9a-f]{6}$/i.test(hex)) return;
+    const rgb = [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16));
+    // Body themes define their own variables; update both scopes.
+    [document.documentElement, document.body].forEach(el => {
+        el.style.setProperty('--accent', hex);
+        el.style.setProperty('--accent-readable', hex);
+        el.style.setProperty('--accent-glow', `rgba(${rgb.join(',')}, 0.35)`);
+        el.style.setProperty('--accent-gradient', `linear-gradient(135deg, ${hex} 0%, ${hex}CC 100%)`);
+    });
+    try {
+        localStorage.setItem('orbit_pref_accent', hex);
+        localStorage.setItem('orbit_selected_color', hex);
+    } catch(e) {}
+    document.querySelectorAll('#modal-settings [onclick^="setLiquidAccent"]').forEach(btn => {
+        const selected = btn.getAttribute('onclick').toLowerCase().includes(hex.toLowerCase());
+        btn.setAttribute('aria-pressed', String(selected));
+        btn.style.outline = selected ? '2px solid var(--text-primary)' : '';
+        btn.style.outlineOffset = '3px';
+    });
     if (!quiet) showToast('Accent color updated ✓', 'success');
+}
+
+function syncOrbitSettingsControls() {
+    const values = {
+        'media-quality': localStorage.getItem('orbit_media_quality_pref') || 'standard',
+        'group-privacy': getGroupPrivacyPref(currentUser?.id),
+        'pod-dock-pos': localStorage.getItem('orbit_pref_pod_dock') || 'top'
+    };
+    Object.entries(values).forEach(([name, value]) => {
+        document.querySelectorAll(`input[name="${name}"]`).forEach(input => input.checked = input.value === value);
+    });
 }
 
 // ══════════════════════════════════════════════════════════════════════════
@@ -597,31 +645,25 @@ function setChatWallpaper(preset, quiet = false) {
         document.documentElement.style.setProperty('--chat-wallpaper', `url("${doodleFile}")`);
         document.documentElement.style.setProperty('--chat-wallpaper-size', '236px 405px');
         document.documentElement.style.setProperty('--chat-wallpaper-repeat', 'repeat');
-        setLiquidAccent('#25D366', true);
     } else if (preset === 'pour_pause') {
         document.documentElement.style.setProperty('--chat-wallpaper', 'url("assets/wallpapers/pour_a_pause.svg")');
         document.documentElement.style.setProperty('--chat-wallpaper-size', 'cover');
         document.documentElement.style.setProperty('--chat-wallpaper-repeat', 'no-repeat');
-        setLiquidAccent('#E61A66', true);
     } else if (preset === 'celestial') {
         document.documentElement.style.setProperty('--chat-wallpaper', 'url("assets/wallpapers/celestial_odyssey.svg")');
         document.documentElement.style.setProperty('--chat-wallpaper-size', 'cover');
         document.documentElement.style.setProperty('--chat-wallpaper-repeat', 'no-repeat');
-        setLiquidAccent('#70C8FF', true);
     } else if (preset === 'botanical') {
         document.documentElement.style.setProperty('--chat-wallpaper', 'url("assets/wallpapers/botanical_bloom.svg")');
         document.documentElement.style.setProperty('--chat-wallpaper-size', 'cover');
         document.documentElement.style.setProperty('--chat-wallpaper-repeat', 'no-repeat');
-        setLiquidAccent('#D36B4D', true);
     } else if (preset === 'midnight') {
         document.documentElement.style.setProperty('--chat-wallpaper', 'linear-gradient(135deg, rgba(30, 27, 75, 0.5) 0%, rgba(15, 23, 42, 0.7) 100%)');
         document.documentElement.style.setProperty('--chat-wallpaper-size', '100% 100%');
         document.documentElement.style.setProperty('--chat-wallpaper-repeat', 'no-repeat');
-        setLiquidAccent('#6366F1', true);
     } else if (preset === 'oled') {
         document.documentElement.style.setProperty('--chat-wallpaper', 'none');
         document.documentElement.style.setProperty('--chat-wallpaper-repeat', 'no-repeat');
-        setLiquidAccent('#FFFFFF', true);
     } else {
         document.documentElement.style.setProperty('--chat-wallpaper', 'url("assets/wallpapers/doodle-user.png")');
         document.documentElement.style.setProperty('--chat-wallpaper-size', '236px 405px');
@@ -1003,18 +1045,20 @@ function initTheme() {
     const dim = localStorage.getItem('orbit_wallpaper_dim') || 20;
     handleWallpaperDimSlider(dim);
     const accent = localStorage.getItem('orbit_pref_accent');
-    if (accent) setLiquidAccent(accent);
+    if (accent) setLiquidAccent(accent, true);
     const preset = localStorage.getItem('orbit_pref_glass_preset');
-    if (preset) {
-        setLiquidBlur(preset);
-    } else {
-        const blur = localStorage.getItem('orbit_pref_blur');
-        if (blur) handleBlurSlider(blur);
-        const opacity = localStorage.getItem('orbit_pref_opacity');
-        if (opacity) handleOpacitySlider(opacity);
-        const glow = localStorage.getItem('orbit_pref_glow');
-        if (glow) handleGlowSlider(glow);
-    }
+    const sliders = ['blur', 'opacity', 'glow'].map(key => localStorage.getItem(`orbit_pref_${key}`));
+    if (preset && sliders.every(value => value === null)) setLiquidBlur(preset);
+    const savedPreset = localStorage.getItem('orbit_pref_glass_preset');
+    handleRefractionSlider(localStorage.getItem('orbit_pref_refraction') ?? (preset === 'perf' ? 0 : 55));
+    if (sliders[0] !== null) handleBlurSlider(sliders[0]);
+    if (sliders[1] !== null) handleOpacitySlider(sliders[1]);
+    if (sliders[2] !== null) handleGlowSlider(sliders[2]);
+    if (savedPreset) localStorage.setItem('orbit_pref_glass_preset', savedPreset);
+    document.querySelectorAll('#settings-glass .news-filter-chip').forEach(button => {
+        button.classList.toggle('active', !!savedPreset && button.getAttribute('onclick').includes(`'${savedPreset}'`));
+    });
+
 }
 function toggleTheme() {
     const isLight = document.body.classList.toggle('light-mode');
@@ -1248,17 +1292,85 @@ function setMediaQualityPref(pref) {
     showToast(`Media upload quality set to: ${pref}`);
 }
 
-function toggleAutoStorageClean(checked) {
-    localStorage.setItem('orbit_auto_clean_media', checked ? 'true' : 'false');
-    showToast(checked ? 'Auto storage cleaner enabled' : 'Auto storage cleaner disabled');
+async function orbitCleanupRequest(body) {
+    const client = await ensureSupabase();
+    const {data, error} = await client.auth.getSession();
+    if (error || !data.session) throw new Error('Sign in again.');
+    const result = await client.functions.invoke('orbit-admin-cleanup', {
+        body, headers: {'Authorization': `Bearer ${SB_KEY}`, 'x-orbit-user-token': data.session.access_token}
+    });
+    if (result.error) {
+        const detail = await result.error.context?.json?.().catch(() => null);
+        throw new Error(detail?.error || 'Cleanup service unavailable. Deploy SETUP_ORBIT_ADMIN_CLEANUP.sql and orbit-admin-cleanup, then retry.');
+    }
+    if (result.data?.error) throw new Error(result.data.error);
+    return result.data;
 }
 
-async function adminCleanOldNonAdminMedia() {
-    if (!isAdmin()) {
-        showToast('Admin privilege required for storage cleanup.', 'error');
-        return;
+async function loadOrbitCleanupSettings() {
+    const input = document.getElementById('chk-auto-storage-clean');
+    if (!input || !isPrimaryAdmin()) return;
+    input.disabled = true;
+    try { const result = await orbitCleanupRequest({action:'settings'}); input.checked = result.enabled === true; }
+    catch (error) { input.checked = false; showToast(error.message, 'error'); }
+    finally { input.disabled = false; }
+}
+
+async function toggleAutoStorageClean(checked) {
+    if (!isPrimaryAdmin()) return;
+    const input = document.getElementById('chk-auto-storage-clean');
+    input.disabled = true;
+    try {
+        await orbitCleanupRequest({action:'schedule', enabled:checked});
+        showToast(checked ? 'Daily cleanup enabled: messages older than 10 days.' : 'Scheduled cleanup disabled.');
+    } catch (error) { input.checked = !checked; showToast(error.message, 'error'); }
+    finally { input.disabled = false; }
+}
+
+let orbitCleanupBusy = false;
+let orbitCleanupSync = null;
+function applyOrbitCleanupCutoff(cutoff) {
+    const timestamp = Date.parse(cutoff);
+    if (!Number.isFinite(timestamp) || timestamp <= 0) return;
+    const keep = message => ['sending', 'queued', 'failed'].includes(message?.status) || Date.parse(message?.created_at) >= timestamp;
+    for (const [room, messages] of messageCache) messageCache.set(room, messages.filter(keep));
+    for (const key of Object.keys(localStorage)) {
+        if (key.startsWith('orbit_cache_msgs_')) {
+            try {
+                const messages = JSON.parse(localStorage.getItem(key));
+                if (Array.isArray(messages)) localStorage.setItem(key, JSON.stringify(messages.filter(keep)));
+            } catch (_) { localStorage.removeItem(key); }
+        } else if (key.startsWith('orbit_recent_chats_v27_')) localStorage.removeItem(key);
     }
-    showToast('Storage scan complete: No orphaned non-admin files found.', 'success');
+    if (typeof olderPageCache !== 'undefined') olderPageCache.clear();
+    if (currentRoom && typeof renderMessageFeed === 'function') renderMessageFeed(messageCache.get(currentRoom) || [], false);
+}
+async function syncOrbitCleanupWatermark() {
+    if (!currentUser || !navigator.onLine) return;
+    if (orbitCleanupSync) return orbitCleanupSync;
+    orbitCleanupSync = (async () => {
+        const client = await ensureSupabase();
+        const {data, error} = await client.rpc('orbit_message_cleanup_cutoff');
+        // Older deployments may not have the optional cleanup migration yet.
+        if (!error && data) applyOrbitCleanupCutoff(data);
+    })();
+    try { await orbitCleanupSync; } finally { orbitCleanupSync = null; }
+}
+window.addEventListener('online', () => syncOrbitCleanupWatermark().catch(() => {}));
+document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) syncOrbitCleanupWatermark().catch(() => {});
+});
+async function adminCleanOldNonAdminMedia() {
+    if (!isPrimaryAdmin()) { showToast('Only the primary admin can clear messages.', 'error'); return; }
+    if (orbitCleanupBusy || !confirm('Permanently clear ALL existing text messages and media for every account, including admin messages? Profile pictures will be kept.')) return;
+    orbitCleanupBusy = true;
+    try {
+        const result = await orbitCleanupRequest({action:'clear', confirm:'CLEAR_ALL_MESSAGES'});
+        applyOrbitCleanupCutoff(result.cutoff);
+        if (typeof loadMainChats === 'function') loadMainChats(true);
+        showToast(`${result.messages} messages cleared. ${result.pending ? `${result.pending} media batches await retry; run cleanup again.` : 'Media cleanup complete.'} Profile pictures preserved.`, result.pending ? 'info' : 'success');
+    } catch (error) { showToast(error.message, 'error'); }
+    finally { orbitCleanupBusy = false; }
 }
 
 // ══════════════════════════════════════════════════════════════════════════
@@ -1366,7 +1478,7 @@ function setSelectedColorSwatch(colorHex) {
     document.querySelectorAll('#display-swatches-row .color-swatch-chip').forEach(btn => {
         btn.classList.toggle('active', btn.getAttribute('data-color') === colorHex);
     });
-    document.documentElement.style.setProperty('--accent', colorHex);
+    setLiquidAccent(colorHex, true);
     showToast('Accent color updated');
 }
 
@@ -1386,7 +1498,7 @@ function setSelectedStylePreset(presetIndex) {
         7: '#ffffff'
     };
     if (styleAccents[presetIndex]) {
-        document.documentElement.style.setProperty('--accent', styleAccents[presetIndex]);
+        setLiquidAccent(styleAccents[presetIndex], true);
     }
     showToast(`Style preset ${presetIndex} applied`);
 }
@@ -1438,7 +1550,8 @@ function initDisplaySettingsOnLoad() {
     }
 
     const savedColor = localStorage.getItem('orbit_selected_color');
-    if (savedColor) document.documentElement.style.setProperty('--accent', savedColor);
+    const accent = localStorage.getItem('orbit_pref_accent') || savedColor;
+    if (accent) setLiquidAccent(accent, true);
 }
 
 // Auto init on script run
