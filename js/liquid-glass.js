@@ -1,3 +1,59 @@
+/* Refraction affects backdrop pixels only: labels and controls stay sharp. */
+(() => {
+ const NS = 'http://www.w3.org/2000/svg';
+ const svg = document.createElementNS(NS, 'svg');
+ svg.setAttribute('width', '0'); svg.setAttribute('height', '0');
+ svg.setAttribute('aria-hidden', 'true'); svg.style.cssText = 'position:fixed;pointer-events:none;overflow:hidden';
+ svg.innerHTML = '<defs><filter id="orbit-water-refraction" x="-20%" y="-20%" width="140%" height="140%" color-interpolation-filters="sRGB"><feTurbulence type="fractalNoise" baseFrequency="0.012 0.022" numOctaves="1" seed="8" result="waves"/><feGaussianBlur in="waves" stdDeviation="2" result="smooth-waves"/><feDisplacementMap in="SourceGraphic" in2="smooth-waves" scale="30" xChannelSelector="R" yChannelSelector="G"/></filter></defs>';
+ document.body.prepend(svg);
+ const noise = svg.querySelector('feTurbulence'), displacement = svg.querySelector('feDisplacementMap');
+ const reduced = matchMedia('(prefers-reduced-motion: reduce)');
+ // WebKit versions that reject SVG backdrop references retain ordinary glass.
+ const safari = /Safari/.test(navigator.userAgent) && !/Chrome|Chromium|Edg/.test(navigator.userAgent);
+ const canRefract = !safari && CSS.supports('backdrop-filter', 'url("#orbit-water-refraction")');
+ let intensity = 0, frame = 0, until = 0, last = 0;
+ function preference(key, fallback) {
+  try { const raw = localStorage.getItem(key); return raw === null ? fallback : Number(raw); } catch (_) { return fallback; }
+ }
+ function refresh() {
+  intensity = Math.max(0, Math.min(100, preference('orbit_pref_refraction', 55) || 0));
+  const blur = Math.max(0, Math.min(45, preference('orbit_pref_blur', 12) || 0));
+  const tint = Math.max(0, Math.min(100, preference('orbit_pref_opacity', 50) || 0));
+  const root = document.documentElement;
+  root.style.setProperty('--liquid-refraction-filter', intensity && canRefract ? 'url("#orbit-water-refraction")' : '');
+  root.style.setProperty('--liquid-surface-blur', `${intensity && canRefract ? blur / 3 : blur}px`);
+  root.style.setProperty('--liquid-tint-alpha', String(0.06 + tint * 0.004));
+  root.style.setProperty('--liquid-highlight-alpha', String(0.12 + intensity * 0.003));
+  displacement.setAttribute('scale', String(intensity * 0.75));
+  document.body.classList.toggle('orbit-water-glass', intensity > 0 && canRefract);
+  document.body.classList.toggle('orbit-glass-fast', intensity === 0 && blur === 0);
+  if (!intensity || reduced.matches) { cancelAnimationFrame(frame); frame = 0; }
+ }
+ function animate(now) {
+  frame = 0;
+  if (document.hidden || reduced.matches || !intensity || !canRefract) return;
+  if (now - last >= 45) {
+   last = now;
+   noise.setAttribute('baseFrequency', `${0.012 + Math.sin(now / 1700) * 0.002} ${0.022 + Math.cos(now / 2100) * 0.003}`);
+  }
+  if (now < until) frame = requestAnimationFrame(animate);
+ }
+ function wake() {
+  if (document.hidden || reduced.matches || !intensity || !canRefract) return;
+  until = performance.now() + 700;
+  if (!frame) frame = requestAnimationFrame(animate);
+ }
+ window.refreshOrbitLiquidGlass = refresh;
+ document.addEventListener('pointermove', wake, {passive:true});
+ document.addEventListener('scroll', wake, {capture:true,passive:true});
+ document.addEventListener('visibilitychange', () => {
+  if (document.hidden) { cancelAnimationFrame(frame); frame = 0; } else refresh();
+ });
+ reduced.addEventListener('change', refresh);
+ window.addEventListener('storage', event => { if (event.key?.startsWith('orbit_pref_')) refresh(); });
+ refresh();
+})();
+
 /* Damped spring motion with pointer capture and reduced-motion support. */
 (() => {
  const reduced=matchMedia('(prefers-reduced-motion: reduce)');
