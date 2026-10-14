@@ -33,10 +33,10 @@
     <script src="assets/vendor/supabase.min.js?v=2.117.3"></script>
     <!-- Document, crop and resumable upload tools load only when needed. -->
 
-    <link rel="stylesheet" href="style.css?v=photo-weather-20261013-r1">
+    <link rel="stylesheet" href="style.css?v=liquid-production-20261014-r2">
     <link rel="stylesheet" href="tools.css">
-<link rel="stylesheet" href="chat-upgrades.css?v=photo-weather-20261013-r1">
-<link rel="stylesheet" href="photo-weather.css?v=photo-weather-20261013-r1">
+<link rel="stylesheet" href="chat-upgrades.css?v=liquid-production-20261014-r2">
+<link rel="stylesheet" href="photo-weather.css?v=liquid-production-20261014-r2">
 </head>
 <body>
 
@@ -331,7 +331,7 @@
                 <!-- User Profile Chip (Enlarged with Full Name & Verified Badge) -->
                 <div class="user-chip-wrap">
                     <div id="user-chip" class="user-chip touch-fix" onclick="toggleUserDropdown(event)" title="Account Menu">
-                        <div id="dash-av" class="user-av-mini">U</div>
+                        <div id="dash-av" class="user-av-mini" onclick="event.stopPropagation(); openProfileScreen()">U</div>
                         <span id="dash-id" class="user-chip-name">User</span>
                         <div class="online-dot-mini"></div>
                     </div>
@@ -637,9 +637,6 @@
 
                         <!-- Font, Fit & Display Settings Controls -->
                         <div style="display:flex; align-items:center; gap:5px;">
-                            <button class="btn-reset touch-fix" onclick="openCalcDisplaySettings()" style="font-size:11px; font-weight:800; padding:3px 8px; background:rgba(255,255,255,0.08); border:1px solid var(--glass-border); border-radius:8px; color:var(--accent); display:flex; align-items:center; gap:4px;" title="Display Settings">
-                                <i class="fa-solid fa-palette"></i> Display
-                            </button>
                             <button class="btn-reset touch-fix" onclick="adjustCalcFontSize(-1)" style="font-size:11px; font-weight:800; padding:3px 7px; background:rgba(255,255,255,0.08); border:1px solid var(--glass-border); border-radius:8px; color:var(--text-primary);" title="Decrease Font">A−</button>
                             <button class="btn-reset touch-fix" onclick="adjustCalcFontSize(1)" style="font-size:12px; font-weight:800; padding:3px 7px; background:rgba(255,255,255,0.08); border:1px solid var(--glass-border); border-radius:8px; color:var(--text-primary);" title="Increase Font">A+</button>
                             <button type="button" id="calc-wallpaper-btn" class="btn-reset touch-fix" onclick="chooseCalcWallpaper()" title="Choose calculator wallpaper">Wallpaper</button>
@@ -1364,21 +1361,21 @@
             </section>
             <section class="settings-section-block" id="settings-navigation">
             <!-- Navigation Pod Dock Position -->
-            <div class="settings-section-title"><span>NAVIGATION POD DOCK POSITION</span></div>
+            <div class="settings-section-title"><span>NAVIGATION POD POSITION</span></div>
             <div class="settings-card-group">
                 <div style="display:flex; flex-direction:column; gap:8px;">
                     <label style="display:flex; align-items:center; gap:10px; font-size:12.5px; cursor:pointer; font-weight:600; color:var(--text-primary);">
                         <input type="radio" name="pod-dock-pos" value="top" id="dock-pos-top" checked onchange="togglePodDockPosition('top')" style="accent-color:var(--accent);">
                         <div>
                             <div>📌 Top Dock (Header Pod)</div>
-                            <div class="settings-subtext" style="font-size:10.5px; color:var(--text-secondary);">Classic top navigation bar docked above chats</div>
+                            <div class="settings-subtext" style="font-size:10.5px; color:var(--text-secondary);">Top navigation bar. Hold the pod, then drag left or right to place it.</div>
                         </div>
                     </label>
                     <label style="display:flex; align-items:center; gap:10px; font-size:12.5px; cursor:pointer; font-weight:600; color:var(--text-primary);">
                         <input type="radio" name="pod-dock-pos" value="bottom" id="dock-pos-bottom" onchange="togglePodDockPosition('bottom')" style="accent-color:var(--accent);">
                         <div>
                             <div>🛸 Bottom Floating Pod</div>
-                            <div class="settings-subtext" style="font-size:10.5px; color:var(--text-secondary);">Floating liquid capsule anchored gracefully at bottom of screen</div>
+                            <div class="settings-subtext" style="font-size:10.5px; color:var(--text-secondary);">Bottom navigation bar. Hold the pod, then drag left or right to place it.</div>
                         </div>
                     </label>
                 </div>
@@ -1425,14 +1422,14 @@
                 </div>
                 <div class="admin-storage-card">
                     <p class="admin-storage-description">
-                        Safely cleans up heavy media attachments older than 10 days from non-admin users to prevent Supabase quota saturation. <strong>All Admin chats and files are permanently preserved.</strong>
+                        Clears all text messages and message attachments from every account, including the admin. <strong>Profile pictures and accounts are preserved.</strong> Manual cleanup covers all existing messages; scheduled cleanup removes messages older than 10 days.
                     </p>
                     <div class="admin-storage-toggle-row">
-                        <span><strong>Scheduled cleanup</strong><small>Non-admin media · older than 10 days</small></span>
+                        <span><strong>Scheduled cleanup</strong><small>All messages and attachments · older than 10 days</small></span>
                         <input type="checkbox" id="chk-auto-storage-clean" onchange="toggleAutoStorageClean(this.checked)" aria-label="Enable scheduled cleanup" style="accent-color:var(--accent); width:18px; height:18px; cursor:pointer;">
                     </div>
                     <button class="btn-reset touch-fix admin-storage-action" onclick="adminCleanOldNonAdminMedia()">
-                        <i class="fa-solid fa-broom"></i> Run storage cleanup
+                        <i class="fa-solid fa-broom"></i> Clear all messages &amp; media
                     </button>
                 </div>
             </div>
@@ -1441,6 +1438,10 @@
             <section class="settings-section-block" id="settings-glass">
             <!-- Liquid Blur Customization -->
             <div class="settings-section-title"><span>LIQUID GLASS INTENSITY</span></div>
+            <div class="orbit-liquid-preview" aria-label="Live preview of water bending behind glass">
+                <div class="orbit-liquid-preview-pattern" aria-hidden="true"></div>
+                <div class="orbit-liquid-preview-lens"><i class="fa-solid fa-droplet" aria-hidden="true"></i><span>Liquid glass<small>Background bends. Text stays clear.</small></span></div>
+            </div>
             <div style="display:flex; gap:6px; margin-bottom:14px;">
                 <button class="news-filter-chip active touch-fix" onclick="setLiquidBlur('ultra', this)">VisionOS Ultra</button>
                 <button class="news-filter-chip touch-fix" onclick="setLiquidBlur('balanced', this)">Balanced</button>
@@ -1451,6 +1452,14 @@
             <div class="settings-card-group" style="display:flex; flex-direction:column; gap:12px;">
                 <div>
                     <div style="display:flex; justify-content:space-between; font-size:11.5px; font-weight:700; color:var(--text-secondary); margin-bottom:4px;">
+                        <label for="slider-refraction">Water bend</label>
+                        <span id="val-refraction" style="color:var(--accent);">55%</span>
+                    </div>
+                    <input type="range" id="slider-refraction" min="0" max="100" value="55" class="glass-slider" oninput="handleRefractionSlider(this.value)" style="width:100%; accent-color:var(--accent);">
+                    <div class="settings-subtext">Move or scroll behind the glass to see the ripples. Lower blur reveals more detail.</div>
+                </div>
+                <div>
+                    <div style="display:flex; justify-content:space-between; font-size:11.5px; font-weight:700; color:var(--text-secondary); margin-bottom:4px;">
                         <span>Glass Blur Strength</span>
                         <span id="val-blur" style="color:var(--accent);">24px</span>
                     </div>
@@ -1458,7 +1467,7 @@
                 </div>
                 <div>
                     <div style="display:flex; justify-content:space-between; font-size:11.5px; font-weight:700; color:var(--text-secondary); margin-bottom:4px;">
-                        <span>Glass Transparency</span>
+                        <span>Glass Tint</span>
                         <span id="val-opacity" style="color:var(--accent);">75%</span>
                     </div>
                     <input type="range" id="slider-opacity" min="30" max="98" value="75" class="glass-slider" oninput="handleOpacitySlider(this.value)" style="width:100%; accent-color:var(--accent);">
@@ -2555,29 +2564,29 @@
     <div id="simple-toast" class="simple-toast">Notification</div>
 </div>
 
-<script src="js/config.js?v=banner-20261012-r15"></script>
-<script src="js/rooms.js?v=photo-weather-20261013-r1"></script>
+<script src="js/config.js?v=liquid-production-20261014-r2"></script>
+<script src="js/rooms.js?v=liquid-production-20261014-r2"></script>
     <script src="js/chat-actions.js"></script>
-    <script src="js/actions/media-lightbox.js?v=photo-weather-20261013-r1"></script>
-    <script src="js/actions/media-preview.js?v=photo-weather-20261013-r1"></script>
-    <script src="js/actions/file-viewer.js?v=photo-weather-20261013-r1"></script>
+    <script src="js/actions/media-lightbox.js?v=liquid-production-20261014-r2"></script>
+    <script src="js/actions/media-preview.js?v=liquid-production-20261014-r2"></script>
+    <script src="js/actions/file-viewer.js?v=liquid-production-20261014-r2"></script>
     <script src="js/actions/voice-recorder.js"></script>
-    <script src="js/actions/chat-extras.js?v=photo-weather-20261013-r1"></script>
-    <script src="js/messaging-notifications.js?v=photo-weather-20261013-r1"></script>
+    <script src="js/actions/chat-extras.js?v=liquid-production-20261014-r2"></script>
+    <script src="js/messaging-notifications.js?v=liquid-production-20261014-r2"></script>
     <script src="js/chat-gestures.js"></script>
     <script src="js/chat-select.js"></script>
-    <script src="js/chat-share.js?v=photo-weather-20261013-r1"></script>
-    <script src="js/chat/chat-history.js?v=photo-weather-20261013-r1"></script>
-    <script src="js/chat/chat-feed.js?v=photo-weather-20261013-r1"></script>
-    <script src="js/chat/chat-dispatcher.js?v=photo-weather-20261013-r1"></script>
-    <script src="js/chat/chat-realtime.js?v=photo-weather-20261013-r1"></script>
+    <script src="js/chat-share.js?v=liquid-production-20261014-r2"></script>
+    <script src="js/chat/chat-history.js?v=liquid-production-20261014-r2"></script>
+    <script src="js/chat/chat-feed.js?v=liquid-production-20261014-r2"></script>
+    <script src="js/chat/chat-dispatcher.js?v=liquid-production-20261014-r2"></script>
+    <script src="js/chat/chat-realtime.js?v=liquid-production-20261014-r2"></script>
     <script src="js/chat.js"></script>
 <script src="js/calculator.js"></script>
     <script src="js/tools.js"></script>
     <script src="js/celestial.js"></script>
-    <script src="js/ui/ui-auth.js?v=photo-weather-20261013-r1"></script>
-    <script src="js/ui/ui-navigation.js?v=photo-weather-20261013-r1"></script>
-    <script src="js/ui/ui-modals.js?v=delivery-20261011-r16"></script>
+    <script src="js/ui/ui-auth.js?v=liquid-production-20261014-r2"></script>
+    <script src="js/ui/ui-navigation.js?v=liquid-production-20261014-r2"></script>
+    <script src="js/ui/ui-modals.js?v=liquid-production-20261014-r2"></script>
     <script src="js/ui/ui-notifications.js"></script>
 <script src="js/ui.js"></script>
 
@@ -2612,8 +2621,8 @@
  <div id="orbit-editor-filters" class="hide"><button type="button" onclick="applyOrbitMediaFilter('vivid')">Vivid</button><button type="button" onclick="applyOrbitMediaFilter('mono')">Mono</button><button type="button" onclick="applyOrbitMediaFilter('warm')">Warm</button><button type="button" onclick="applyOrbitMediaFilter('bright')">Bright</button></div>
  <div class="orbit-editor-stage"><canvas id="orbit-editor-canvas"></canvas></div>
 </div>
-<script src="js/orbit-chat-services.js?v=photo-weather-20261013-r1"></script>
-<script src="js/orbit-media-editor.js?v=photo-weather-20261013-r1"></script>
+<script src="js/orbit-chat-services.js?v=liquid-production-20261014-r2"></script>
+<script src="js/orbit-media-editor.js?v=liquid-production-20261014-r2"></script>
 <div id="modal-orbit-weather" class="glass-modal-overlay"><div class="glass-modal-box">
  <div class="modal-header-row"><strong>Weather near you</strong><button type="button" class="btn-reset" onclick="closeOrbitWeatherConsent()" aria-label="Close weather settings">✕</button></div>
  <p>Allow device location to show nearby weather below the Orbit logo. Orbit requests a fresh, high-accuracy location and shows the accuracy your device reports.</p>
@@ -2622,8 +2631,8 @@
  <button type="button" id="orbit-weather-disable" class="glass-btn-secondary hide" onclick="disableOrbitWeather()">Turn off local weather</button>
  <p class="orbit-weather-attribution">Weather by <a href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer">Open-Meteo</a> · Places by <a href="https://www.bigdatacloud.com/" target="_blank" rel="noopener noreferrer">BigDataCloud</a></p>
 </div></div>
-<script src="js/orbit-private-photos.js?v=photo-weather-20261013-r1"></script>
-<script src="js/orbit-banner-weather.js?v=photo-weather-20261013-r1"></script>
-<script src="js/liquid-glass.js?v=4"></script>
+<script src="js/orbit-private-photos.js?v=liquid-production-20261014-r2"></script>
+<script src="js/orbit-banner-weather.js?v=liquid-production-20261014-r2"></script>
+<script src="js/liquid-glass.js?v=5"></script>
 </body>
 </html>
