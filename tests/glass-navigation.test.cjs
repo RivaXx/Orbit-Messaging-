@@ -60,16 +60,17 @@ test('keyboard moves skip hidden tabs; corrupt saved order cannot drop buttons; 
 });
 function glass({saved={},safari=false,reduced=false}={}) {
  const store=new Map(Object.entries(saved)), properties=new Map(), attrs=new Map(), frames=[];
- const controls={};const body={classList:classes(),prepend:()=>{}};
- const context=vm.createContext({window:{addEventListener:()=>{}},document:{body,hidden:false,addEventListener:()=>{},querySelectorAll:()=>[],
+ const controls={},events={},timers=new Map();const body={classList:classes(),prepend:()=>{}};
+ const context=vm.createContext({window:{addEventListener:()=>{}},document:{body,hidden:false,addEventListener:(name,fn)=>events[name]=fn,querySelectorAll:()=>[],
   documentElement:{style:{setProperty:(k,v)=>properties.set(k,v)}},
   getElementById:id=>id.startsWith('glass-')?(controls[id]??={}):null,
   createElementNS:()=>({setAttribute:()=>{},style:{},querySelector:tag=>({setAttribute:(k,v)=>attrs.set(tag+':'+k,v)})})},
   localStorage:{getItem:k=>store.get(k)??null,setItem:(k,v)=>store.set(k,v),removeItem:k=>store.delete(k)},
   matchMedia:()=>({matches:reduced,addEventListener:()=>{}}),navigator:{userAgent:safari?'Safari':'Chrome Safari'},
-  CSS:{supports:()=>true},requestAnimationFrame:fn=>{frames.push(fn);return frames.length;},cancelAnimationFrame:()=>{},performance:{now:()=>0}});
+  CSS:{supports:()=>true},requestAnimationFrame:fn=>{frames.push(fn);return frames.length;},cancelAnimationFrame:()=>{},performance:{now:()=>0},
+  setTimeout:fn=>{timers.set(1,fn);return 1;},clearTimeout:id=>timers.delete(id)});
  vm.runInContext(fs.readFileSync(path.join(root,'js/liquid-glass.js'),'utf8'),context);
- return {context,body,store,properties,controls,attrs,frames};
+ return {context,body,store,properties,controls,attrs,frames,events,timers};
 }
 test('whole UI glass controls persist, support zero values and master disable',()=>{
  const g=glass();g.context.window.setOrbitGlassControl('speed',0);g.context.window.setOrbitGlassControl('saturation',0);
@@ -89,4 +90,12 @@ test('Safari fallback keeps full blur; reduced motion retains static glass',()=>
  assert.doesNotMatch(fallback.properties.get('--liquid-backdrop'),/url\(/);
  const still=glass({reduced:true});assert.equal(still.frames.length,0);
  assert.equal(still.body.classList.contains('orbit-water-glass'),true);
+});
+test('balanced glass avoids global ripple animation; scrolling suspends filters and restores after idle',()=>{
+ const g=glass();g.events.pointermove();assert.equal(g.frames.length,0);
+ g.events.scroll();assert.equal(g.body.classList.contains('orbit-glass-scrolling'),true);
+ [...g.timers.values()].forEach(fn=>fn());assert.equal(g.body.classList.contains('orbit-glass-scrolling'),false);
+ g.context.window.setOrbitGlassQuality('full');g.events.pointermove();assert.equal(g.frames.length,1);
+ g.context.window.setOrbitGlassQuality('fast');assert.doesNotMatch(g.properties.get('--liquid-backdrop'),/url\(/);
+ assert.equal(glass({saved:Object.fromEntries(g.store)}).controls['glass-quality'].value,'fast');
 });
