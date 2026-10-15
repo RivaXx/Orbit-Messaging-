@@ -1,3 +1,10 @@
+News, stable glass, and profile-photo fixes — 15 October 2026
+
+- Added Finance, Entertainment, and Sports alongside Global, India, and Tech. Publisher RSS supplies article-specific images; GDELT and category-specific search feeds remain fallbacks. Removed repeated stock thumbnails from live stories and cached rendering. Missing/broken publisher images use an explicit neutral placeholder. Lazy image decoding reduces feed rendering work.
+- Glass filters no longer turn off while scrolling. Balanced rendering keeps static refraction; scrolling pauses only optional noise animation, preserving the chosen appearance through scroll and idle.
+- Profile-photo selection no longer calls the nonexistent readFileAsDataURL helper. Resizes to 512 pixels, uploads through the existing authenticated avatar path, checks the profile save response, and updates UI/cache after confirmation. Failed saves preserve the old photo; account changes cannot update another profile.
+- Added explicit small, regular-weight activity timestamps in chat lists and reduced chat-header status typography.
+- Validation: all 28 regression tests and JavaScript syntax checks pass. Live publisher feeds for all three new sections were checked for article thumbnails; the RSS converter returned ten Finance stories with ten publisher images. No backend deployment is part of this update.
 Media, weather, and rendering fixes — 15 October 2026
 
 - Media uploads continue from tab memory when IndexedDB is unavailable, full, blocked, or cannot clone files. The app asks users to keep the tab open until sending finishes in this fallback mode. Normal persistent offline queues remain supported.
@@ -33,4 +40,5 @@ Only referenced objects in chat-assets and orbit-view-once are candidates for re
 Verification
 
 Run `node --test tests/settings-cleanup.test.cjs` with Node 24 or later. The tests cover accent restoration, custom glass settings, pod positioning, admin authorization, required confirmation, schedule secrets and setup, photo protection, and storage retries. Browser visual verification and live Supabase integration are still required after deployment. No production cleanup was executed.
+
 
