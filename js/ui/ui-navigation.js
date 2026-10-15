@@ -214,7 +214,7 @@ function startLiveFeedAutoRefresh() {
 startLiveFeedAutoRefresh();
 
 function filterNewsCategory(cat, btn) {
-    if (!['global', 'india', 'tech'].includes(cat)) return;
+    if (!['global', 'india', 'tech', 'finance', 'entertainment', 'sports'].includes(cat)) return;
     currentNewsCategory = cat;
     document.querySelectorAll('#tab-news .news-filter-chip').forEach(b => b.classList.remove('active'));
     if (btn) btn.classList.add('active');
@@ -290,11 +290,11 @@ async function fetchRssItems(feedUrl, limit = 10) {
             author: read(node, 'author', 'source'),
             description: read(node, 'description', 'summary', 'content'),
             category: read(node, 'category'),
-            thumbnail: node.querySelector('thumbnail, content[url]')?.getAttribute('url') || ''
+            thumbnail: Array.from(node.getElementsByTagNameNS('*','thumbnail')).find(el => el.getAttribute('url'))?.getAttribute('url') || Array.from(node.getElementsByTagNameNS('*','content')).find(el => el.getAttribute('url') && /image/i.test(el.getAttribute('type') || el.getAttribute('medium') || ''))?.getAttribute('url') || node.querySelector('enclosure[type^="image"]')?.getAttribute('url') || ''
         })).filter(item => item.title && item.link).slice(0, limit);
     };
     try {
-        const url = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(feedUrl)}&count=${limit}&t=${Date.now()}`;
+        const url = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(feedUrl)}&t=${Date.now()}`;
         const data = JSON.parse(await fetchText(url));
         if (data.status !== 'ok' || !Array.isArray(data.items)) throw new Error(data.message || 'RSS converter returned no items');
         if (data.items.length) return data.items.slice(0, limit);
@@ -328,7 +328,10 @@ async function fetchGdeltNews(category) {
     const queries = {
         global: '(world OR international OR politics OR economy) sourcelang:English',
         india: 'India sourcelang:English',
-        tech: '(technology OR "artificial intelligence" OR software OR AI) sourcelang:English'
+        tech: '(technology OR "artificial intelligence" OR software OR AI) sourcelang:English',
+        finance: '(finance OR markets OR stocks OR banking) sourcelang:English',
+        entertainment: '(entertainment OR cinema OR music OR television) sourcelang:English',
+        sports: '(sports OR football OR cricket OR tennis) sourcelang:English'
     };
     const params = new URLSearchParams({
         query: queries[category] || queries.global,
@@ -347,26 +350,34 @@ async function fetchGdeltNews(category) {
         seen.add(link);
         return {
             id: `${category}_${encodeURIComponent(link)}`, title, source: cleanFeedText(article.domain || 'Live news'),
-            pubDate: published.toISOString(), img: article.socialimage || 'https://images.unsplash.com/photo-1504711434969-e33886168f5c?w=400&q=80',
+            pubDate: published.toISOString(), img: safeNewsImage(article.socialimage),
             body: title, link, category
         };
     }).filter(Boolean).sort((a, b) => new Date(b.pubDate) - new Date(a.pubDate)).slice(0, 10);
 }
 
-function makeNewsItems(items, category) {
+function safeNewsImage(value) {
+    if (typeof value !== 'string' || /photo-1504711434969-e33886168f5c|photo-1518770660439-4636190af475/.test(value)) return '';
+    try { const url = new URL(value); return ['https:','http:'].includes(url.protocol) ? url.href : ''; } catch (_) { return ''; }
+}
+function articleNewsImage(item) {
+    const description = new DOMParser().parseFromString(String(item.description || ''), 'text/html');
+    return [item.thumbnail, item.enclosure?.link, item.enclosure?.url, description.querySelector('img')?.getAttribute('src')].map(safeNewsImage).find(Boolean) || '';
+}
+function makeNewsItems(items, category, defaultSource = 'Google News') {
     return items.map(item => {
         const pubDate = item.pubDate ? new Date(item.pubDate) : null;
         if (!pubDate || Number.isNaN(pubDate.getTime()) || !item.link) return null;
         const rawTitle = cleanFeedText(item.title);
         const sourceFromTitle = rawTitle.match(/\s+[–-]\s+([^–-]+)$/)?.[1]?.trim();
-        const title = rawTitle.replace(/\s+[–-]\s+[^–-]+$/, '').trim();
+        const title = defaultSource.startsWith('Google') ? rawTitle.replace(/\s+[–-]\s+[^–-]+$/, '').trim() : rawTitle;
         if (!title) return null;
         return {
             id: `${category}_${encodeURIComponent(item.link)}`,
             title,
-            source: cleanFeedText(item.author || item.source || sourceFromTitle || (category === 'india' ? 'Google News India' : 'Google News')),
+            source: cleanFeedText(item.author || item.source || (defaultSource.startsWith('Google') ? sourceFromTitle : '') || defaultSource),
             pubDate: pubDate.toISOString(),
-            img: item.thumbnail || item.enclosure?.link || 'https://images.unsplash.com/photo-1504711434969-e33886168f5c?w=400&q=80',
+            img: articleNewsImage(item),
             body: cleanFeedText(item.description).slice(0, 700) || title,
             link: item.link,
             category
@@ -374,15 +385,29 @@ function makeNewsItems(items, category) {
     }).filter(Boolean).slice(0, 10);
 }
 
+const newsRefreshPending = new Set();
+const newsPublisherFeeds = {
+    global:'https://feeds.bbci.co.uk/news/world/rss.xml',
+    india:'https://feeds.bbci.co.uk/news/world/asia/india/rss.xml',
+    tech:'https://feeds.bbci.co.uk/news/technology/rss.xml',
+    finance:'https://feeds.bbci.co.uk/news/business/rss.xml',
+    entertainment:'https://feeds.bbci.co.uk/news/entertainment_and_arts/rss.xml',
+    sports:'https://feeds.bbci.co.uk/sport/rss.xml'
+};
 async function refreshNewsFeed() {
+    const category = currentNewsCategory;
+    if (newsRefreshPending.has(category)) return;
+    newsRefreshPending.add(category);
     const icon = document.getElementById('news-refresh-icon');
     const list = document.getElementById('news-feed-list');
     if (icon) icon.classList.add('fa-spin');
     if (list && !liveNewsCache[currentNewsCategory]?.length) list.innerHTML = '<div class="feed-state">Loading the latest headlines…</div>';
-    const category = currentNewsCategory;
     try {
         let items = [];
-        try { items = await fetchGdeltNews(category); }
+        // Publisher RSS carries story images. Never substitute a stock photo.
+        try { items = makeNewsItems(await fetchRssItems(newsPublisherFeeds[category] || newsPublisherFeeds.global), category, category === 'sports' ? 'BBC Sport' : 'BBC News'); }
+        catch (error) { console.warn('[Orbit News] Publisher feed unavailable:', error.message); }
+        try { if (!items.length) items = await fetchGdeltNews(category); }
         catch (primaryError) { console.warn('[Orbit News] Primary live feed unavailable; trying backup:', primaryError); }
 
         if (!items.length && category === 'tech') {
@@ -393,11 +418,12 @@ async function refreshNewsFeed() {
             items = stories.filter(story => story?.title && story?.url && story.time)
                 .sort((a, b) => b.time - a.time).slice(0, 10).map(story => ({
                 id: `hn_${story.id}`, title: story.title, source: `Hacker News · ${story.by || 'community'}`,
-                pubDate: new Date(story.time * 1000).toISOString(), img: 'https://images.unsplash.com/photo-1518770660439-4636190af475?w=400&q=80',
+                pubDate: new Date(story.time * 1000).toISOString(), img: '',
                 body: `${story.title}\n\n${story.score || 0} points · ${story.descendants || 0} comments`, link: story.url, category
             }));
         } else if (!items.length) {
-            const feed = category === 'india'
+            const topic = {finance:'finance markets',entertainment:'entertainment film music',sports:'sports cricket football'}[category];
+            const feed = topic ? `https://news.google.com/rss/search?q=${encodeURIComponent(topic)}&hl=en-US&gl=US&ceid=US:en` : category === 'india'
                 ? 'https://news.google.com/rss?hl=en-IN&gl=IN&ceid=IN:en'
                 : 'https://news.google.com/rss?hl=en-US&gl=US&ceid=US:en';
             items = makeNewsItems(await fetchRssItems(feed), category);
@@ -405,8 +431,7 @@ async function refreshNewsFeed() {
         if (!items.length) throw new Error('No recent stories were returned');
         liveNewsCache[category] = items;
         try { localStorage.setItem(`orbit_news_${category}`, JSON.stringify(items)); } catch(e) {}
-        setFeedUpdatedAt('news-last-updated');
-        if (category === currentNewsCategory) loadNewsFeed();
+        if (category === currentNewsCategory) { setFeedUpdatedAt('news-last-updated'); loadNewsFeed(); }
     } catch(error) {
         console.warn(`[Orbit News] ${category} feed refresh failed:`, error);
         if (category === currentNewsCategory && liveNewsCache[category]?.length) {
@@ -415,7 +440,8 @@ async function refreshNewsFeed() {
         }
         if (category === currentNewsCategory && list && !liveNewsCache[category]?.length) list.innerHTML = '<div class="feed-state">Live headlines could not load. Check your connection and refresh.</div>';
     } finally {
-        if (icon) icon.classList.remove('fa-spin');
+        newsRefreshPending.delete(category);
+        if (icon && !newsRefreshPending.has(currentNewsCategory)) icon.classList.remove('fa-spin');
     }
 }
 
@@ -432,13 +458,19 @@ function loadNewsFeed() {
         list.innerHTML = '<div class="feed-state">Headlines will appear here when the live feed loads.</div>';
         return;
     }
-    list.innerHTML = items.map(item => `
-        <button type="button" class="news-card-liquid touch-fix" onclick="openNewsReader('${escapeHtml(item.id)}')">
-            <div class="news-thumb-wrap"><img src="${escapeHtml(item.img)}" alt="" onerror="this.src='https://images.unsplash.com/photo-1504711434969-e33886168f5c?w=400&q=80'"></div>
+    list.innerHTML = items.map(item => {
+        const image = safeNewsImage(item.img);
+        return `<button type="button" class="news-card-liquid touch-fix" data-news-id="${escapeHtml(item.id)}">
+            <div class="news-thumb-wrap ${image ? '' : 'no-news-image'}">
+                ${image ? `<img src="${escapeHtml(image)}" alt="Article image from ${escapeHtml(item.source)}" loading="lazy" decoding="async" referrerpolicy="no-referrer" onerror="this.hidden=true;this.parentElement.classList.add('no-news-image')">` : ''}
+                <span class="news-thumb-empty"><i class="fa-regular fa-newspaper" aria-hidden="true"></i><small>No publisher image</small></span>
+            </div>
             <span class="news-card-copy"><span class="news-headline">${escapeHtml(item.title)}</span>
                 <span class="news-source-meta"><span class="news-source-name">${escapeHtml(item.source)}</span> · ${escapeHtml(formatFeedTimestamp(item.pubDate))}</span>
             </span>
-        </button>`).join('');
+        </button>`;
+    }).join('');
+    list.querySelectorAll('[data-news-id]').forEach(button => button.addEventListener('click', () => openNewsReader(button.dataset.newsId)));
 }
 
 function openNewsReader(newsId) {
@@ -448,7 +480,9 @@ function openNewsReader(newsId) {
     document.getElementById('news-reader-title').innerText = item.title;
     document.getElementById('news-reader-meta').innerText = `${item.source} · ${formatFeedTimestamp(item.pubDate)}`;
     document.getElementById('news-reader-body').innerText = item.body;
-    document.getElementById('news-reader-img').src = item.img;
+    const hero = document.getElementById('news-reader-img'), image = safeNewsImage(item.img);
+    hero.hidden = !image; hero.onerror = () => { hero.hidden = true; };
+    if (image) hero.src = image; else hero.removeAttribute('src');
     document.getElementById('news-reader-source-link').href = item.link;
     document.getElementById('modal-news-reader').classList.add('active');
 }
