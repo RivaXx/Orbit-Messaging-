@@ -5266,6 +5266,14 @@ body.light-mode #app-viewport {
 body.light-mode .screen {
     background: #F4F7FB !important;
 }
+/* Preserve the user's home photo after the light-mode background shorthand. */
+body.light-mode #screen-dash.has-dashboard-wallpaper {
+    background-color:#F4F7FB!important;
+    background-image:linear-gradient(rgba(255,255,255,.18),rgba(255,255,255,.28)),var(--dashboard-wallpaper-image)!important;
+    background-size:cover!important;
+    background-position:center!important;
+    background-repeat:no-repeat!important;
+}
 
 /* ── Prevent AMOLED Dark from breaking Light Mode (Fixes media_1790769523937.png & media_1790769539242.png) ── */
 body.light-mode.amoled-dark,
@@ -6440,6 +6448,14 @@ body.orbit-glass-enabled #screen-chat .msg-bubble-row.own .msg-bubble-card { bor
 body.orbit-glass-enabled :is(.calc-screen,.calc-btn.num,.calc-btn.mod) { color:var(--text-primary)!important; }
 body.orbit-glass-enabled .selected-chat-card { outline:2px solid var(--accent); }
 body.orbit-glass-fast { --liquid-backdrop:none!important; }
+body.orbit-glass-scrolling { --liquid-backdrop:none!important; }
+body:not(.orbit-glass-full) :is(.ambient-glow,.ambient-glow-2) { animation:none; }
+/* Nested and repeated surfaces share their parent's glass in balanced mode. */
+body.orbit-glass-enabled:not(.orbit-glass-full) :is(#screen-dash,#screen-chat,#screen-profile,#modal-settings) :is(.contact-glass-card,.msg-bubble-card,.news-card-liquid,.trending-card-liquid,.settings-card-group,.glass-icon-btn,.chat-circle-action-btn,.news-filter-chip) {
+    backdrop-filter:none!important; -webkit-backdrop-filter:none!important;
+}
+body.orbit-glass-scrolling :is(.ambient-glow,.ambient-glow-2,.orbit-weather-glow,.orbit-weather-symbol),
+body.orbit-glass-scrolling .orbit-weather-pill::after { animation-play-state:paused!important; }
 .orbit-liquid-preview { position:relative; height:136px; margin:0 0 15px; border:1px solid var(--glass-border); border-radius:20px; overflow:hidden; background:#081926; }
 .orbit-liquid-preview-pattern { position:absolute; inset:-20px; background:repeating-linear-gradient(103deg,transparent 0 18px,#65dbd9aa 19px 22px,transparent 23px 38px),repeating-linear-gradient(13deg,#12304b 0 24px,#80b9df 25px 28px,#112b44 29px 50px); }
 .orbit-liquid-preview-lens { position:absolute; inset:25px 12%; display:flex; align-items:center; justify-content:center; gap:12px; border:1px solid #ffffff50; border-radius:28px; color:#fff; }
