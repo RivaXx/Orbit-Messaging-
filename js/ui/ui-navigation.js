@@ -697,45 +697,92 @@ function togglePodDockPosition(pos) {
         if (rTop) rTop.checked = true;
     }
     try { localStorage.setItem('orbit_pref_pod_dock', targetPos); } catch(e) {}
-    applyOrbitPodPosition();
     setTimeout(() => updateLiquidPodThumb(), 60);
 }
 window.togglePodDockPosition = togglePodDockPosition;
 
 let liquidPodInitialized = false;
-function applyOrbitPodPosition(fraction) {
-    const pod = document.getElementById('dash-tabs-wrapper');
-    if (!pod) return;
-    const dock = pod.classList.contains('dock-bottom') ? 'bottom' : 'top';
-    const saved = Number(localStorage.getItem(`orbit_pod_horizontal_${dock}`) ?? 0.5);
-    const ratio = Math.max(0, Math.min(1, Number.isFinite(fraction) ? fraction : saved));
-    const width = pod.getBoundingClientRect().width;
-    const available = dock === 'bottom' ? window.innerWidth : pod.parentElement.clientWidth;
-    const left = 14 + Math.max(0, available - width - 28) * ratio;
-    pod.style.setProperty('--pod-left', `${dock === 'bottom' ? left + width / 2 : left}px`);
-    return ratio;
+const orbitDefaultTabOrder = ['main-chats','friends','groups','global','news','trending','notes','clock','calculator','calendar','compass'];
+function orbitTabButtons() {
+    return Array.from(document.getElementById('dash-tabs-wrapper')?.querySelectorAll('.liquid-tab-btn') || []);
 }
-
-function initOrbitPodDrag() {
+function saveOrbitTabOrder() {
+    try { localStorage.setItem('orbit_pref_tab_order', JSON.stringify(orbitTabButtons().map(button => button.dataset.tab))); } catch (_) {}
+}
+function restoreOrbitTabOrder(reset = false) {
     const pod = document.getElementById('dash-tabs-wrapper');
     if (!pod) return;
-    let hold = null, state = null, suppressClickUntil = 0;
-    pod.title = 'Hold for half a second, then drag left or right to place navigation';
-    applyOrbitPodPosition();
+    let saved = [];
+    try { saved = reset ? orbitDefaultTabOrder : JSON.parse(localStorage.getItem('orbit_pref_tab_order') || '[]'); } catch (_) {}
+    const buttons = orbitTabButtons(), byKey = new Map(buttons.map(button => [button.dataset.tab, button]));
+    const keys = [...new Set([...(Array.isArray(saved) ? saved : []), ...buttons.map(button => button.dataset.tab)])];
+    keys.forEach(key => { if (byKey.has(key)) pod.appendChild(byKey.get(key)); });
+    if (reset) saveOrbitTabOrder();
+    updateLiquidPodThumb();
+}
+function moveOrbitTab(button, direction) {
+    const buttons = orbitTabButtons().filter(item => item.style.display !== 'none' && !item.classList.contains('hide'));
+    const index = buttons.indexOf(button), neighbor = buttons[index + direction];
+    if (!neighbor) return false;
+    button.parentElement.insertBefore(button, direction < 0 ? neighbor : neighbor.nextSibling);
+    updateLiquidPodThumb();
+    return true;
+}
+function announceOrbitTab(button) {
+    const status = document.getElementById('orbit-tab-order-status');
+    const buttons = orbitTabButtons().filter(item => item.style.display !== 'none' && !item.classList.contains('hide'));
+    if (status) status.textContent = `${button.title || button.dataset.tab}: position ${buttons.indexOf(button) + 1} of ${buttons.length}`;
+}
+function resetOrbitTabOrder() { restoreOrbitTabOrder(true); }
+function initOrbitTabReorder() {
+    const pod = document.getElementById('dash-tabs-wrapper');
+    if (!pod) return;
+    let hold = null, state = null, edgeFrame = 0, suppressClickUntil = 0;
+    restoreOrbitTabOrder();
+    pod.title = 'Hold a button, then drag it left or right to reorder. Alt + arrow keys also moves a focused button.';
+    orbitTabButtons().forEach(button => button.setAttribute('aria-keyshortcuts', 'Alt+ArrowLeft Alt+ArrowRight'));
+    function reorderAtPointer() {
+        if (!state?.dragging) return;
+        const button = state.button;
+        const others = orbitTabButtons().filter(item => item !== button && item.offsetWidth > 0);
+        const before = others.find(item => state.clientX < item.getBoundingClientRect().left + item.offsetWidth / 2);
+        const visible = orbitTabButtons().filter(item => item.offsetWidth > 0);
+        const currentIndex = visible.indexOf(button);
+        const targetIndex = before ? visible.indexOf(before) - (currentIndex < visible.indexOf(before) ? 1 : 0) : visible.length - 1;
+        if (currentIndex !== targetIndex) {
+            pod.insertBefore(button, before || (others.at(-1)?.nextSibling ?? null));
+            updateLiquidPodThumb();
+            announceOrbitTab(button);
+        }
+    }
+    function edgeScroll() {
+        edgeFrame = 0;
+        if (!state?.dragging) return;
+        const rect = pod.getBoundingClientRect();
+        const step = state.clientX < rect.left + 32 ? -8 : state.clientX > rect.right - 32 ? 8 : 0;
+        if (step) { pod.scrollLeft += step; reorderAtPointer(); }
+        edgeFrame = requestAnimationFrame(edgeScroll);
+    }
     pod.addEventListener('pointerdown', event => {
-        if (event.button !== 0 || state) return;
-        state = {id:event.pointerId, x:event.clientX, y:event.clientY, dragging:false, scroll:pod.scrollLeft, ratio:applyOrbitPodPosition()};
+        const button = event.target.closest('.liquid-tab-btn');
+        if (event.button !== 0 || state || !button || !pod.contains(button)) return;
+        state = {id:event.pointerId, button, x:event.clientX, y:event.clientY, clientX:event.clientX, dragging:false,
+            scroll:pod.scrollLeft, original:orbitTabButtons()};
         hold = setTimeout(() => {
             if (!state) return;
             state.dragging = true;
-            state.startLeft = pod.getBoundingClientRect().left;
             pod.setPointerCapture(state.id);
-            pod.classList.add('pod-dragging');
+            pod.classList.add('tabs-reordering');
+            state.button.classList.add('tab-reordering');
+            state.button.focus({preventScroll:true});
             navigator.vibrate?.(20);
+            edgeFrame = requestAnimationFrame(edgeScroll);
+            announceOrbitTab(state.button);
         }, 500);
     });
     pod.addEventListener('pointermove', event => {
         if (!state || event.pointerId !== state.id) return;
+        state.clientX = event.clientX;
         const dx = event.clientX - state.x;
         if (!state.dragging) {
             if (Math.hypot(dx, event.clientY - state.y) > 8) {
@@ -746,25 +793,22 @@ function initOrbitPodDrag() {
             return;
         }
         event.preventDefault();
-        const bottom = pod.classList.contains('dock-bottom');
-        const origin = bottom ? 0 : pod.parentElement.getBoundingClientRect().left;
-        const available = bottom ? window.innerWidth : pod.parentElement.clientWidth;
-        const range = Math.max(0, available - pod.getBoundingClientRect().width - 28);
-        state.ratio = applyOrbitPodPosition(range ? (state.startLeft + dx - origin - 14) / range : 0.5);
+        reorderAtPointer();
     });
     function release(event) {
         if (!state || event.pointerId !== state.id) return;
-        clearTimeout(hold);
-        if (state.dragging) {
-            suppressClickUntil = Date.now() + 500;
-            const dock = pod.classList.contains('dock-bottom') ? 'bottom' : 'top';
-            if (event.type !== 'pointercancel') localStorage.setItem(`orbit_pod_horizontal_${dock}`, String(state.ratio ?? 0.5));
-            else applyOrbitPodPosition();
-        }
-        const id = state.id;
+        clearTimeout(hold); cancelAnimationFrame(edgeFrame); edgeFrame = 0;
+        const finished = state;
         state = null;
-        pod.classList.remove('pod-dragging');
-        if (pod.hasPointerCapture(id)) pod.releasePointerCapture(id);
+        if (finished.dragging) {
+            suppressClickUntil = Date.now() + 500;
+            if (event.type === 'pointercancel' || event.type === 'lostpointercapture') finished.original.forEach(button => pod.appendChild(button));
+            else saveOrbitTabOrder();
+            finished.button.classList.remove('tab-reordering');
+            announceOrbitTab(finished.button);
+        }
+        pod.classList.remove('tabs-reordering');
+        if (pod.hasPointerCapture(finished.id)) pod.releasePointerCapture(finished.id);
         updateLiquidPodThumb();
     }
     ['pointerup','pointercancel','lostpointercapture'].forEach(type => pod.addEventListener(type, release));
@@ -774,8 +818,16 @@ function initOrbitPodDrag() {
     pod.addEventListener('click', event => {
         if (Date.now() < suppressClickUntil) { event.preventDefault(); event.stopImmediatePropagation(); }
     }, true);
-    pod.addEventListener('contextmenu', event => event.preventDefault());
-    if (window.ResizeObserver) new ResizeObserver(() => applyOrbitPodPosition()).observe(pod);
+    pod.addEventListener('keydown', event => {
+        const button = event.target.closest('.liquid-tab-btn');
+        if (event.key === 'Escape' && state?.dragging) { release({pointerId:state.id,type:'pointercancel'}); event.preventDefault(); return; }
+        if (!button || !event.altKey || !['ArrowLeft','ArrowRight'].includes(event.key)) return;
+        event.preventDefault();
+        if (moveOrbitTab(button, event.key === 'ArrowLeft' ? -1 : 1)) {
+            saveOrbitTabOrder(); button.focus({preventScroll:true}); button.scrollIntoView({block:'nearest',inline:'nearest'}); announceOrbitTab(button);
+        }
+    });
+    pod.addEventListener('contextmenu', event => { if (state?.dragging) event.preventDefault(); });
 }
 function initLiquidPod() {
     if (liquidPodInitialized) { updateLiquidPodThumb(); return; }
@@ -787,9 +839,8 @@ function initLiquidPod() {
         }
     } catch(e) {}
 
-    initOrbitPodDrag();
+    initOrbitTabReorder();
     window.addEventListener('resize', () => {
-        applyOrbitPodPosition();
         requestAnimationFrame(() => updateLiquidPodThumb());
     });
 
