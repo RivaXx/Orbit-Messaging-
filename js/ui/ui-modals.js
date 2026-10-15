@@ -466,6 +466,7 @@ function openSettingsModal() {
     const email = document.getElementById('settings-account-email');
     if (email) email.textContent = currentUser?.email || 'Customize your Orbit experience';
     syncOrbitSettingsControls();
+    window.refreshOrbitLiquidGlass?.();
     document.getElementById('admin-storage-section')?.classList.toggle('hide', !isPrimaryAdmin());
     if (isPrimaryAdmin()) loadOrbitCleanupSettings();
     document.getElementById('modal-settings').classList.add('active');
@@ -536,6 +537,10 @@ function handleGlowSlider(val) {
 }
 
 function setLiquidBlur(mode, btn) {
+    window.setOrbitGlassControl?.('enabled', 1);
+    window.setOrbitGlassControl?.('speed', mode === 'perf' ? 0 : mode === 'ultra' ? 70 : 40);
+    window.setOrbitGlassControl?.('saturation', mode === 'perf' ? 100 : 155);
+    window.setOrbitGlassControl?.('highlight', mode === 'perf' ? 0 : 55);
     document.querySelectorAll('#settings-glass .news-filter-chip').forEach(b => b.classList.remove('active'));
     if (btn) {
         btn.classList.add('active');
@@ -575,6 +580,11 @@ function handleRefractionSlider(value) {
         localStorage.setItem('orbit_pref_refraction', String(amount));
         localStorage.removeItem('orbit_pref_glass_preset');
     } catch (_) {}
+    window.refreshOrbitLiquidGlass?.();
+}
+
+function resetOrbitGlassControls() {
+    setLiquidBlur('balanced');
     window.refreshOrbitLiquidGlass?.();
 }
 
@@ -1051,9 +1061,9 @@ function initTheme() {
     if (preset && sliders.every(value => value === null)) setLiquidBlur(preset);
     const savedPreset = localStorage.getItem('orbit_pref_glass_preset');
     handleRefractionSlider(localStorage.getItem('orbit_pref_refraction') ?? (preset === 'perf' ? 0 : 55));
-    if (sliders[0] !== null) handleBlurSlider(sliders[0]);
-    if (sliders[1] !== null) handleOpacitySlider(sliders[1]);
-    if (sliders[2] !== null) handleGlowSlider(sliders[2]);
+    handleBlurSlider(sliders[0] ?? 12);
+    handleOpacitySlider(sliders[1] ?? 50);
+    handleGlowSlider(sliders[2] ?? 60);
     if (savedPreset) localStorage.setItem('orbit_pref_glass_preset', savedPreset);
     document.querySelectorAll('#settings-glass .news-filter-chip').forEach(button => {
         button.classList.toggle('active', !!savedPreset && button.getAttribute('onclick').includes(`'${savedPreset}'`));

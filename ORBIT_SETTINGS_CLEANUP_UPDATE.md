@@ -3,7 +3,8 @@ Changes made on 14 October 2026
 - Fixed the accent palette across body themes, gradients, glow, and logo. The saved accent is restored quietly on reload.
 - Custom blur, opacity, and glow values now survive reload, including zero. Settings radio controls reflect saved media quality, group privacy, and pod dock position when reopened.
 - Raised the account menu above the weather button. Clicking the avatar opens Profile, including accounts with no uploaded avatar.
-- Hold the navigation pod for 500 ms, then drag left or right. Position is bounded to the screen, saved separately for top and bottom docks, and restored on reload. Ordinary swipes scroll the tabs; releasing a drag does not select a tab.
+- Hold an individual navigation button for 500 ms, then drag left or right to reorder Chats, Global, and the other buttons inside the stationary pod. Order is saved on the device; ordinary swipes scroll the tabs. Alt + Left/Right reorders a focused button, and Settings includes a reset button.
+- Water glass now covers UI surfaces across chats, profile, settings, cards, menus, notifications, and tools. Settings provides a master switch, water bend, blur, tint (0–100%), ambient glow, ripple speed (0 freezes motion), saturation, edge highlights, presets, and reset. Preferences update live and persist on the device. Reduced motion keeps refraction static; browsers without SVG backdrop support retain ordinary blur.
 - Restricted the configured admin and blue tick to rivaldo.a.rodrigues@gmail.com.
 - Removed the calculator Display button.
 - Replaced the dummy cleanup toast with a server-side cleanup service. Manual cleanup clears all existing messages (text and media), including admin messages. Accounts and profile photos are preserved. Scheduled cleanup covers messages older than ten days for all accounts.

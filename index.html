@@ -33,10 +33,10 @@
     <script src="assets/vendor/supabase.min.js?v=2.117.3"></script>
     <!-- Document, crop and resumable upload tools load only when needed. -->
 
-    <link rel="stylesheet" href="style.css?v=liquid-production-20261014-r2">
+    <link rel="stylesheet" href="style.css?v=glass-tabs-20261015-r3">
     <link rel="stylesheet" href="tools.css">
-<link rel="stylesheet" href="chat-upgrades.css?v=liquid-production-20261014-r2">
-<link rel="stylesheet" href="photo-weather.css?v=liquid-production-20261014-r2">
+<link rel="stylesheet" href="chat-upgrades.css?v=glass-tabs-20261015-r3">
+<link rel="stylesheet" href="photo-weather.css?v=glass-tabs-20261015-r3">
 </head>
 <body>
 
@@ -381,8 +381,9 @@
             </div>
         </div>
 
+        <span id="orbit-tab-order-status" class="orbit-sr-only" role="status" aria-live="polite"></span>
         <!-- Liquid Tabs: Liquid Glass Pod with physics sliding thumb -->
-        <div id="dash-tabs-wrapper" class="dash-tabs-wrapper liquid-glass-pod dock-top">
+        <div id="dash-tabs-wrapper" aria-label="Main navigation. Hold a button to reorder it." class="dash-tabs-wrapper liquid-glass-pod dock-top">
             <div id="liquid-pill-thumb" class="liquid-pill-thumb"></div>
             <button class="liquid-tab-btn active touch-fix" data-tab="main-chats" onclick="switchTab('main-chats')" title="Main Chats" style="position:relative;">
                 <span class="tab-emoji-icon"><i class="fa-solid fa-comments"></i></span>
@@ -1368,14 +1369,14 @@
                         <input type="radio" name="pod-dock-pos" value="top" id="dock-pos-top" checked onchange="togglePodDockPosition('top')" style="accent-color:var(--accent);">
                         <div>
                             <div>📌 Top Dock (Header Pod)</div>
-                            <div class="settings-subtext" style="font-size:10.5px; color:var(--text-secondary);">Top navigation bar. Hold the pod, then drag left or right to place it.</div>
+                            <div class="settings-subtext" style="font-size:10.5px; color:var(--text-secondary);">Top navigation bar. Hold an individual button to reorder it.</div>
                         </div>
                     </label>
                     <label style="display:flex; align-items:center; gap:10px; font-size:12.5px; cursor:pointer; font-weight:600; color:var(--text-primary);">
                         <input type="radio" name="pod-dock-pos" value="bottom" id="dock-pos-bottom" onchange="togglePodDockPosition('bottom')" style="accent-color:var(--accent);">
                         <div>
                             <div>🛸 Bottom Floating Pod</div>
-                            <div class="settings-subtext" style="font-size:10.5px; color:var(--text-secondary);">Bottom navigation bar. Hold the pod, then drag left or right to place it.</div>
+                            <div class="settings-subtext" style="font-size:10.5px; color:var(--text-secondary);">Bottom navigation bar. Hold an individual button to reorder it.</div>
                         </div>
                     </label>
                 </div>
@@ -1437,7 +1438,12 @@
             </section>
             <section class="settings-section-block" id="settings-glass">
             <!-- Liquid Blur Customization -->
-            <div class="settings-section-title"><span>LIQUID GLASS INTENSITY</span></div>
+            <div class="settings-section-title"><span>LIQUID GLASS · ENTIRE APP</span></div>
+            <div class="ios-toggle-row">
+                <label for="glass-enabled">Enable water glass across the UI</label>
+                <label class="ios-switch"><input type="checkbox" id="glass-enabled" checked onchange="setOrbitGlassControl('enabled', this.checked ? 1 : 0)"><span class="ios-slider"></span></label>
+            </div>
+            <p class="settings-subtext">Applies to chats, cards, menus, settings, profile, and tools. All controls update live and are saved on this device.</p>
             <div class="orbit-liquid-preview" aria-label="Live preview of water bending behind glass">
                 <div class="orbit-liquid-preview-pattern" aria-hidden="true"></div>
                 <div class="orbit-liquid-preview-lens"><i class="fa-solid fa-droplet" aria-hidden="true"></i><span>Liquid glass<small>Background bends. Text stays clear.</small></span></div>
@@ -1460,27 +1466,28 @@
                 </div>
                 <div>
                     <div style="display:flex; justify-content:space-between; font-size:11.5px; font-weight:700; color:var(--text-secondary); margin-bottom:4px;">
-                        <span>Glass Blur Strength</span>
+                        <label for="slider-blur">Glass Blur Strength</label>
                         <span id="val-blur" style="color:var(--accent);">24px</span>
                     </div>
                     <input type="range" id="slider-blur" min="0" max="45" value="24" class="glass-slider" oninput="handleBlurSlider(this.value)" style="width:100%; accent-color:var(--accent);">
                 </div>
                 <div>
                     <div style="display:flex; justify-content:space-between; font-size:11.5px; font-weight:700; color:var(--text-secondary); margin-bottom:4px;">
-                        <span>Glass Tint</span>
+                        <label for="slider-opacity">Glass Tint</label>
                         <span id="val-opacity" style="color:var(--accent);">75%</span>
                     </div>
-                    <input type="range" id="slider-opacity" min="30" max="98" value="75" class="glass-slider" oninput="handleOpacitySlider(this.value)" style="width:100%; accent-color:var(--accent);">
+                    <input type="range" id="slider-opacity" min="0" max="100" value="75" class="glass-slider" oninput="handleOpacitySlider(this.value)" style="width:100%; accent-color:var(--accent);">
                 </div>
                 <div>
                     <div style="display:flex; justify-content:space-between; font-size:11.5px; font-weight:700; color:var(--text-secondary); margin-bottom:4px;">
-                        <span>Ambient Glow Radiance</span>
+                        <label for="slider-glow">Ambient Glow Radiance</label>
                         <span id="val-glow" style="color:var(--accent);">60%</span>
                     </div>
                     <input type="range" id="slider-glow" min="0" max="100" value="60" class="glass-slider" oninput="handleGlowSlider(this.value)" style="width:100%; accent-color:var(--accent);">
                 </div>
             </div>
 
+            <div class="settings-card-group orbit-glass-controls"><div><label for="glass-speed">Ripple speed · 0 freezes motion</label><output id="glass-speed-value" for="glass-speed">50%</output><input class="glass-slider" type="range" id="glass-speed" min="0" max="100" value="50" oninput="setOrbitGlassControl('speed', this.value)"></div><div><label for="glass-saturation">Color saturation</label><output id="glass-saturation-value" for="glass-saturation">155%</output><input class="glass-slider" type="range" id="glass-saturation" min="0" max="200" value="155" oninput="setOrbitGlassControl('saturation', this.value)"></div><div><label for="glass-highlight">Glass edge highlights</label><output id="glass-highlight-value" for="glass-highlight">55%</output><input class="glass-slider" type="range" id="glass-highlight" min="0" max="100" value="55" oninput="setOrbitGlassControl('highlight', this.value)"></div><button type="button" class="news-filter-chip touch-fix" onclick="resetOrbitGlassControls()">Reset glass controls</button></div>
             <!-- Accent Palette -->
             <div class="settings-section-title"><span>ACCENT PALETTE</span></div>
             <div style="display:flex; gap:10px; margin-bottom:18px;">
@@ -1558,7 +1565,8 @@
             <!-- Configurable Navigation Tabs -->
             <div class="settings-section-title"><span>Customize navigation tabs</span></div>
             <div style="background:rgba(0,0,0,0.25); border-radius:16px; padding:12px 14px; margin-bottom:18px;">
-                <p style="font-size:11px; color:var(--text-secondary); margin-bottom:10px;">Toggle tabs to customize your main navigation bar.</p>
+                <p style="font-size:11px; color:var(--text-secondary); margin-bottom:10px;">Hold Chats, Global, or any navigation button for half a second, then drag left or right to change its position. Your order is saved on this device. With a keyboard, focus a button and use Alt + Left / Right.</p>
+                <button type="button" class="news-filter-chip touch-fix" onclick="resetOrbitTabOrder()">Reset button order</button>
 
                 <div class="ios-toggle-row">
                     <span style="font-size:12.5px; font-weight:700;"><i class="fa-solid fa-comments" style="color:var(--accent); width:20px;"></i> Chats</span>
@@ -2564,29 +2572,29 @@
     <div id="simple-toast" class="simple-toast">Notification</div>
 </div>
 
-<script src="js/config.js?v=liquid-production-20261014-r2"></script>
-<script src="js/rooms.js?v=liquid-production-20261014-r2"></script>
+<script src="js/config.js?v=glass-tabs-20261015-r3"></script>
+<script src="js/rooms.js?v=glass-tabs-20261015-r3"></script>
     <script src="js/chat-actions.js"></script>
-    <script src="js/actions/media-lightbox.js?v=liquid-production-20261014-r2"></script>
-    <script src="js/actions/media-preview.js?v=liquid-production-20261014-r2"></script>
-    <script src="js/actions/file-viewer.js?v=liquid-production-20261014-r2"></script>
+    <script src="js/actions/media-lightbox.js?v=glass-tabs-20261015-r3"></script>
+    <script src="js/actions/media-preview.js?v=glass-tabs-20261015-r3"></script>
+    <script src="js/actions/file-viewer.js?v=glass-tabs-20261015-r3"></script>
     <script src="js/actions/voice-recorder.js"></script>
-    <script src="js/actions/chat-extras.js?v=liquid-production-20261014-r2"></script>
-    <script src="js/messaging-notifications.js?v=liquid-production-20261014-r2"></script>
+    <script src="js/actions/chat-extras.js?v=glass-tabs-20261015-r3"></script>
+    <script src="js/messaging-notifications.js?v=glass-tabs-20261015-r3"></script>
     <script src="js/chat-gestures.js"></script>
     <script src="js/chat-select.js"></script>
-    <script src="js/chat-share.js?v=liquid-production-20261014-r2"></script>
-    <script src="js/chat/chat-history.js?v=liquid-production-20261014-r2"></script>
-    <script src="js/chat/chat-feed.js?v=liquid-production-20261014-r2"></script>
-    <script src="js/chat/chat-dispatcher.js?v=liquid-production-20261014-r2"></script>
-    <script src="js/chat/chat-realtime.js?v=liquid-production-20261014-r2"></script>
+    <script src="js/chat-share.js?v=glass-tabs-20261015-r3"></script>
+    <script src="js/chat/chat-history.js?v=glass-tabs-20261015-r3"></script>
+    <script src="js/chat/chat-feed.js?v=glass-tabs-20261015-r3"></script>
+    <script src="js/chat/chat-dispatcher.js?v=glass-tabs-20261015-r3"></script>
+    <script src="js/chat/chat-realtime.js?v=glass-tabs-20261015-r3"></script>
     <script src="js/chat.js"></script>
 <script src="js/calculator.js"></script>
     <script src="js/tools.js"></script>
     <script src="js/celestial.js"></script>
-    <script src="js/ui/ui-auth.js?v=liquid-production-20261014-r2"></script>
-    <script src="js/ui/ui-navigation.js?v=liquid-production-20261014-r2"></script>
-    <script src="js/ui/ui-modals.js?v=liquid-production-20261014-r2"></script>
+    <script src="js/ui/ui-auth.js?v=glass-tabs-20261015-r3"></script>
+    <script src="js/ui/ui-navigation.js?v=glass-tabs-20261015-r3"></script>
+    <script src="js/ui/ui-modals.js?v=glass-tabs-20261015-r3"></script>
     <script src="js/ui/ui-notifications.js"></script>
 <script src="js/ui.js"></script>
 
@@ -2621,8 +2629,8 @@
  <div id="orbit-editor-filters" class="hide"><button type="button" onclick="applyOrbitMediaFilter('vivid')">Vivid</button><button type="button" onclick="applyOrbitMediaFilter('mono')">Mono</button><button type="button" onclick="applyOrbitMediaFilter('warm')">Warm</button><button type="button" onclick="applyOrbitMediaFilter('bright')">Bright</button></div>
  <div class="orbit-editor-stage"><canvas id="orbit-editor-canvas"></canvas></div>
 </div>
-<script src="js/orbit-chat-services.js?v=liquid-production-20261014-r2"></script>
-<script src="js/orbit-media-editor.js?v=liquid-production-20261014-r2"></script>
+<script src="js/orbit-chat-services.js?v=glass-tabs-20261015-r3"></script>
+<script src="js/orbit-media-editor.js?v=glass-tabs-20261015-r3"></script>
 <div id="modal-orbit-weather" class="glass-modal-overlay"><div class="glass-modal-box">
  <div class="modal-header-row"><strong>Weather near you</strong><button type="button" class="btn-reset" onclick="closeOrbitWeatherConsent()" aria-label="Close weather settings">✕</button></div>
  <p>Allow device location to show nearby weather below the Orbit logo. Orbit requests a fresh, high-accuracy location and shows the accuracy your device reports.</p>
@@ -2631,8 +2639,8 @@
  <button type="button" id="orbit-weather-disable" class="glass-btn-secondary hide" onclick="disableOrbitWeather()">Turn off local weather</button>
  <p class="orbit-weather-attribution">Weather by <a href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer">Open-Meteo</a> · Places by <a href="https://www.bigdatacloud.com/" target="_blank" rel="noopener noreferrer">BigDataCloud</a></p>
 </div></div>
-<script src="js/orbit-private-photos.js?v=liquid-production-20261014-r2"></script>
-<script src="js/orbit-banner-weather.js?v=liquid-production-20261014-r2"></script>
-<script src="js/liquid-glass.js?v=5"></script>
+<script src="js/orbit-private-photos.js?v=glass-tabs-20261015-r3"></script>
+<script src="js/orbit-banner-weather.js?v=glass-tabs-20261015-r3"></script>
+<script src="js/liquid-glass.js?v=6"></script>
 </body>
 </html>

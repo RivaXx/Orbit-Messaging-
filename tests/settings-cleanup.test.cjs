@@ -62,15 +62,6 @@ test('existing custom slider values are not overwritten by legacy preset',()=>{
     const {context,store}=uiContext({orbit_pref_glass_preset:'ultra',orbit_pref_blur:'7',orbit_pref_opacity:'51',orbit_pref_glow:'9'});
     context.initTheme(); assert.equal(store.get('orbit_pref_blur'),'7'); assert.equal(store.get('orbit_pref_opacity'),'51');
 });
-test('pod horizontal position restores separately for each dock and clamps to edges',()=>{
-    const {context,document}=uiContext({orbit_pod_horizontal_top:'1',orbit_pod_horizontal_bottom:'0'});
-    vm.runInContext(fs.readFileSync(path.join(root,'js/ui/ui-navigation.js'),'utf8'),context);
-    const pod=document.getElementById('dash-tabs-wrapper');
-    context.applyOrbitPodPosition(); assert.equal(pod.style.getPropertyValue('--pod-left'),'186px');
-    pod.classList.add('dock-bottom'); context.applyOrbitPodPosition();
-    assert.equal(pod.style.getPropertyValue('--pod-left'),'234px');
-    context.applyOrbitPodPosition(2); assert.equal(pod.style.getPropertyValue('--pod-left'),'406px');
-});
 test('cleanup drops old cached messages but preserves newer and unsent messages',()=>{
     const {context}=uiContext();
     context.currentRoom = null;
