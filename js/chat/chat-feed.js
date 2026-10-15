@@ -388,7 +388,7 @@ function createMessageDOMNode(msg, isConsecutive = false) {
             else if (replyObj.type === 'video') snippet = '🎥 Video';
             else if (replyObj.type === 'file' || replyObj.type === 'document') snippet = '📄 Document';
             
-            const targetId = replyObj.id ? escapeHtml(String(replyObj.id)) : '';
+            const targetId = /^[a-z0-9_-]+$/i.test(String(replyObj.id || '')) ? String(replyObj.id) : '';
             replyHtml = `
                 <div class="quoted-reply-box" onclick="scrollToMessage('${targetId}')" title="Click to view original message">
                     <div class="quoted-reply-sender">
@@ -421,7 +421,7 @@ function createMessageDOMNode(msg, isConsecutive = false) {
                     } catch(e) {}
                 }
                 const rawUrl = att.url || att.publicUrl || att.storage_path || att.path || (typeof att === 'string' ? att : '');
-                const cleanUrl = att.view_once && att.storage_bucket==='orbit-view-once' ? rawUrl : formatMediaUrl(rawUrl);
+                const cleanUrl = formatMediaUrl(rawUrl);
                 if (!cleanUrl) return;
 
                 const cleanUrlNoQuery = cleanUrl.split('?')[0].split('#')[0];
@@ -477,11 +477,11 @@ function createMessageDOMNode(msg, isConsecutive = false) {
                 trimmedText.startsWith('data:audio');
 
             if (isDirectImageUrl) {
-                images.push({ url: trimmedText, name: 'Photo.jpg' });
+                images.push({ url: formatMediaUrl(trimmedText), name: 'Photo.jpg' });
             } else if (isDirectVideoUrl) {
-                files.push({ url: trimmedText, name: 'Video.mp4', isVideo: true, isAudio: false, type: 'video' });
+                files.push({ url: formatMediaUrl(trimmedText), name: 'Video.mp4', isVideo: true, isAudio: false, type: 'video' });
             } else if (isDirectAudioUrl) {
-                files.push({ url: trimmedText, name: 'Voice Note.webm', isVideo: false, isAudio: true, type: 'audio' });
+                files.push({ url: formatMediaUrl(trimmedText), name: 'Voice Note.webm', isVideo: false, isAudio: true, type: 'audio' });
             }
         }
 
@@ -1392,7 +1392,9 @@ function getMessageReactionsMap(msg) {
         try { raw = JSON.parse(raw); } catch(e) { raw = null; }
     }
     if (raw && raw.reactions && typeof raw.reactions === 'object') {
-        return raw.reactions;
+        return Object.fromEntries(Object.entries(raw.reactions).filter(([emoji,uids]) =>
+            /^[\p{Extended_Pictographic}\p{Emoji_Component}\u200d\ufe0f]+$/u.test(emoji) && emoji.length<=32 && Array.isArray(uids)
+        ).map(([emoji,uids])=>[emoji,uids.filter(uid=>/^[0-9a-f-]{36}$/i.test(String(uid)))]));
     }
     return {};
 }
@@ -1892,14 +1894,8 @@ async function toggleMessageReaction(msgId, emoji) {
     // Persist to Supabase with column fallback
     try {
         const client = await ensureSupabase();
-        const { error } = await client.from('messages')
-            .update({ reply_to: replyObj })
-            .eq('id', msgId);
-        if (error) {
-            await client.from('messages')
-                .update({ metadata: { reactions: replyObj.reactions } })
-                .eq('id', msgId);
-        }
+        const { error } = await client.rpc('orbit_security_react', {message_key:msgId,emoji});
+        if (error) throw error;
     } catch(e) {
         console.warn('[Orbit] toggleReaction error:', e);
     }
