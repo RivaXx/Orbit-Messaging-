@@ -533,3 +533,8 @@ function escapeHtml(str) {
     return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(new RegExp("'", "g"),'&#39;');
 }
 
+// A JavaScript string inside an HTML attribute needs BOTH encodings, in order.
+function orbitJsString(value) {
+    return escapeHtml(JSON.stringify(String(value ?? '')));
+}
+
