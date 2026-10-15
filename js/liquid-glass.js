@@ -11,7 +11,7 @@
  // WebKit versions that reject SVG backdrop references retain ordinary glass.
  const safari = /Safari/.test(navigator.userAgent) && !/Chrome|Chromium|Edg/.test(navigator.userAgent);
  const canRefract = !safari && CSS.supports('backdrop-filter', 'url("#orbit-water-refraction")');
- let intensity = 0, speed = 50, frame = 0, until = 0, last = 0, scrollTimer = 0, quality = 'balanced', lastScale = null;
+ let intensity = 0, speed = 50, frame = 0, until = 0, last = 0, scrollTimer = 0, scrolling = false, quality = 'balanced', lastScale = null;
  function preference(key, fallback) {
   try { const raw = localStorage.getItem(key); return raw === null ? fallback : Number(raw); } catch (_) { return fallback; }
  }
@@ -51,7 +51,7 @@
  }
  function animate(now) {
   frame = 0;
-  if (document.hidden || reduced.matches || !intensity || !speed || !canRefract || quality !== 'full' || document.body.classList.contains('orbit-glass-scrolling') || !document.body.classList.contains('orbit-glass-enabled')) return;
+  if (document.hidden || reduced.matches || !intensity || !speed || !canRefract || quality !== 'full' || scrolling || !document.body.classList.contains('orbit-glass-enabled')) return;
   if (now - last >= 80) {
    last = now;
    const time = now * speed / 50;
@@ -60,7 +60,7 @@
   if (now < until) frame = requestAnimationFrame(animate);
  }
  function wake() {
-  if (document.hidden || reduced.matches || !intensity || !speed || !canRefract || quality !== 'full' || document.body.classList.contains('orbit-glass-scrolling') || !document.body.classList.contains('orbit-glass-enabled')) return;
+  if (document.hidden || reduced.matches || !intensity || !speed || !canRefract || quality !== 'full' || scrolling || !document.body.classList.contains('orbit-glass-enabled')) return;
   until = performance.now() + 350;
   if (!frame) frame = requestAnimationFrame(animate);
  }
@@ -79,13 +79,13 @@
  };
  document.addEventListener('pointermove', wake, {passive:true});
  // Shared SVG noise can invalidate every glass surface at once. Keep it static
- // by default and suspend expensive backdrops during active scrolling.
+ // by default. Pause noise animation during scroll without changing the glass.
  document.addEventListener('scroll', () => {
   if (!document.body.classList.contains('orbit-glass-enabled')) return;
-  document.body.classList.add('orbit-glass-scrolling');
+  scrolling = true;
   cancelAnimationFrame(frame); frame = 0;
   clearTimeout(scrollTimer);
-  scrollTimer = setTimeout(() => document.body.classList.remove('orbit-glass-scrolling'), 180);
+  scrollTimer = setTimeout(() => { scrolling = false; }, 180);
  }, {capture:true,passive:true});
  document.addEventListener('visibilitychange', () => {
   if (document.hidden) { cancelAnimationFrame(frame); frame = 0; } else refresh();

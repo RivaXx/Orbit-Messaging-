@@ -91,10 +91,12 @@ test('Safari fallback keeps full blur; reduced motion retains static glass',()=>
  const still=glass({reduced:true});assert.equal(still.frames.length,0);
  assert.equal(still.body.classList.contains('orbit-water-glass'),true);
 });
-test('balanced glass avoids global ripple animation; scrolling suspends filters and restores after idle',()=>{
+test('glass appearance stays identical through scrolling and idle while noise animation pauses',()=>{
  const g=glass();g.events.pointermove();assert.equal(g.frames.length,0);
- g.events.scroll();assert.equal(g.body.classList.contains('orbit-glass-scrolling'),true);
- [...g.timers.values()].forEach(fn=>fn());assert.equal(g.body.classList.contains('orbit-glass-scrolling'),false);
+ const backdrop=g.properties.get('--liquid-backdrop');
+ g.events.scroll();assert.equal(g.body.classList.contains('orbit-glass-scrolling'),false);
+ assert.equal(g.properties.get('--liquid-backdrop'),backdrop);
+ [...g.timers.values()].forEach(fn=>fn());assert.equal(g.properties.get('--liquid-backdrop'),backdrop);
  g.context.window.setOrbitGlassQuality('full');g.events.pointermove();assert.equal(g.frames.length,1);
  g.context.window.setOrbitGlassQuality('fast');assert.doesNotMatch(g.properties.get('--liquid-backdrop'),/url\(/);
  assert.equal(glass({saved:Object.fromEntries(g.store)}).controls['glass-quality'].value,'fast');
