@@ -1,0 +1,66 @@
+-- Append inside the migration transaction and ROLLBACK. Uses synthetic rows only.
+create temporary table orbit_security_fixture(k text primary key,v uuid);
+insert into orbit_security_fixture values('a',gen_random_uuid()),('b',gen_random_uuid()),('c',gen_random_uuid()),('room',gen_random_uuid()),('message',gen_random_uuid());
+grant select on orbit_security_fixture to authenticated,anon;
+insert into auth.users(id,email,aud,role) select v,'orbit-security-'||v||'@example.invalid','authenticated','authenticated' from orbit_security_fixture where k in ('a','b','c');
+insert into public.rooms(id,name,is_direct,created_by,participants) values
+ ((select v from orbit_security_fixture where k='room'),'security-test',false,(select v from orbit_security_fixture where k='a'),array[(select v from orbit_security_fixture where k='a'),(select v from orbit_security_fixture where k='b')]);
+insert into public.messages(id,room,sender_id,text,type,attachments) values
+ ((select v from orbit_security_fixture where k='message'),(select v::text from orbit_security_fixture where k='room'),(select v from orbit_security_fixture where k='a'),'fixture','poll',array['{"type":"poll","poll":{"options":[{"text":"one","voters":[]},{"text":"two","voters":[]}],"multiple_answers":false}}',jsonb_build_object('storage_path','images/'||(select v::text from orbit_security_fixture where k='a')||'/fixture.jpg','storage_bucket','chat-assets')::text]);
+do $$ declare a uuid; b uuid; c uuid; room_key uuid; message_key uuid; amount integer; blocked boolean; begin
+ select v into a from orbit_security_fixture where k='a'; select v into b from orbit_security_fixture where k='b'; select v into c from orbit_security_fixture where k='c';
+ select v into room_key from orbit_security_fixture where k='room'; select v into message_key from orbit_security_fixture where k='message';
+ perform set_config('request.jwt.claims',jsonb_build_object('sub',c,'role','authenticated')::text,true);
+ execute 'set local role authenticated';
+ select count(*) into amount from public.messages where id=message_key;
+ if amount<>0 then raise exception 'FAIL outsider read'; end if;
+ delete from public.messages where id=message_key; get diagnostics amount=row_count;
+ if amount<>0 then raise exception 'FAIL outsider delete'; end if;
+ blocked:=false; begin
+  insert into public.messages(room,sender_id,text,type) values(room_key::text,c,'forbidden','text');
+ exception when insufficient_privilege then blocked:=true; end;
+ if not blocked then raise exception 'FAIL outsider insert'; end if;
+ if has_function_privilege('authenticated','public.admin_purge_inactive_users(uuid)','execute') then raise exception 'FAIL legacy purge callable'; end if;
+ blocked:=false; begin perform public.orbit_security_react(message_key,'ok'); exception when insufficient_privilege then blocked:=true; end;
+ if not blocked then raise exception 'FAIL outsider reaction'; end if;
+ if public.orbit_security_media_access('images/'||a::text||'/fixture.jpg') then raise exception 'FAIL outsider media'; end if;
+ insert into public.messages(room,sender_id,text,type,attachments) values('self_'||c::text,c,'forged reference','image',array[jsonb_build_object('storage_path','images/'||a::text||'/fixture.jpg','storage_bucket','chat-assets')::text]);
+ if public.orbit_security_media_access('images/'||a::text||'/fixture.jpg') then raise exception 'FAIL forged media reference'; end if;
+ perform set_config('request.jwt.claims',jsonb_build_object('sub',b,'role','authenticated')::text,true);
+ select count(*) into amount from public.messages where id=message_key;
+ if amount<>1 then raise exception 'FAIL member read'; end if;
+ if not public.orbit_security_media_access('images/'||a::text||'/fixture.jpg') then raise exception 'FAIL member media'; end if;
+ update public.messages set text='forged' where id=message_key; get diagnostics amount=row_count;
+ if amount<>0 then raise exception 'FAIL peer edit'; end if;
+ perform public.orbit_security_react(message_key,'ok');
+ if not exists(select 1 from public.messages where id=message_key and reply_to->'reactions'->'ok' ? b::text) then raise exception 'FAIL member reaction'; end if;
+ perform public.orbit_security_vote(message_key,1);
+ if not exists(select 1 from public.messages where id=message_key and attachments[1]::jsonb->'poll'->'options'->1->'voters' ? b::text) then raise exception 'FAIL member vote'; end if;
+ perform set_config('request.jwt.claims',jsonb_build_object('sub',a,'role','authenticated')::text,true);
+ blocked:=false; begin insert into public.friends(user_id,friend_id,status) values(a,b,'accepted'); exception when insufficient_privilege then blocked:=true; end;
+ if not blocked then raise exception 'FAIL forged accepted friendship'; end if;
+ insert into public.friends(user_id,friend_id,status) values(a,b,'pending');
+ update public.messages set text='edited' where id=message_key; get diagnostics amount=row_count;
+ if amount<>1 then raise exception 'FAIL sender edit'; end if;
+ blocked:=false; begin update public.messages set room='self_'||a::text where id=message_key; exception when insufficient_privilege then blocked:=true; end;
+ if not blocked then raise exception 'FAIL message move'; end if;
+ insert into public.messages(room,sender_id,text,type) values('self_'||a::text,a,'private note','text');
+ perform set_config('request.jwt.claims',jsonb_build_object('sub',b,'role','authenticated')::text,true);
+ update public.friends set status='accepted' where user_id=a and friend_id=b; get diagnostics amount=row_count;
+ if amount<>1 then raise exception 'FAIL recipient accepts friendship'; end if;
+ perform public.orbit_mark_room_read(room_key::text,now()+interval '1 minute');
+ if not exists(select 1 from public.messages where id=message_key and b=any(read_by)) then raise exception 'FAIL member read receipt'; end if;
+ blocked:=false; begin update public.rooms set created_by=b where id=room_key; exception when insufficient_privilege then blocked:=true; end;
+ if not blocked then raise exception 'FAIL room takeover'; end if;
+ update public.rooms set participants=array_remove(participants,b) where id=room_key; get diagnostics amount=row_count;
+ if amount<>1 then raise exception 'FAIL group leave'; end if;
+ if public.orbit_security_can_access(room_key::text) then raise exception 'FAIL departed member read'; end if;
+ execute 'reset role';
+ perform set_config('request.jwt.claims','{"role":"anon"}',true);
+ execute 'set local role anon';
+ blocked:=false; begin perform 1 from public.messages where id=message_key; exception when insufficient_privilege then blocked:=true; end;
+ if not blocked then raise exception 'FAIL anonymous table grant'; end if;
+ if has_function_privilege('anon','public.get_room_messages_smart(text,text,integer)','execute') then raise exception 'FAIL anonymous legacy reader'; end if;
+ execute 'reset role';
+end $$;
+select 'PASS: outsider read/write/delete, anonymous denial, sender edit, member read/reaction/vote, self notes, immutable identity, legacy RPC revocation' as security_test_result;
