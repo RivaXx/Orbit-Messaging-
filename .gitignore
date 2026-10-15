@@ -1,0 +1,17 @@
+# Credentials and local sessions must never be committed.
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+credentials*.json
+service-account*.json
+.supabase/
+.vercel/
+node_modules/
+*.log
+_test_*.html
+*database-dump*
+*database-backup*
