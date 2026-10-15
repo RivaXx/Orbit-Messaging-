@@ -537,6 +537,7 @@ function handleGlowSlider(val) {
 }
 
 function setLiquidBlur(mode, btn) {
+    window.setOrbitGlassQuality?.(mode === 'perf' ? 'fast' : mode === 'ultra' ? 'full' : 'balanced');
     window.setOrbitGlassControl?.('enabled', 1);
     window.setOrbitGlassControl?.('speed', mode === 'perf' ? 0 : mode === 'ultra' ? 70 : 40);
     window.setOrbitGlassControl?.('saturation', mode === 'perf' ? 100 : 155);
