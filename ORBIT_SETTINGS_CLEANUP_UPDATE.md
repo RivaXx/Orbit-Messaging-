@@ -1,3 +1,11 @@
+Media, weather, and rendering fixes — 15 October 2026
+
+- Media uploads continue from tab memory when IndexedDB is unavailable, full, blocked, or cannot clone files. The app asks users to keep the tab open until sending finishes in this fallback mode. Normal persistent offline queues remain supported.
+- Message bubbles switch to uploaded image/video URLs before local preview URLs are revoked. Retries retain the original bytes and avoid replacing valid preview URLs unnecessarily.
+- Balanced rendering is now the default: static water refraction, simpler repeated/nested cards, paused costly backdrops during scrolling, and static decorative glows. Full effects and Battery saver remain selectable. No device frame-rate guarantee is implied.
+- Weather details include humidity, feels-like temperature, wind, precipitation, pressure, US AQI, PM2.5, PM10, daily high/low, rain chance, UV maximum, and sunrise/sunset. Air-quality failures do not hide other weather data. AQI is explicitly labeled as the US scale, with model-data attribution.
+- The light-mode home screen preserves the selected dashboard photo instead of replacing it with a solid background.
+- Validation: 22 regression tests pass and all changed JavaScript passes syntax checks. Browser/device performance and live authenticated uploads have not been benchmarked by these tests. This update changes repository files only.
 Changes made on 14 October 2026
 
 - Fixed the accent palette across body themes, gradients, glow, and logo. The saved accent is restored quietly on reload.
@@ -25,3 +33,4 @@ Only referenced objects in chat-assets and orbit-view-once are candidates for re
 Verification
 
 Run `node --test tests/settings-cleanup.test.cjs` with Node 24 or later. The tests cover accent restoration, custom glass settings, pod positioning, admin authorization, required confirmation, schedule secrets and setup, photo protection, and storage retries. Browser visual verification and live Supabase integration are still required after deployment. No production cleanup was executed.
+
