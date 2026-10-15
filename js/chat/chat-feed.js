@@ -188,7 +188,7 @@ function getTickIconHtml(msg) {
     if (!msg) return '';
     if (msg.status === 'failed' || msg.status === 'error') {
         const tempId = msg.client_temp_id || msg.id;
-        return `<span class="msg-status-tick retry-error" onclick="event.stopPropagation(); retrySendMessage('${escapeHtml(String(tempId))}')" title="Failed to send. Tap to retry" style="color:#FF453A; cursor:pointer;"><i class="fa-solid fa-circle-exclamation"></i></span>`;
+        return `<span class="msg-status-tick retry-error" onclick="event.stopPropagation(); retrySendMessage(${orbitJsString(tempId)})" title="Failed to send. Tap to retry" style="color:#FF453A; cursor:pointer;"><i class="fa-solid fa-circle-exclamation"></i></span>`;
     }
     if (msg.status === 'sending' || msg.status === 'queued') {
         const title = msg.status === 'queued' ? 'Saved on this device; waiting for connection' : 'Sending...';
@@ -630,11 +630,11 @@ function createMessageDOMNode(msg, isConsecutive = false) {
                         <div class="file-icon-box" style="background:rgba(127,87,255,0.2); color:#7F57FF; width:36px; height:36px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:18px;">
                             <i class="fa-solid fa-file-lines"></i>
                         </div>
-                        <div style="flex:1; overflow:hidden; cursor:pointer;" onclick="handleDocumentFilePreview('${f.url}', '${escapeHtml(f.name)}')">
+                        <div style="flex:1; overflow:hidden; cursor:pointer;" onclick="handleDocumentFilePreview(${orbitJsString(f.url)}, ${orbitJsString(f.name)})">
                             <div style="font-size:13px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHtml(f.name)}</div>
                             <div class="file-detail">${escapeHtml([typeof formatFileSize === 'function' ? formatFileSize(f.size) : '', (f.name.split('.').pop() || 'File').toUpperCase()].filter(Boolean).join(' · '))}</div>
                         </div>
-                        <button class="btn-reset touch-fix" style="color:var(--accent); font-size:16px; padding:6px;" onclick="downloadFile('${f.url}', '${escapeHtml(f.name)}')" title="Download with original filename">
+                        <button class="btn-reset touch-fix" style="color:var(--accent); font-size:16px; padding:6px;" onclick="downloadFile(${orbitJsString(f.url)}, ${orbitJsString(f.name)})" title="Download with original filename">
                             <i class="fa-solid fa-download"></i>
                         </button>
                     </div>
@@ -788,7 +788,7 @@ function createMessageDOMNode(msg, isConsecutive = false) {
                                 <div style="font-size:11.5px; color:var(--text-secondary);">${escapeHtml(contactDetail)}</div>
                             </div>
                         </div>
-                        <button type="button" class="contact-card-btn touch-fix" onclick="startDirectChatWithContact('${escapeHtml(contactInfo.username || contactName)}')">
+                        <button type="button" class="contact-card-btn touch-fix" onclick="startDirectChatWithContact(${orbitJsString(contactInfo.username || contactName)})">
                             <i class="fa-solid fa-comment-dots" style="margin-right:4px;"></i> Message
                         </button>
                     </div>
