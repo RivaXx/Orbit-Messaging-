@@ -581,15 +581,8 @@ async function voteOnPollMessage(msgId, optionIndex) {
             (async () => {
                 try {
                     const client = await ensureSupabase();
-                    const { error: upErr } = await client.from('messages').update({
-                        attachments: [{ type: 'poll', poll: pollData }]
-                    }).eq('id', msgId);
-                    if (upErr) {
-                        await client.from('messages').update({
-                            metadata: { poll: pollData },
-                            attachments: [{ type: 'poll', poll: pollData }]
-                        }).eq('id', msgId);
-                    }
+                    const { error: upErr } = await client.rpc('orbit_security_vote', {message_key:msgId,option_index:optionIndex});
+                    if (upErr) throw upErr;
                 } catch(err) {
                     console.warn('[Orbit] Poll vote background update note:', err);
                 }
