@@ -16,7 +16,7 @@ function ensureOrbitLibrary(name) {
         tus: ['tus', 'assets/vendor/tus.min.js'],
         cropper: ['Cropper', 'https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js'],
         pdf: ['pdfjsLib', 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js'],
-        xlsx: ['XLSX', 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js']
+        xlsx: ['XLSX', 'https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js']
     };
     const spec = libraries[name];
     if (!spec) return Promise.reject(new Error('Unknown media tool.'));
@@ -232,7 +232,13 @@ let adminInactiveBlacklist = new Set(JSON.parse(localStorage.getItem('orbit_admi
 function formatMediaUrl(urlOrPath) {
     if (!urlOrPath) return '';
     if (typeof urlOrPath !== 'string') urlOrPath = urlOrPath.url || '';
-    if (/^(data:|blob:|https?:\/\/)/i.test(urlOrPath)) return urlOrPath;
+    // URLs are also embedded in HTML attributes and inline media controls.
+    const safe = value => /&(?:#|[a-z]+;|(?:quot|apos|lt|gt|amp)(?:[^a-z0-9=]|$))/i.test(value) ? ''
+        : value.replace(/[\x00-\x20\x7f"'<>`\\]/g, ch => '%' + ch.charCodeAt(0).toString(16).padStart(2,'0').toUpperCase());
+    if (/^orbit-once:\/\/[0-9a-f-]{36}$/i.test(urlOrPath)) return urlOrPath;
+    if (/^(blob:|https?:\/\/)/i.test(urlOrPath)) return safe(urlOrPath);
+    if (/^data:(?:image|audio|video)\/[a-z0-9.+-]+[;,]/i.test(urlOrPath) || /^data:application\/(?:pdf|octet-stream)[;,]/i.test(urlOrPath)) return safe(urlOrPath);
+    if (/^[a-z][a-z0-9+.-]*:/i.test(urlOrPath)) return '';
     if (/^\/?storage\/v1\/object\//i.test(urlOrPath)) return `${SB_URL}/${urlOrPath.replace(/^\/+/, '')}`;
     const clean = urlOrPath.replace(/^\/+/, '').replace(/^\.\//, '').replace(/^chat-assets\//i, '');
     const encoded = clean.split('/').map(encodeURIComponent).join('/');
@@ -246,7 +252,8 @@ function getOrbitStorageObjectPath(urlOrPath) {
     let pathname = urlOrPath;
     try {
         const parsed = new URL(urlOrPath, window.location.href);
-        if (/^https?:$/i.test(parsed.protocol) && parsed.hostname !== new URL(SB_URL).hostname && !parsed.pathname.includes('/storage/v1/object/')) return '';
+        if (!/^https?:$/i.test(parsed.protocol)) return '';
+        if (/^(?:https?:)?\/\//i.test(urlOrPath) && parsed.origin !== new URL(SB_URL).origin) return '';
         pathname = parsed.pathname;
     } catch(e) {}
     const objectMatch = pathname.match(/\/storage\/v1\/object\/(?:public|sign|authenticated)\/chat-assets\/(.+)$/i);
@@ -256,15 +263,24 @@ function getOrbitStorageObjectPath(urlOrPath) {
     return objectPath;
 }
 
-async function getSignedOrbitMediaUrl(urlOrPath, expiresIn = 3600) {
-    const objectPath = getOrbitStorageObjectPath(urlOrPath);
+async function getSignedOrbitMediaUrl(urlOrPath, expiresIn = 300) {
+    const requestingOwner=currentUser?.id;
+    if (!requestingOwner) return null;
+    let objectPath = getOrbitStorageObjectPath(urlOrPath), bucketName = 'chat-assets';
+    try {
+        const parsed = new URL(urlOrPath, window.location.href);
+        const match = parsed.pathname.match(/^\/storage\/v1\/object\/(?:public|sign|authenticated)\/(chat-assets|avatars|voice-notes|files|uploads)\/(.+)$/);
+        if (parsed.origin === new URL(SB_URL).origin && match) {
+            bucketName = match[1]; objectPath = decodeURIComponent(match[2]);
+        }
+    } catch (_) {}
     if (!objectPath || objectPath.startsWith('storage/v1/')) return null;
     try {
         const client = await ensureSupabase();
         if (!client?.storage) return null;
-        const { data, error } = await client.storage.from('chat-assets').createSignedUrl(objectPath, expiresIn);
+        const { data, error } = await client.storage.from(bucketName).createSignedUrl(objectPath, Math.max(60,Math.min(300,Number(expiresIn)||300)));
         if (error) throw error;
-        return data?.signedUrl || null;
+        return currentUser?.id===requestingOwner ? data?.signedUrl || null : null;
     } catch(error) {
         console.warn('[Orbit] Could not create an attachment preview URL:', error?.message || error);
         return null;
@@ -317,6 +333,25 @@ window.formatMediaUrl = formatMediaUrl;
 window.getSignedOrbitMediaUrl = getSignedOrbitMediaUrl;
 window.resolveMediaUrlForAccess = resolveMediaUrlForAccess;
 window.retryMediaPreview = retryMediaPreview;
+
+// Private objects use short-lived signed URLs, including avatars, video and audio.
+document.addEventListener('error', async event => {
+    const media=event.target;
+    if (!media || !['IMG','VIDEO','AUDIO'].includes(media.tagName) || media.dataset.mediaFallbackBusy==='true') return;
+    const original=media.currentSrc || media.src;
+    if (!original || media.dataset.orbitSignedRetry===original) return;
+    let parsed;
+    try { parsed=new URL(original); } catch (_) { return; }
+    if (parsed.origin!==new URL(SB_URL).origin || !/^\/storage\/v1\/object\/(?:public|sign)\/(?:chat-assets|avatars|voice-notes|files|uploads)\//.test(parsed.pathname)) return;
+    media.dataset.orbitSignedRetry=original;
+    const owner=currentUser?.id;
+    const signed=await getSignedOrbitMediaUrl(original,300);
+    if (!signed || currentUser?.id!==owner || (media.currentSrc||media.src)!==original) return;
+    media.dataset.orbitSignedRetry=signed;
+    media.src=signed;
+    if (media.tagName!=='IMG') media.load();
+},true);
+
 
 
 // --- Global States (Pre-declared for cross-module accessibility) ---
