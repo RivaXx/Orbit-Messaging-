@@ -11,39 +11,61 @@
  // WebKit versions that reject SVG backdrop references retain ordinary glass.
  const safari = /Safari/.test(navigator.userAgent) && !/Chrome|Chromium|Edg/.test(navigator.userAgent);
  const canRefract = !safari && CSS.supports('backdrop-filter', 'url("#orbit-water-refraction")');
- let intensity = 0, frame = 0, until = 0, last = 0;
+ let intensity = 0, speed = 50, frame = 0, until = 0, last = 0;
  function preference(key, fallback) {
   try { const raw = localStorage.getItem(key); return raw === null ? fallback : Number(raw); } catch (_) { return fallback; }
  }
  function refresh() {
+  const enabled = preference('orbit_pref_glass_enabled', 1) !== 0;
   intensity = Math.max(0, Math.min(100, preference('orbit_pref_refraction', 55) || 0));
+  speed = Math.max(0, Math.min(100, preference('orbit_pref_glass_speed', 50) || 0));
+  const saturation = Math.max(0, Math.min(200, preference('orbit_pref_glass_saturation', 155) || 0));
+  const highlight = Math.max(0, Math.min(100, preference('orbit_pref_glass_highlight', 55) || 0));
   const blur = Math.max(0, Math.min(45, preference('orbit_pref_blur', 12) || 0));
   const tint = Math.max(0, Math.min(100, preference('orbit_pref_opacity', 50) || 0));
   const root = document.documentElement;
   root.style.setProperty('--liquid-refraction-filter', intensity && canRefract ? 'url("#orbit-water-refraction")' : '');
   root.style.setProperty('--liquid-surface-blur', `${intensity && canRefract ? blur / 3 : blur}px`);
-  root.style.setProperty('--liquid-tint-alpha', String(0.06 + tint * 0.004));
-  root.style.setProperty('--liquid-highlight-alpha', String(0.12 + intensity * 0.003));
+  root.style.setProperty('--liquid-tint-alpha', String(tint / 100));
+  root.style.setProperty('--liquid-highlight-alpha', String(highlight / 100));
+  root.style.setProperty('--liquid-saturation', `${saturation}%`);
+  root.style.setProperty('--liquid-backdrop', `${intensity && canRefract ? 'url("#orbit-water-refraction") ' : ''}blur(${intensity && canRefract ? blur / 3 : blur}px) saturate(${saturation}%)`);
   displacement.setAttribute('scale', String(intensity * 0.75));
-  document.body.classList.toggle('orbit-water-glass', intensity > 0 && canRefract);
+  document.body.classList.toggle('orbit-glass-enabled', enabled);
+  document.body.classList.toggle('orbit-water-glass', enabled && intensity > 0 && canRefract);
   document.body.classList.toggle('orbit-glass-fast', intensity === 0 && blur === 0);
-  if (!intensity || reduced.matches) { cancelAnimationFrame(frame); frame = 0; }
+  const toggle = document.getElementById('glass-enabled');
+  if (toggle) toggle.checked = enabled;
+  for (const [name, value] of Object.entries({speed, saturation, highlight})) {
+   const input = document.getElementById(`glass-${name}`), label = document.getElementById(`glass-${name}-value`);
+   if (input) input.value = String(value);
+   if (label) label.textContent = name === 'speed' && value === 0 ? 'Still' : `${value}%`;
+  }
+  if (!enabled || !intensity || !speed || reduced.matches) { cancelAnimationFrame(frame); frame = 0; }
  }
  function animate(now) {
   frame = 0;
-  if (document.hidden || reduced.matches || !intensity || !canRefract) return;
+  if (document.hidden || reduced.matches || !intensity || !speed || !canRefract || !document.body.classList.contains('orbit-glass-enabled')) return;
   if (now - last >= 45) {
    last = now;
-   noise.setAttribute('baseFrequency', `${0.012 + Math.sin(now / 1700) * 0.002} ${0.022 + Math.cos(now / 2100) * 0.003}`);
+   const time = now * speed / 50;
+   noise.setAttribute('baseFrequency', `${0.012 + Math.sin(time / 1700) * 0.002} ${0.022 + Math.cos(time / 2100) * 0.003}`);
   }
   if (now < until) frame = requestAnimationFrame(animate);
  }
  function wake() {
-  if (document.hidden || reduced.matches || !intensity || !canRefract) return;
+  if (document.hidden || reduced.matches || !intensity || !speed || !canRefract || !document.body.classList.contains('orbit-glass-enabled')) return;
   until = performance.now() + 700;
   if (!frame) frame = requestAnimationFrame(animate);
  }
  window.refreshOrbitLiquidGlass = refresh;
+ window.setOrbitGlassControl = (name, value) => {
+  const limits = {enabled:1, speed:100, saturation:200, highlight:100};
+  if (!(name in limits)) return;
+  const amount = Math.max(0, Math.min(limits[name], Number(value) || 0));
+  try { localStorage.setItem(`orbit_pref_glass_${name}`, String(amount)); localStorage.removeItem('orbit_pref_glass_preset'); } catch (_) {}
+  refresh();
+ };
  document.addEventListener('pointermove', wake, {passive:true});
  document.addEventListener('scroll', wake, {capture:true,passive:true});
  document.addEventListener('visibilitychange', () => {
