@@ -4,19 +4,22 @@
  const svg = document.createElementNS(NS, 'svg');
  svg.setAttribute('width', '0'); svg.setAttribute('height', '0');
  svg.setAttribute('aria-hidden', 'true'); svg.style.cssText = 'position:fixed;pointer-events:none;overflow:hidden';
- svg.innerHTML = '<defs><filter id="orbit-water-refraction" x="-20%" y="-20%" width="140%" height="140%" color-interpolation-filters="sRGB"><feTurbulence type="fractalNoise" baseFrequency="0.012 0.022" numOctaves="1" seed="8" result="waves"/><feGaussianBlur in="waves" stdDeviation="2" result="smooth-waves"/><feDisplacementMap in="SourceGraphic" in2="smooth-waves" scale="30" xChannelSelector="R" yChannelSelector="G"/></filter></defs>';
+ svg.innerHTML = '<defs><filter id="orbit-water-refraction" x="-10%" y="-10%" width="120%" height="120%" color-interpolation-filters="sRGB"><feTurbulence type="fractalNoise" baseFrequency="0.012 0.022" numOctaves="1" seed="8" result="waves"/><feDisplacementMap in="SourceGraphic" in2="waves" scale="30" xChannelSelector="R" yChannelSelector="G"/></filter></defs>';
  document.body.prepend(svg);
  const noise = svg.querySelector('feTurbulence'), displacement = svg.querySelector('feDisplacementMap');
  const reduced = matchMedia('(prefers-reduced-motion: reduce)');
  // WebKit versions that reject SVG backdrop references retain ordinary glass.
  const safari = /Safari/.test(navigator.userAgent) && !/Chrome|Chromium|Edg/.test(navigator.userAgent);
  const canRefract = !safari && CSS.supports('backdrop-filter', 'url("#orbit-water-refraction")');
- let intensity = 0, speed = 50, frame = 0, until = 0, last = 0;
+ let intensity = 0, speed = 50, frame = 0, until = 0, last = 0, scrollTimer = 0, quality = 'balanced', lastScale = null;
  function preference(key, fallback) {
   try { const raw = localStorage.getItem(key); return raw === null ? fallback : Number(raw); } catch (_) { return fallback; }
  }
  function refresh() {
   const enabled = preference('orbit_pref_glass_enabled', 1) !== 0;
+  try { quality = localStorage.getItem('orbit_pref_glass_quality') || 'balanced'; } catch (_) {}
+  if (!['balanced','full','fast'].includes(quality)) quality = 'balanced';
+  const refract = canRefract && quality !== 'fast';
   intensity = Math.max(0, Math.min(100, preference('orbit_pref_refraction', 55) || 0));
   speed = Math.max(0, Math.min(100, preference('orbit_pref_glass_speed', 50) || 0));
   const saturation = Math.max(0, Math.min(200, preference('orbit_pref_glass_saturation', 155) || 0));
@@ -24,29 +27,32 @@
   const blur = Math.max(0, Math.min(45, preference('orbit_pref_blur', 12) || 0));
   const tint = Math.max(0, Math.min(100, preference('orbit_pref_opacity', 50) || 0));
   const root = document.documentElement;
-  root.style.setProperty('--liquid-refraction-filter', intensity && canRefract ? 'url("#orbit-water-refraction")' : '');
-  root.style.setProperty('--liquid-surface-blur', `${intensity && canRefract ? blur / 3 : blur}px`);
+  root.style.setProperty('--liquid-refraction-filter', intensity && refract ? 'url("#orbit-water-refraction")' : '');
+  root.style.setProperty('--liquid-surface-blur', `${intensity && refract ? blur / 3 : Math.min(blur, quality === 'fast' ? 6 : 45)}px`);
   root.style.setProperty('--liquid-tint-alpha', String(tint / 100));
   root.style.setProperty('--liquid-highlight-alpha', String(highlight / 100));
   root.style.setProperty('--liquid-saturation', `${saturation}%`);
-  root.style.setProperty('--liquid-backdrop', `${intensity && canRefract ? 'url("#orbit-water-refraction") ' : ''}blur(${intensity && canRefract ? blur / 3 : blur}px) saturate(${saturation}%)`);
-  displacement.setAttribute('scale', String(intensity * 0.75));
+  root.style.setProperty('--liquid-backdrop', `${intensity && refract ? 'url("#orbit-water-refraction") ' : ''}blur(${intensity && refract ? blur / 3 : Math.min(blur, quality === 'fast' ? 6 : 45)}px) saturate(${saturation}%)`);
+  if (lastScale !== intensity * 0.75) { lastScale = intensity * 0.75; displacement.setAttribute('scale', String(lastScale)); }
   document.body.classList.toggle('orbit-glass-enabled', enabled);
-  document.body.classList.toggle('orbit-water-glass', enabled && intensity > 0 && canRefract);
+  document.body.classList.toggle('orbit-water-glass', enabled && intensity > 0 && refract);
+  document.body.classList.toggle('orbit-glass-full', quality === 'full');
   document.body.classList.toggle('orbit-glass-fast', intensity === 0 && blur === 0);
   const toggle = document.getElementById('glass-enabled');
   if (toggle) toggle.checked = enabled;
+  const qualityInput = document.getElementById('glass-quality');
+  if (qualityInput) qualityInput.value = quality;
   for (const [name, value] of Object.entries({speed, saturation, highlight})) {
    const input = document.getElementById(`glass-${name}`), label = document.getElementById(`glass-${name}-value`);
    if (input) input.value = String(value);
    if (label) label.textContent = name === 'speed' && value === 0 ? 'Still' : `${value}%`;
   }
-  if (!enabled || !intensity || !speed || reduced.matches) { cancelAnimationFrame(frame); frame = 0; }
+  if (!enabled || !intensity || !speed || reduced.matches || quality !== 'full') { cancelAnimationFrame(frame); frame = 0; }
  }
  function animate(now) {
   frame = 0;
-  if (document.hidden || reduced.matches || !intensity || !speed || !canRefract || !document.body.classList.contains('orbit-glass-enabled')) return;
-  if (now - last >= 45) {
+  if (document.hidden || reduced.matches || !intensity || !speed || !canRefract || quality !== 'full' || document.body.classList.contains('orbit-glass-scrolling') || !document.body.classList.contains('orbit-glass-enabled')) return;
+  if (now - last >= 80) {
    last = now;
    const time = now * speed / 50;
    noise.setAttribute('baseFrequency', `${0.012 + Math.sin(time / 1700) * 0.002} ${0.022 + Math.cos(time / 2100) * 0.003}`);
@@ -54,11 +60,16 @@
   if (now < until) frame = requestAnimationFrame(animate);
  }
  function wake() {
-  if (document.hidden || reduced.matches || !intensity || !speed || !canRefract || !document.body.classList.contains('orbit-glass-enabled')) return;
-  until = performance.now() + 700;
+  if (document.hidden || reduced.matches || !intensity || !speed || !canRefract || quality !== 'full' || document.body.classList.contains('orbit-glass-scrolling') || !document.body.classList.contains('orbit-glass-enabled')) return;
+  until = performance.now() + 350;
   if (!frame) frame = requestAnimationFrame(animate);
  }
  window.refreshOrbitLiquidGlass = refresh;
+ window.setOrbitGlassQuality = value => {
+  if (!['balanced','full','fast'].includes(value)) return;
+  try { localStorage.setItem('orbit_pref_glass_quality', value); } catch (_) {}
+  refresh();
+ };
  window.setOrbitGlassControl = (name, value) => {
   const limits = {enabled:1, speed:100, saturation:200, highlight:100};
   if (!(name in limits)) return;
@@ -67,7 +78,15 @@
   refresh();
  };
  document.addEventListener('pointermove', wake, {passive:true});
- document.addEventListener('scroll', wake, {capture:true,passive:true});
+ // Shared SVG noise can invalidate every glass surface at once. Keep it static
+ // by default and suspend expensive backdrops during active scrolling.
+ document.addEventListener('scroll', () => {
+  if (!document.body.classList.contains('orbit-glass-enabled')) return;
+  document.body.classList.add('orbit-glass-scrolling');
+  cancelAnimationFrame(frame); frame = 0;
+  clearTimeout(scrollTimer);
+  scrollTimer = setTimeout(() => document.body.classList.remove('orbit-glass-scrolling'), 180);
+ }, {capture:true,passive:true});
  document.addEventListener('visibilitychange', () => {
   if (document.hidden) { cancelAnimationFrame(frame); frame = 0; } else refresh();
  });
@@ -107,7 +126,7 @@
    if(Math.abs(energy-target)+Math.abs(velocity)>.003)frame=requestAnimationFrame(settle);else{frame=0;last=0;}
   }
   feed.addEventListener('scroll',()=>{const now=performance.now(),delta=Math.abs(feed.scrollTop-lastScroll);lastScroll=feed.scrollTop;
-   if(reduced.matches)return;target=Math.min(1,delta/Math.max(16,now-lastEvent)/2);lastEvent=now;if(!frame)frame=requestAnimationFrame(settle);
+   if(reduced.matches||!document.body.classList.contains('orbit-glass-full'))return;target=Math.min(1,delta/Math.max(16,now-lastEvent)/2);lastEvent=now;if(!frame)frame=requestAnimationFrame(settle);
   },{passive:true});
  }
 })();

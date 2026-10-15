@@ -17,6 +17,28 @@ function orbitWeatherCode(code,day){
 function openOrbitWeatherConsent(){
     document.getElementById('modal-orbit-weather').classList.add('active');
     document.getElementById('orbit-weather-disable').classList.toggle('hide',!orbitWeatherEnabled());
+    document.getElementById('orbit-weather-refresh').textContent=orbitWeatherEnabled()?'Refresh weather':'Allow location & show weather';
+}
+function orbitAqiCategory(value){
+    if(!Number.isFinite(value)||value<0)return 'Unavailable';
+    return value<=50?'Good':value<=100?'Moderate':value<=150?'Unhealthy for sensitive groups':value<=200?'Unhealthy':value<=300?'Very unhealthy':'Hazardous';
+}
+function renderOrbitWeatherMetrics(weather,air){
+    const current=weather.current||{},daily=weather.daily||{},quality=air?.current||{};
+    const number=(value,unit='',digits=0)=>Number.isFinite(value)?`${value.toFixed(digits)}${unit}`:'Unavailable';
+    const time=value=>Number.isFinite(value)?new Date(value*1000).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',timeZone:weather.timezone||undefined}):'Unavailable';
+    const values={humidity:number(current.relative_humidity_2m,'%'),feels:number(current.apparent_temperature,'°C'),
+        wind:number(current.wind_speed_10m,' km/h'),rain:number(current.precipitation,' mm',1),pressure:number(current.surface_pressure,' hPa'),
+        aqi:Number.isFinite(quality.us_aqi)?`${Math.round(quality.us_aqi)} · ${orbitAqiCategory(quality.us_aqi)}`:'Unavailable',
+        pm25:number(quality.pm2_5,' µg/m³',1),pm10:number(quality.pm10,' µg/m³',1),
+        highlow:`${number(daily.temperature_2m_max?.[0],'°')} / ${number(daily.temperature_2m_min?.[0],'°')}`,
+        chance:number(daily.precipitation_probability_max?.[0],'%'),uv:number(daily.uv_index_max?.[0],'',1),
+        sun:`${time(daily.sunrise?.[0])} / ${time(daily.sunset?.[0])}`};
+    Object.entries(values).forEach(([key,value])=>{const el=document.getElementById(`orbit-weather-${key}`);if(el)el.textContent=value;});
+    document.getElementById('orbit-weather-metrics').classList.remove('hide');
+    document.getElementById('orbit-weather-air-status').textContent=Number.isFinite(quality.us_aqi)
+        ?`Air quality model updated ${time(quality.time)}. AQI uses the US scale; model estimates can differ from local monitors.`
+        :'Air quality is temporarily unavailable. Other weather details are still shown.';
 }
 function closeOrbitWeatherConsent(){document.getElementById('modal-orbit-weather').classList.remove('active');}
 function stopOrbitWeather(){
@@ -26,11 +48,14 @@ function stopOrbitWeather(){
     if(orbitWeatherPermission)orbitWeatherPermission.onchange=null;orbitWeatherPermission=null;
     document.getElementById('orbit-banner-weather').dataset.weather='idle';
     orbitWeatherLabel('Enable local weather');document.getElementById('orbit-weather-details').textContent='';document.getElementById('orbit-weather-icon').textContent='⌖';
+    document.getElementById('orbit-weather-metrics')?.classList.add('hide');
+    document.getElementById('orbit-weather-air-status').textContent='';
+    document.getElementById('orbit-weather-updated').textContent='';
 }
 function disableOrbitWeather(){try{localStorage.removeItem(orbitWeatherKey());}catch(_){}stopOrbitWeather();closeOrbitWeatherConsent();showToast('Local weather turned off.');}
 async function enableOrbitWeather(){
     try{localStorage.setItem(orbitWeatherKey(),'true');}catch(_){}
-    closeOrbitWeatherConsent();await refreshOrbitWeather(true);
+    await refreshOrbitWeather(true);
     try{
         orbitWeatherPermission=await navigator.permissions.query({name:'geolocation'});
         orbitWeatherPermission.onchange=()=>{if(orbitWeatherPermission?.state!=='granted'){stopOrbitWeather();orbitWeatherLabel('Location off · Enable weather');}};
@@ -73,14 +98,16 @@ async function refreshOrbitWeather(explicit=false){
         if(epoch!==orbitWeatherEpoch||currentUser?.id!==owner||!orbitWeatherEnabled())return;
         const {latitude,longitude,accuracy}=position.coords;
         const controller=new AbortController();orbitWeatherAbort=controller;const timer=setTimeout(()=>controller.abort(),15000);
-        let weather,place;
+        let weather,place,air;
         try{
             const results=await Promise.allSettled([
-                orbitWeatherFetch(`https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,weather_code,is_day,apparent_temperature&timeformat=unixtime&timezone=auto&forecast_days=1`,controller.signal),
-                orbitWeatherFetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=en`,controller.signal)
+                orbitWeatherFetch(`https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,weather_code,is_day,apparent_temperature,relative_humidity_2m,wind_speed_10m,precipitation,surface_pressure&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max,uv_index_max,sunrise,sunset&temperature_unit=celsius&wind_speed_unit=kmh&precipitation_unit=mm&timeformat=unixtime&timezone=auto&forecast_days=1`,controller.signal),
+                orbitWeatherFetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=en`,controller.signal),
+                orbitWeatherFetch(`https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${latitude}&longitude=${longitude}&current=us_aqi,pm2_5,pm10&timeformat=unixtime&timezone=auto&forecast_days=1`,controller.signal)
             ]);
             if(results[0].status!=='fulfilled')throw results[0].reason;
             weather=results[0].value;place=results[1].status==='fulfilled'?results[1].value:null;
+            air=results[2].status==='fulfilled'?results[2].value:null;
         }finally{clearTimeout(timer);}
         if(epoch!==orbitWeatherEpoch||currentUser?.id!==owner||!orbitWeatherEnabled())return;
         const current=weather.current;
@@ -90,7 +117,10 @@ async function refreshOrbitWeather(explicit=false){
         pill.dataset.weather=condition.kind;document.getElementById('orbit-weather-icon').textContent=condition.icon;
         orbitWeatherLabel(`${Math.round(current.temperature_2m)}° · ${condition.label}`);
         const metres=Math.round(accuracy),range=metres<1000?`${metres} m`:`${(metres/1000).toFixed(1)} km`;
-        document.getElementById('orbit-weather-details').textContent=`${location} · ${metres>500?'Approx. ':''}±${range}`;
+        const humidity=Number.isFinite(current.relative_humidity_2m)?` · Humidity ${Math.round(current.relative_humidity_2m)}%`:'';
+        const aqi=Number.isFinite(air?.current?.us_aqi)?` · AQI (US) ${Math.round(air.current.us_aqi)}`:'';
+        document.getElementById('orbit-weather-details').textContent=`${location}${humidity}${aqi}`;
+        renderOrbitWeatherMetrics(weather,air);
         document.getElementById('orbit-weather-updated').textContent=`Weather updated ${new Date(current.time*1000).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}. Location accuracy ±${range}. Weather is an estimate for the nearby forecast grid.`;
         pill.title=`${location} · ${condition.label} · Location accuracy ±${range}`;
         orbitWeatherLastFetch=Date.now();

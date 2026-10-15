@@ -10,6 +10,10 @@ const _messageRetryTimers = new Map();
 let _outboxHydratedForUser = null;
 const _mediaOutboxDbName = 'orbit-media-outbox-v1';
 let _mediaOutboxDbPromise = null;
+// Some devices deny IndexedDB or cannot clone File objects. Keep the original
+// bytes in this tab so a disk-cache failure never prevents an online upload.
+const _mediaOutboxMemory = new Map();
+const _mediaOutboxVolatile = new Set();
 const _pendingChatCacheWrites = new Set();
 let _chatCacheWriteTimer = null;
 let _mediaUploadLane = Promise.resolve();
@@ -38,29 +42,50 @@ function _openMediaOutboxDb() {
     if (_mediaOutboxDbPromise) return _mediaOutboxDbPromise;
     _mediaOutboxDbPromise = new Promise((resolve, reject) => {
         if (!('indexedDB' in window)) return reject(new Error('This browser cannot save media for background upload.'));
-        const request = indexedDB.open(_mediaOutboxDbName, 1);
+        let settled = false;
+        const timeout = setTimeout(() => { settled = true; reject(new Error('Device media storage did not respond.')); }, 3000);
+        let request;
+        try { request = indexedDB.open(_mediaOutboxDbName, 1); }
+        catch (error) { clearTimeout(timeout); reject(error); return; }
         request.onupgradeneeded = () => {
             const db = request.result;
             if (!db.objectStoreNames.contains('files')) db.createObjectStore('files', { keyPath: 'key' });
         };
-        request.onsuccess = () => resolve(request.result);
-        request.onerror = () => reject(request.error || new Error('Could not open media queue.'));
+        request.onsuccess = () => { clearTimeout(timeout); if (settled) { request.result.close(); return; } settled = true; resolve(request.result); };
+        request.onerror = () => { clearTimeout(timeout); settled = true; reject(request.error || new Error('Could not open media queue.')); };
     });
+    _mediaOutboxDbPromise.catch(() => { _mediaOutboxDbPromise = null; });
     return _mediaOutboxDbPromise;
 }
 
 async function _storeOutboxMedia(messageId, index, file) {
-    const db = await _openMediaOutboxDb();
-    return new Promise((resolve, reject) => {
-        const tx = db.transaction('files', 'readwrite');
-        tx.objectStore('files').put({ key: `${messageId}:${index}`, messageId, index, file });
-        tx.oncomplete = () => resolve();
-        tx.onerror = () => reject(tx.error || new Error('Could not save media for upload.'));
-        tx.onabort = () => reject(tx.error || new Error('Could not save media for upload.'));
-    });
+    const key = `${messageId}:${index}`;
+    _mediaOutboxMemory.set(key, file);
+    if (_mediaOutboxVolatile.has(key)) return false;
+    try {
+        const db = await _openMediaOutboxDb();
+        await new Promise((resolve, reject) => {
+            const tx = db.transaction('files', 'readwrite');
+            const timer = setTimeout(() => { try { tx.abort(); } catch (_) {} reject(new Error('Device media storage stalled.')); }, 3000);
+            const finish = error => { clearTimeout(timer); error ? reject(error) : resolve(); };
+            tx.oncomplete = () => finish();
+            tx.onerror = () => finish(tx.error || new Error('Could not save media for upload.'));
+            tx.onabort = () => finish(tx.error || new Error('Could not save media for upload.'));
+            try { tx.objectStore('files').put({ key, messageId, index, file }); }
+            catch (error) { finish(error); }
+        });
+        _mediaOutboxVolatile.delete(key);
+        return true;
+    } catch (error) {
+        _mediaOutboxVolatile.add(key);
+        console.warn('[Orbit] Device media cache unavailable; sending from this tab:', error?.message);
+        return false;
+    }
 }
 
 async function _getOutboxMedia(messageId, index) {
+    const memory = _mediaOutboxMemory.get(`${messageId}:${index}`);
+    if (memory) return memory;
     const db = await _openMediaOutboxDb();
     return new Promise((resolve, reject) => {
         const request = db.transaction('files', 'readonly').objectStore('files').get(`${messageId}:${index}`);
@@ -70,6 +95,11 @@ async function _getOutboxMedia(messageId, index) {
 }
 
 async function _deleteOutboxMedia(messageId, index = null) {
+    for (const key of _mediaOutboxMemory.keys()) {
+        if (index === null ? key.startsWith(`${messageId}:`) : key === `${messageId}:${index}`) {
+            _mediaOutboxMemory.delete(key); _mediaOutboxVolatile.delete(key);
+        }
+    }
     try {
         const db = await _openMediaOutboxDb();
         await new Promise((resolve, reject) => {
@@ -115,6 +145,7 @@ function _persistMessageOutbox(userId = currentUser?.id) {
                 });
                 delete safeItem.mediaReadyPromise;
                 delete safeItem.progressTimer;
+                delete safeItem.previewObjectUrls;
                 return safeItem;
             });
         localStorage.setItem(_messageOutboxStorageKey(userId), JSON.stringify(items));
@@ -141,8 +172,8 @@ function _updateOutboxMessage(item, status, error = null) {
         document.querySelector(`[data-client-temp-id="${item.clientTempId}"]`) ||
         document.querySelector(`[data-msg-id="${item.payload.id}"]`);
     if (node) {
-        if (['sent', 'delivered', 'read'].includes(status) &&
-            cacheMessage.attachments?.some(a => a?.url && !a.upload_pending) &&
+        if (['sending', 'sent', 'delivered', 'read'].includes(status) &&
+            cacheMessage.attachments?.length && cacheMessage.attachments.every(a => a?.url && !a.upload_pending) &&
             node.dataset.mediaDelivered !== 'true' && typeof createMessageDOMNode === 'function') {
             // Reloaded pending media has no blob URL. Rebuild its final bubble
             // and click handlers from the confirmed attachment, not only ticks.
@@ -589,7 +620,12 @@ async function queueMediaMessage(items, caption = '', messageType = null, target
         document.getElementById('reply-preview-bar')?.classList.add('hide');
     }
     _persistMessageOutbox(userAtSend);
-    item.mediaReadyPromise.then(() => _deliverOutboxMessage(id)).catch(error => {
+    item.mediaReadyPromise.then(() => {
+        if (mediaUploadInfo.some(info => _mediaOutboxVolatile.has(`${id}:${info.index}`))) {
+            showToast('Device storage is unavailable. Keep this tab open until the media finishes sending.', 'info');
+        }
+        return _deliverOutboxMessage(id);
+    }).catch(error => {
         item.status = 'failed';
         _updateOutboxMessage(item, 'failed', error);
         showToast(`Media saved in chat but could not be queued for upload: ${error.message || 'device storage error'}`, 'error');
@@ -603,6 +639,7 @@ async function _uploadQueuedMedia(item) {
     const totalUploads = item.mediaUploadInfo.length;
     let completedCount = 0;
     const uploadBytes = new Map();
+    const completedPreviewUrls = item.previewObjectUrls || (item.previewObjectUrls = []);
     const uploadTotals = new Map(item.mediaUploadInfo.map(info => [info.index, Number(item.payload.attachments[info.index]?.size) || 0]));
     const reportProgress = () => {
         const loaded = [...uploadBytes.values()].reduce((a,b) => a+b,0);
@@ -626,7 +663,7 @@ async function _uploadQueuedMedia(item) {
         if (!file) throw new Error(`Queued file ${info.name || ''} is missing on this device. Please select it again.`);
         uploadTotals.set(info.index, file.size);
         const attachment = item.payload.attachments[info.index];
-        if (attachment && (!attachment.url || attachment.upload_pending)) {
+        if (attachment && !attachment.url) {
             attachment.url = URL.createObjectURL(file);
             attachment.upload_pending = true;
         }
@@ -700,7 +737,7 @@ async function _uploadQueuedMedia(item) {
         if (item.cancelled) return;
 
         if (attachment?.url?.startsWith('blob:')) {
-            try { URL.revokeObjectURL(attachment.url); } catch (_) {}
+            completedPreviewUrls.push(attachment.url);
         }
         item.payload.attachments[info.index] = { name: info.name, url, storage_path: privatePhoto?.storage_path || getOrbitStorageObjectPath(url), storage_bucket: privatePhoto?.storage_bucket, type: info.type, size: attachment?.size || file.size, upload_pending: false, view_once: !!attachment?.view_once };
         
@@ -727,6 +764,10 @@ async function _uploadQueuedMedia(item) {
 
     item.mediaUploadInfo = [];
     _updateOutboxMessage(item, 'sending');
+    // Replace image/video bubbles and their click handlers before releasing
+    // local previews. Single-photo bubbles need the same update as galleries.
+    completedPreviewUrls.forEach(url => { try { URL.revokeObjectURL(url); } catch (_) {} });
+    completedPreviewUrls.length = 0;
     _persistMessageOutbox(item.payload.sender_id);
     hideChatMediaUploadProgress();
 }
