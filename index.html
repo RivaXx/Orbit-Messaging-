@@ -27,16 +27,16 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" media="print" onload="this.media='all'">
     
     <!-- Standalone Client-Side Error Logger (Captures all uncaught errors & rejections) -->
-    <script src="js/logger.js?v=authenticated-20261011"></script>
+    <script src="js/logger.js?v=security-20261015-r7"></script>
     
     <!-- Core Supabase Client -->
     <script src="assets/vendor/supabase.min.js?v=2.117.3"></script>
     <!-- Document, crop and resumable upload tools load only when needed. -->
 
-    <link rel="stylesheet" href="style.css?v=brand-theme-20261015-r6">
+    <link rel="stylesheet" href="style.css?v=security-20261015-r7">
     <link rel="stylesheet" href="tools.css">
-<link rel="stylesheet" href="chat-upgrades.css?v=brand-theme-20261015-r6">
-<link rel="stylesheet" href="photo-weather.css?v=brand-theme-20261015-r6">
+<link rel="stylesheet" href="chat-upgrades.css?v=security-20261015-r7">
+<link rel="stylesheet" href="photo-weather.css?v=security-20261015-r7">
 </head>
 <body>
 
@@ -1060,7 +1060,7 @@
     </div>
 
     <!-- ══════════════════════════════════════════════════════════════════════════
-         SCREEN 4: CHAT VIEW (Instantaneous 0ms Loading & E2EE)
+         SCREEN 4: CHAT VIEW (Chat view)
          ══════════════════════════════════════════════════════════════════════════ -->
     <div id="screen-chat" class="screen z-top">
         <!-- Frosted Glass Drag & Drop Overlay -->
@@ -1083,7 +1083,7 @@
                     <div id="chat-target-name" class="chat-target-name">User</div>
                 </div>
                 <div id="chat-target-status" class="chat-target-status">
-                    <i class="fa-solid fa-shield-halved" style="font-size:10px; color:var(--online);"></i> E2EE Active
+                    <i class="fa-solid fa-shield-halved" style="font-size:10px; color:var(--online);"></i> HTTPS connection
                 </div>
             </div>
             <div style="display:flex; align-items:center; gap:8px; position:relative;">
@@ -2557,29 +2557,29 @@
     <div id="simple-toast" class="simple-toast">Notification</div>
 </div>
 
-<script src="js/config.js?v=brand-theme-20261015-r6"></script>
-<script src="js/rooms.js?v=brand-theme-20261015-r6"></script>
+<script src="js/config.js?v=security-20261015-r7"></script>
+<script src="js/rooms.js?v=security-20261015-r7"></script>
     <script src="js/chat-actions.js"></script>
-    <script src="js/actions/media-lightbox.js?v=brand-theme-20261015-r6"></script>
-    <script src="js/actions/media-preview.js?v=brand-theme-20261015-r6"></script>
-    <script src="js/actions/file-viewer.js?v=brand-theme-20261015-r6"></script>
+    <script src="js/actions/media-lightbox.js?v=security-20261015-r7"></script>
+    <script src="js/actions/media-preview.js?v=security-20261015-r7"></script>
+    <script src="js/actions/file-viewer.js?v=security-20261015-r7"></script>
     <script src="js/actions/voice-recorder.js"></script>
-    <script src="js/actions/chat-extras.js?v=brand-theme-20261015-r6"></script>
-    <script src="js/messaging-notifications.js?v=brand-theme-20261015-r6"></script>
+    <script src="js/actions/chat-extras.js?v=security-20261015-r7"></script>
+    <script src="js/messaging-notifications.js?v=security-20261015-r7"></script>
     <script src="js/chat-gestures.js"></script>
     <script src="js/chat-select.js"></script>
-    <script src="js/chat-share.js?v=brand-theme-20261015-r6"></script>
-    <script src="js/chat/chat-history.js?v=brand-theme-20261015-r6"></script>
-    <script src="js/chat/chat-feed.js?v=brand-theme-20261015-r6"></script>
-    <script src="js/chat/chat-dispatcher.js?v=brand-theme-20261015-r6"></script>
-    <script src="js/chat/chat-realtime.js?v=brand-theme-20261015-r6"></script>
+    <script src="js/chat-share.js?v=security-20261015-r7"></script>
+    <script src="js/chat/chat-history.js?v=security-20261015-r7"></script>
+    <script src="js/chat/chat-feed.js?v=security-20261015-r7"></script>
+    <script src="js/chat/chat-dispatcher.js?v=security-20261015-r7"></script>
+    <script src="js/chat/chat-realtime.js?v=security-20261015-r7"></script>
     <script src="js/chat.js"></script>
 <script src="js/calculator.js"></script>
     <script src="js/tools.js"></script>
     <script src="js/celestial.js"></script>
-    <script src="js/ui/ui-auth.js?v=brand-theme-20261015-r6"></script>
-    <script src="js/ui/ui-navigation.js?v=brand-theme-20261015-r6"></script>
-    <script src="js/ui/ui-modals.js?v=brand-theme-20261015-r6"></script>
+    <script src="js/ui/ui-auth.js?v=security-20261015-r7"></script>
+    <script src="js/ui/ui-navigation.js?v=security-20261015-r7"></script>
+    <script src="js/ui/ui-modals.js?v=security-20261015-r7"></script>
     <script src="js/ui/ui-notifications.js"></script>
 <script src="js/ui.js"></script>
 
@@ -2614,8 +2614,8 @@
  <div id="orbit-editor-filters" class="hide"><button type="button" onclick="applyOrbitMediaFilter('vivid')">Vivid</button><button type="button" onclick="applyOrbitMediaFilter('mono')">Mono</button><button type="button" onclick="applyOrbitMediaFilter('warm')">Warm</button><button type="button" onclick="applyOrbitMediaFilter('bright')">Bright</button></div>
  <div class="orbit-editor-stage"><canvas id="orbit-editor-canvas"></canvas></div>
 </div>
-<script src="js/orbit-chat-services.js?v=brand-theme-20261015-r6"></script>
-<script src="js/orbit-media-editor.js?v=brand-theme-20261015-r6"></script>
+<script src="js/orbit-chat-services.js?v=security-20261015-r7"></script>
+<script src="js/orbit-media-editor.js?v=security-20261015-r7"></script>
 <div id="modal-orbit-weather" class="glass-modal-overlay"><div class="glass-modal-box">
  <div class="modal-header-row"><strong>Weather near you</strong><button type="button" class="btn-reset" onclick="closeOrbitWeatherConsent()" aria-label="Close weather settings">✕</button></div>
  <p>Allow device location to show nearby weather below the Orbit logo. Orbit requests a fresh, high-accuracy location and shows the accuracy your device reports.</p>
@@ -2624,8 +2624,8 @@
  <button type="button" id="orbit-weather-disable" class="glass-btn-secondary hide" onclick="disableOrbitWeather()">Turn off local weather</button>
  <p class="orbit-weather-attribution">Weather by <a href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer">Open-Meteo</a> · Air quality: <a href="https://atmosphere.copernicus.eu/" target="_blank" rel="noopener noreferrer">CAMS</a> · Places by <a href="https://www.bigdatacloud.com/" target="_blank" rel="noopener noreferrer">BigDataCloud</a></p>
 </div></div>
-<script src="js/orbit-private-photos.js?v=brand-theme-20261015-r6"></script>
-<script src="js/orbit-banner-weather.js?v=brand-theme-20261015-r6"></script>
+<script src="js/orbit-private-photos.js?v=security-20261015-r7"></script>
+<script src="js/orbit-banner-weather.js?v=security-20261015-r7"></script>
 <script src="js/liquid-glass.js?v=8"></script>
 </body>
 </html>
