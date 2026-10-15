@@ -692,7 +692,7 @@ function renderFriendsListDOM(friendsArray, list) {
                     <span class="c-last-msg">${escapeHtml(u.about || 'Tap to chat')}</span>
                 </div>
             </div>
-            <button class="btn-reset" onclick="event.stopPropagation(); openDirectChat('${u.user_id}', '${escapeHtml(name).replace(/'/g, "\\'")}', '${u.dp_url || ''}')" style="margin-left:auto; padding:7px 14px; background:var(--accent); color:#fff; border-radius:10px; font-size:12px; font-weight:700; cursor:pointer;">
+            <button class="btn-reset" onclick="event.stopPropagation(); openDirectChat(${orbitJsString(u.user_id)}, ${orbitJsString(name)}, ${orbitJsString(u.dp_url || '')})" style="margin-left:auto; padding:7px 14px; background:var(--accent); color:#fff; border-radius:10px; font-size:12px; font-weight:700; cursor:pointer;">
                 <i class="fa-solid fa-comment-dots"></i> Chat
             </button>
         `;

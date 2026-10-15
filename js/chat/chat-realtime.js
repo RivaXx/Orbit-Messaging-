@@ -12,70 +12,9 @@ let isTypingActive = false;
 let activeTypingUsers = new Map();
 let globalRealtimeChannel = null;
 let _realtimeSetupEpoch = 0;
-let _fastMessageChannel = null;
-const _fastPreviewTimers = new Map();
-
-function expireFastPreviewLater(id, roomId, aliases) {
-    clearTimeout(_fastPreviewTimers.get(id));
-    _fastPreviewTimers.set(id, setTimeout(() => {
-        _fastPreviewTimers.delete(id);
-        const message = (messageCache.get(roomId) || []).find(m => m.id === id);
-        if (!message?.broadcast_pending) return;
-        aliases.forEach(alias => messageCache.set(alias, (messageCache.get(alias) || []).filter(m => m.id !== id)));
-        if (aliases.includes(currentRoom)) document.getElementById(`msg-${id}`)?.remove();
-    }, 45000));
-}
-
-async function setupFastMessageChannel(client, roomId, aliases, setupEpoch, viewEpoch) {
-    if (_fastMessageChannel) client.removeChannel(_fastMessageChannel).catch(() => {});
-    _fastMessageChannel = null;
-    if (isSelfChat || !currentUser?.id || !isGroupChat) return; // Direct messages use server-confirmed delivery so blocks cannot be bypassed.
-    const selfId = currentUser.id;
-    const peerId = activeChatPeerId;
-    const topicRoom = !isGroupChat && peerId ? getDeterministicDMId(selfId, peerId) : roomId;
-    try {
-        await client.realtime.setAuth();
-        if (setupEpoch !== _realtimeSetupEpoch || viewEpoch !== _chatViewEpoch || currentRoom !== roomId || currentUser?.id !== selfId) return;
-        const channel = client.channel(`orbit_fast_${topicRoom}`, { config: { private: true } })
-            .on('broadcast', { event: 'new_message' }, event => {
-                const message = event.payload;
-                if(isUserBlocked(message?.sender_id))return;
-                if (currentRoom !== roomId || currentUser?.id !== selfId || !message?.id || message.sender_id === selfId) return;
-                if (!aliases.includes(message.room) || typeof message.text !== 'string' || !message.text || message.text.length > 32768) return;
-                if (!/^[0-9a-f-]{36}$/i.test(message.id) || (message.attachments?.length || 0) > 0 || message.type !== 'text') return;
-                if (peerId && message.sender_id !== peerId) return;
-                if (!peerId) {
-                    const room = allRoomsMap.get(roomId);
-                    if (!room || !(room.participants || []).includes(message.sender_id) && room.created_by !== message.sender_id) return;
-                }
-                const messages = messageCache.get(roomId) || [];
-                const existing = messages.find(m => m.id === message.id);
-                if (existing) {
-                    if (existing.broadcast_pending) expireFastPreviewLater(message.id, roomId, aliases);
-                    return;
-                }
-                // Preview is temporary. Only a database INSERT confirms it,
-                // persists it, or produces a read receipt.
-                const preview = { ...message, status: 'sending', broadcast_pending: true };
-                const sorted = deduplicateAndSort([...messages, preview]);
-                aliases.forEach(alias => messageCache.set(alias, sorted));
-                expireFastPreviewLater(message.id, roomId, aliases);
-                const feed = document.getElementById('chat-feed');
-                const nearBottom = !feed || feed.scrollHeight - feed.scrollTop - feed.clientHeight < 220;
-                appendSingleMessageNode(preview);
-                if (nearBottom) scrollFeedToBottom(false);
-            });
-        _fastMessageChannel = channel;
-        channel.subscribe();
-    } catch (_) { /* Database realtime remains the delivery fallback. */ }
-}
-
-function sendFastMessagePreview(message) {
-    if (!navigator.onLine || _fastMessageChannel?.state !== 'joined' || message.type !== 'text' || message.attachments?.length || !message.text || message.text.length > 32768) return;
-    try {
-        _fastMessageChannel.send({ type: 'broadcast', event: 'new_message', payload: message }).catch(() => {});
-    } catch (_) {}
-}
+// Only database-confirmed messages are accepted from peers. Client broadcasts
+// cannot authenticate a payload's sender, even inside a private group channel.
+function sendFastMessagePreview() {}
 window.sendFastMessagePreview = sendFastMessagePreview;
 
 async function setupRealtimeChatSubscription(roomId, viewEpoch = _chatViewEpoch) {
@@ -91,11 +30,11 @@ async function setupRealtimeChatSubscription(roomId, viewEpoch = _chatViewEpoch)
         const client = await ensureSupabase();
         if (setupEpoch !== _realtimeSetupEpoch || viewEpoch !== _chatViewEpoch || currentRoom !== roomId) return;
         const aliases = resolveRoomAliases(roomId, typeof activeChatPeerId !== 'undefined' ? activeChatPeerId : null);
-        setupFastMessageChannel(client, roomId, aliases, setupEpoch, viewEpoch);
+        await client.realtime.setAuth();
 
         // Deterministic channel name (NO random Date.now()) so both users join the exact same broadcast room!
         const channelName = `chat_stream_${roomId}`;
-        activeRealtimeChannel = client.channel(channelName)
+        activeRealtimeChannel = client.channel(channelName, {config:{private:true}})
             .on('postgres_changes', {
                 event: 'INSERT',
                 schema: 'public',
@@ -113,25 +52,8 @@ async function setupRealtimeChatSubscription(roomId, viewEpoch = _chatViewEpoch)
                 schema: 'public',
                 table: 'messages'
             }, payload => handleRealtimeDelete(payload, roomId, aliases))
-            .on('broadcast', { event: 'delete_message' }, payload => {
-                const delId = payload.payload?.id;
-                if (delId) handleMessageDeleted(delId, roomId, aliases);
-            })
-            .on('broadcast', { event: 'poll_vote' }, payload => {
-                const voteData = payload.payload;
-                if (voteData && voteData.msgId) handleRemotePollVote(voteData, roomId, aliases);
-            })
-            .on('broadcast', { event: 'message_reaction' }, payload => {
-                const d = payload.payload;
-                if (d && d.msgId && d.reactions) handleRemoteReaction(d.msgId, d.reactions, roomId, aliases);
-            })
-            .on('broadcast', { event: 'pin_message' }, payload => {
-                const d = payload.payload;
-                if (d && d.msgId) handleRemotePin(d.msgId, roomId);
-            })
-            .on('broadcast', { event: 'unpin_message' }, () => {
-                handleRemoteUnpin(roomId);
-            })
+            // Message, poll and reaction changes arrive through RLS-filtered
+            // postgres_changes; untrusted broadcasts never mutate chat history.
             .on('broadcast', { event: 'typing' }, payload => handleRemoteTyping(payload.payload))
             .on('broadcast', { event: 'webrtc_signal' }, payload => handleWebRTCSignal(payload.payload));
 
@@ -499,7 +421,7 @@ function renderTypingStatusDOM() {
         if (currentRoom) {
             statusEl.innerHTML = isSelfChat
                 ? '<i class="fa-solid fa-cloud" style="font-size:10px;"></i> Personal Cloud'
-                : '<i class="fa-solid fa-shield-halved" style="font-size:10px; color:var(--online);"></i> E2EE Active';
+                : '<i class="fa-solid fa-shield-halved" style="font-size:10px; color:var(--online);"></i> HTTPS connection';
         }
         return;
     }

@@ -41,7 +41,7 @@ for insert to authenticated with check (
 grant select, insert on realtime.messages to authenticated;
 
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
-values ('chat-assets', 'chat-assets', true, 52428800, null)
+values ('chat-assets', 'chat-assets', false, 52428800, null)
 on conflict (id) do nothing;
 
 drop policy if exists "Authenticated Users Upload Chat Assets" on storage.objects;

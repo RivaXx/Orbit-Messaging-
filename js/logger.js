@@ -70,7 +70,18 @@
             const client = window.getSupabase?.();
             const sessionResult = client?.auth ? await client.auth.getSession() : null;
             const activeSession = sessionResult?.data?.session;
-            if (activeSession?.user?.id) payload.user_id = activeSession.user.id;
+            if (!activeSession?.user?.id) return;
+            payload.user_id = activeSession.user.id;
+            const redact = value => String(value || '').replace(/eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/g,'[redacted token]')
+                .replace(/(https?:\/\/[^\s?#]+)[?#][^\s]*/g,'$1[redacted parameters]');
+            payload.error_message=redact(payload.error_message);
+            payload.error_stack=redact(payload.error_stack);
+            payload.error_source=redact(payload.error_source);
+            payload.route=window.location?.pathname || '/';
+            if(payload.metadata?.context){
+                const context=payload.metadata.context;
+                payload.metadata.context={status:Number(context.status)||0,code:String(context.code||'').replace(/[^a-z0-9_-]/gi,'').slice(0,60)};
+            }
             const body = JSON.stringify(payload);
 
             const response = await fetch(SB_REST_URL, {

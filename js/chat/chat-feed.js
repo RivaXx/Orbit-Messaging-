@@ -188,7 +188,7 @@ function getTickIconHtml(msg) {
     if (!msg) return '';
     if (msg.status === 'failed' || msg.status === 'error') {
         const tempId = msg.client_temp_id || msg.id;
-        return `<span class="msg-status-tick retry-error" onclick="event.stopPropagation(); retrySendMessage('${escapeHtml(String(tempId))}')" title="Failed to send. Tap to retry" style="color:#FF453A; cursor:pointer;"><i class="fa-solid fa-circle-exclamation"></i></span>`;
+        return `<span class="msg-status-tick retry-error" onclick="event.stopPropagation(); retrySendMessage(${orbitJsString(tempId)})" title="Failed to send. Tap to retry" style="color:#FF453A; cursor:pointer;"><i class="fa-solid fa-circle-exclamation"></i></span>`;
     }
     if (msg.status === 'sending' || msg.status === 'queued') {
         const title = msg.status === 'queued' ? 'Saved on this device; waiting for connection' : 'Sending...';
@@ -388,7 +388,7 @@ function createMessageDOMNode(msg, isConsecutive = false) {
             else if (replyObj.type === 'video') snippet = '🎥 Video';
             else if (replyObj.type === 'file' || replyObj.type === 'document') snippet = '📄 Document';
             
-            const targetId = replyObj.id ? escapeHtml(String(replyObj.id)) : '';
+            const targetId = /^[a-z0-9_-]+$/i.test(String(replyObj.id || '')) ? String(replyObj.id) : '';
             replyHtml = `
                 <div class="quoted-reply-box" onclick="scrollToMessage('${targetId}')" title="Click to view original message">
                     <div class="quoted-reply-sender">
@@ -421,7 +421,7 @@ function createMessageDOMNode(msg, isConsecutive = false) {
                     } catch(e) {}
                 }
                 const rawUrl = att.url || att.publicUrl || att.storage_path || att.path || (typeof att === 'string' ? att : '');
-                const cleanUrl = att.view_once && att.storage_bucket==='orbit-view-once' ? rawUrl : formatMediaUrl(rawUrl);
+                const cleanUrl = formatMediaUrl(rawUrl);
                 if (!cleanUrl) return;
 
                 const cleanUrlNoQuery = cleanUrl.split('?')[0].split('#')[0];
@@ -477,11 +477,11 @@ function createMessageDOMNode(msg, isConsecutive = false) {
                 trimmedText.startsWith('data:audio');
 
             if (isDirectImageUrl) {
-                images.push({ url: trimmedText, name: 'Photo.jpg' });
+                images.push({ url: formatMediaUrl(trimmedText), name: 'Photo.jpg' });
             } else if (isDirectVideoUrl) {
-                files.push({ url: trimmedText, name: 'Video.mp4', isVideo: true, isAudio: false, type: 'video' });
+                files.push({ url: formatMediaUrl(trimmedText), name: 'Video.mp4', isVideo: true, isAudio: false, type: 'video' });
             } else if (isDirectAudioUrl) {
-                files.push({ url: trimmedText, name: 'Voice Note.webm', isVideo: false, isAudio: true, type: 'audio' });
+                files.push({ url: formatMediaUrl(trimmedText), name: 'Voice Note.webm', isVideo: false, isAudio: true, type: 'audio' });
             }
         }
 
@@ -630,11 +630,11 @@ function createMessageDOMNode(msg, isConsecutive = false) {
                         <div class="file-icon-box" style="background:rgba(127,87,255,0.2); color:#7F57FF; width:36px; height:36px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:18px;">
                             <i class="fa-solid fa-file-lines"></i>
                         </div>
-                        <div style="flex:1; overflow:hidden; cursor:pointer;" onclick="handleDocumentFilePreview('${f.url}', '${escapeHtml(f.name)}')">
+                        <div style="flex:1; overflow:hidden; cursor:pointer;" onclick="handleDocumentFilePreview(${orbitJsString(f.url)}, ${orbitJsString(f.name)})">
                             <div style="font-size:13px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHtml(f.name)}</div>
                             <div class="file-detail">${escapeHtml([typeof formatFileSize === 'function' ? formatFileSize(f.size) : '', (f.name.split('.').pop() || 'File').toUpperCase()].filter(Boolean).join(' · '))}</div>
                         </div>
-                        <button class="btn-reset touch-fix" style="color:var(--accent); font-size:16px; padding:6px;" onclick="downloadFile('${f.url}', '${escapeHtml(f.name)}')" title="Download with original filename">
+                        <button class="btn-reset touch-fix" style="color:var(--accent); font-size:16px; padding:6px;" onclick="downloadFile(${orbitJsString(f.url)}, ${orbitJsString(f.name)})" title="Download with original filename">
                             <i class="fa-solid fa-download"></i>
                         </button>
                     </div>
@@ -788,7 +788,7 @@ function createMessageDOMNode(msg, isConsecutive = false) {
                                 <div style="font-size:11.5px; color:var(--text-secondary);">${escapeHtml(contactDetail)}</div>
                             </div>
                         </div>
-                        <button type="button" class="contact-card-btn touch-fix" onclick="startDirectChatWithContact('${escapeHtml(contactInfo.username || contactName)}')">
+                        <button type="button" class="contact-card-btn touch-fix" onclick="startDirectChatWithContact(${orbitJsString(contactInfo.username || contactName)})">
                             <i class="fa-solid fa-comment-dots" style="margin-right:4px;"></i> Message
                         </button>
                     </div>
@@ -1392,7 +1392,9 @@ function getMessageReactionsMap(msg) {
         try { raw = JSON.parse(raw); } catch(e) { raw = null; }
     }
     if (raw && raw.reactions && typeof raw.reactions === 'object') {
-        return raw.reactions;
+        return Object.fromEntries(Object.entries(raw.reactions).filter(([emoji,uids]) =>
+            /^[\p{Extended_Pictographic}\p{Emoji_Component}\u200d\ufe0f]+$/u.test(emoji) && emoji.length<=32 && Array.isArray(uids)
+        ).map(([emoji,uids])=>[emoji,uids.filter(uid=>/^[0-9a-f-]{36}$/i.test(String(uid)))]));
     }
     return {};
 }
@@ -1892,14 +1894,8 @@ async function toggleMessageReaction(msgId, emoji) {
     // Persist to Supabase with column fallback
     try {
         const client = await ensureSupabase();
-        const { error } = await client.from('messages')
-            .update({ reply_to: replyObj })
-            .eq('id', msgId);
-        if (error) {
-            await client.from('messages')
-                .update({ metadata: { reactions: replyObj.reactions } })
-                .eq('id', msgId);
-        }
+        const { error } = await client.rpc('orbit_security_react', {message_key:msgId,emoji});
+        if (error) throw error;
     } catch(e) {
         console.warn('[Orbit] toggleReaction error:', e);
     }

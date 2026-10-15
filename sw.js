@@ -1,45 +1,45 @@
 // Orbit Messenger — messaging delivery and storage policy repair
-const CACHE_NAME = 'orbit-brand-theme-20261015-sw6';
+const CACHE_NAME = 'orbit-security-20261015-sw7';
 const PRECACHE_URLS = [
-    "./photo-weather.css?v=brand-theme-20261015-r6",
-    "./js/orbit-private-photos.js?v=brand-theme-20261015-r6",
-    "./js/orbit-banner-weather.js?v=brand-theme-20261015-r6",
-    "./chat-upgrades.css?v=brand-theme-20261015-r6",
-    "./js/orbit-chat-services.js?v=brand-theme-20261015-r6",
-    "./js/orbit-media-editor.js?v=brand-theme-20261015-r6",
-    "./js/messaging-notifications.js?v=brand-theme-20261015-r6",
+    "./photo-weather.css?v=security-20261015-r7",
+    "./js/orbit-private-photos.js?v=security-20261015-r7",
+    "./js/orbit-banner-weather.js?v=security-20261015-r7",
+    "./chat-upgrades.css?v=security-20261015-r7",
+    "./js/orbit-chat-services.js?v=security-20261015-r7",
+    "./js/orbit-media-editor.js?v=security-20261015-r7",
+    "./js/messaging-notifications.js?v=security-20261015-r7",
     "./",
     "./index.html",
     "./manifest.json",
     "./orbit-icon.svg",
     "./orbit-icon.svg?v=brand-20261015",
     "./assets/vendor/tus.min.js",
-    "./js/logger.js?v=authenticated-20261011",
+    "./js/logger.js?v=security-20261015-r7",
     "./assets/vendor/supabase.min.js?v=2.117.3",
-    "./style.css?v=brand-theme-20261015-r6",
+    "./style.css?v=security-20261015-r7",
     "./tools.css",
-    "./js/config.js?v=brand-theme-20261015-r6",
-    "./js/rooms.js?v=brand-theme-20261015-r6",
+    "./js/config.js?v=security-20261015-r7",
+    "./js/rooms.js?v=security-20261015-r7",
     "./js/chat-actions.js",
-    "./js/actions/media-lightbox.js?v=brand-theme-20261015-r6",
-    "./js/actions/media-preview.js?v=brand-theme-20261015-r6",
-    "./js/actions/file-viewer.js?v=brand-theme-20261015-r6",
+    "./js/actions/media-lightbox.js?v=security-20261015-r7",
+    "./js/actions/media-preview.js?v=security-20261015-r7",
+    "./js/actions/file-viewer.js?v=security-20261015-r7",
     "./js/actions/voice-recorder.js",
-    "./js/actions/chat-extras.js?v=brand-theme-20261015-r6",
+    "./js/actions/chat-extras.js?v=security-20261015-r7",
     "./js/chat-gestures.js",
     "./js/chat-select.js",
-    "./js/chat-share.js?v=brand-theme-20261015-r6",
-    "./js/chat/chat-history.js?v=brand-theme-20261015-r6",
-    "./js/chat/chat-feed.js?v=brand-theme-20261015-r6",
-    "./js/chat/chat-dispatcher.js?v=brand-theme-20261015-r6",
-    "./js/chat/chat-realtime.js?v=brand-theme-20261015-r6",
+    "./js/chat-share.js?v=security-20261015-r7",
+    "./js/chat/chat-history.js?v=security-20261015-r7",
+    "./js/chat/chat-feed.js?v=security-20261015-r7",
+    "./js/chat/chat-dispatcher.js?v=security-20261015-r7",
+    "./js/chat/chat-realtime.js?v=security-20261015-r7",
     "./js/chat.js",
     "./js/calculator.js",
     "./js/tools.js",
     "./js/celestial.js",
-    "./js/ui/ui-auth.js?v=brand-theme-20261015-r6",
-    "./js/ui/ui-navigation.js?v=brand-theme-20261015-r6",
-    "./js/ui/ui-modals.js?v=brand-theme-20261015-r6",
+    "./js/ui/ui-auth.js?v=security-20261015-r7",
+    "./js/ui/ui-navigation.js?v=security-20261015-r7",
+    "./js/ui/ui-modals.js?v=security-20261015-r7",
     "./js/ui/ui-notifications.js",
     "./js/ui.js",
     "./js/liquid-glass.js?v=5"
@@ -71,7 +71,7 @@ self.addEventListener('fetch', event => {
     const local = url.origin === self.location.origin;
     const navigation = local && (request.mode === 'navigate' || url.pathname.endsWith('.html'));
     const shellAsset = local && /\.(js|css|json|svg|woff2?)$/i.test(url.pathname);
-    const library = ['cdn.jsdelivr.net', 'cdnjs.cloudflare.com', 'fonts.googleapis.com', 'fonts.gstatic.com'].includes(url.hostname);
+    const library = ['cdn.jsdelivr.net', 'cdnjs.cloudflare.com', 'cdn.sheetjs.com', 'fonts.googleapis.com', 'fonts.gstatic.com'].includes(url.hostname);
     if (!navigation && !shellAsset && !library) return;
     event.respondWith((async () => {
         const cache = await caches.open(CACHE_NAME);
