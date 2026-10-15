@@ -1,4 +1,171 @@
 // Orbit Messenger — messaging delivery and storage policy repair
+const CACHE_NAME = 'orbit-security-20261015-sw7';
+const PRECACHE_URLS = [
+    "./photo-weather.css?v=security-20261015-r7",
+    "./js/orbit-private-photos.js?v=security-20261015-r7",
+    "./js/orbit-banner-weather.js?v=security-20261015-r7",
+    "./chat-upgrades.css?v=security-20261015-r7",
+    "./js/orbit-chat-services.js?v=security-20261015-r7",
+    "./js/orbit-media-editor.js?v=security-20261015-r7",
+    "./js/messaging-notifications.js?v=security-20261015-r7",
+    "./",
+    "./index.html",
+    "./manifest.json",
+    "./orbit-icon.svg",
+    "./orbit-icon.svg?v=brand-20261015",
+    "./assets/vendor/tus.min.js",
+    "./js/logger.js?v=security-20261015-r7",
+    "./assets/vendor/supabase.min.js?v=2.117.3",
+    "./style.css?v=security-20261015-r7",
+    "./tools.css",
+    "./js/config.js?v=security-20261015-r7",
+    "./js/rooms.js?v=security-20261015-r7",
+    "./js/chat-actions.js",
+    "./js/actions/media-lightbox.js?v=security-20261015-r7",
+    "./js/actions/media-preview.js?v=security-20261015-r7",
+    "./js/actions/file-viewer.js?v=security-20261015-r7",
+    "./js/actions/voice-recorder.js",
+    "./js/actions/chat-extras.js?v=security-20261015-r7",
+    "./js/chat-gestures.js",
+    "./js/chat-select.js",
+    "./js/chat-share.js?v=security-20261015-r7",
+    "./js/chat/chat-history.js?v=security-20261015-r7",
+    "./js/chat/chat-feed.js?v=security-20261015-r7",
+    "./js/chat/chat-dispatcher.js?v=security-20261015-r7",
+    "./js/chat/chat-realtime.js?v=security-20261015-r7",
+    "./js/chat.js",
+    "./js/calculator.js",
+    "./js/tools.js",
+    "./js/celestial.js",
+    "./js/ui/ui-auth.js?v=security-20261015-r7",
+    "./js/ui/ui-navigation.js?v=security-20261015-r7",
+    "./js/ui/ui-modals.js?v=security-20261015-r7",
+    "./js/ui/ui-notifications.js",
+    "./js/ui.js",
+    "./js/liquid-glass.js?v=5"
+];
+
+self.addEventListener('install', event => {
+    event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(PRECACHE_URLS)).then(() => self.skipWaiting()));
+});
+
+self.addEventListener('activate', event => {
+    event.waitUntil(
+        Promise.all([
+            self.clients.claim(),
+            caches.keys().then(keys => {
+                return Promise.all(
+                    keys.filter(k => k.startsWith('orbit-') && k !== CACHE_NAME).map(k => caches.delete(k))
+                );
+            })
+        ])
+    );
+});
+
+// Cache only application code, styles and library assets. Authenticated API
+// requests and private chat media always go directly to the network.
+self.addEventListener('fetch', event => {
+    const request = event.request;
+    if (request.method !== 'GET') return;
+    const url = new URL(request.url);
+    const local = url.origin === self.location.origin;
+    const navigation = local && (request.mode === 'navigate' || url.pathname.endsWith('.html'));
+    const shellAsset = local && /\.(js|css|json|svg|woff2?)$/i.test(url.pathname);
+    const library = ['cdn.jsdelivr.net', 'cdnjs.cloudflare.com', 'cdn.sheetjs.com', 'fonts.googleapis.com', 'fonts.gstatic.com'].includes(url.hostname);
+    if (!navigation && !shellAsset && !library) return;
+    event.respondWith((async () => {
+        const cache = await caches.open(CACHE_NAME);
+        const cached = await cache.match(request) || (navigation ? await cache.match('./index.html') : null);
+        const network = fetch(request).then(response => {
+            if (response.ok || response.type === 'opaque') {
+                event.waitUntil(cache.put(request, response.clone()).catch(() => {}));
+            }
+            return response;
+        });
+        event.waitUntil(network.catch(() => {}));
+        if (cached && !navigation) return cached;
+        if (cached && !self.navigator.onLine) return cached;
+        if (cached) return network.catch(() => cached);
+        return network.catch(() => new Response('Offline. Open Orbit once while connected to save this app on your device.', { status: 503 }));
+    })());
+});
+
+// Handle incoming Web Push
+self.addEventListener('push', event => {
+    let data = {};
+    try {
+        data = event.data ? event.data.json() : {};
+    } catch (_) {
+        data = { title: 'Orbit Messenger', body: event.data ? event.data.text() : 'New notification' };
+    }
+
+    const title = data.title || 'Orbit Messenger';
+    const options = {
+        body: data.body || 'You have a new message',
+        icon: data.icon || './orbit-icon.svg',
+        badge: './orbit-icon.svg',
+        tag: data.tag || `orbit-${Date.now()}`,
+        renotify: false,
+        vibrate: [200, 100, 200],
+        silent: false,
+        data: {
+            url: self.registration.scope,
+            roomId: data.roomId || null,
+            msgId: data.msgId || null,
+            timestamp: data.timestamp || Date.now()
+        },
+        actions: [
+            { action: 'open', title: 'Open Chat' },
+            { action: 'dismiss', title: 'Dismiss' }
+        ]
+    };
+
+    event.waitUntil((async () => {
+        const clients = await self.clients.matchAll({type:'window',includeUncontrolled:true});
+        const states = await Promise.all(clients.map(client => new Promise(resolve => {
+            const channel = new MessageChannel();
+            const timer = setTimeout(() => {channel.port1.close(); resolve(false);}, 500);
+            channel.port1.onmessage = reply => {clearTimeout(timer);channel.port1.close();resolve(reply.data?.active === true);};
+            client.postMessage({type:'ORBIT_PUSH_VISIBLE_QUERY',roomId:data.roomId},[channel.port2]);
+        })));
+        if (!states.some(Boolean)) await self.registration.showNotification(title, options);
+    })());
+});
+
+// Handle notification click -> Open app, open exact room, and focus the specific message with ms timestamp
+self.addEventListener('notificationclick', event => {
+    event.notification.close();
+    if (event.action === 'dismiss') return;
+
+    const notifData = event.notification.data || {};
+    const baseTarget = notifData.url || self.registration.scope;
+    const targetUrl = new URL(baseTarget, self.location.origin);
+    if (notifData.roomId) targetUrl.searchParams.set('openRoom', notifData.roomId);
+    if (notifData.msgId) targetUrl.searchParams.set('focusMsg', notifData.msgId);
+    if (notifData.timestamp) targetUrl.searchParams.set('msgTime', notifData.timestamp);
+
+    event.waitUntil(
+        self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clientList => {
+            for (const client of clientList) {
+                if (new URL(client.url).origin === self.location.origin) {
+                    if ('focus' in client) {
+                        client.postMessage({
+                            type: 'NOTIFICATION_NAVIGATE',
+                            roomId: notifData.roomId,
+                            msgId: notifData.msgId,
+                            timestamp: notifData.timestamp
+                        });
+                        return client.focus();
+                    }
+                }
+            }
+            if (self.clients.openWindow) {
+                return self.clients.openWindow(targetUrl.href);
+            }
+        })
+    );
+});
+// Orbit Messenger — messaging delivery and storage policy repair
 const CACHE_NAME = 'orbit-brand-theme-20261015-sw6';
 const PRECACHE_URLS = [
     "./photo-weather.css?v=brand-theme-20261015-r6",
