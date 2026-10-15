@@ -39,6 +39,18 @@ test('accent applies to root and body and survives startup',()=>{
     restored.context.initTheme();
     assert.equal(restored.document.body.style.getPropertyValue('--accent'),'#00E676');
 });
+test('accent foreground and theme-specific ink stay readable across the palette',()=>{
+    const {context,document}=uiContext();
+    const lum=hex=>[1,3,5].map(i=>parseInt(hex.slice(i,i+2),16)/255).map(v=>v<=.04045?v/12.92:((v+.055)/1.055)**2.4).reduce((sum,v,i)=>sum+v*[.2126,.7152,.0722][i],0);
+    const ratio=(a,b)=>(Math.max(lum(a),lum(b))+.05)/(Math.min(lum(a),lum(b))+.05);
+    for(const color of ['#FFD700','#ae43df','#000000','#ffffff','#007aff','#ff3b30','#00E676']) {
+        context.setLiquidAccent(color,true);
+        const style=document.body.style;
+        assert.ok(ratio(color,style.getPropertyValue('--accent-on'))>=4.5,color+' button ink');
+        assert.ok(ratio('#0e141e',style.getPropertyValue('--accent-ink-dark'))>=4.5,color+' dark text');
+        assert.ok(ratio('#f5f9ff',style.getPropertyValue('--accent-ink-light'))>=4.5,color+' light text');
+    }
+});
 test('manual glass sliders override preset and retain zero after reload',()=>{
     const {context,store}=uiContext();
     context.setLiquidBlur('ultra');
