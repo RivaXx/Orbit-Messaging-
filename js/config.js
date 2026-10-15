@@ -174,7 +174,7 @@ async function ensureCompactAuthSession(client, session) {
 }
 window.ensureCompactAuthSession = ensureCompactAuthSession;
 
-const ADMIN_EMAILS = ['rivaldo.a.rodrigues@gmail.com', 'rivacolony@gmail.com'];
+const ADMIN_EMAILS = ['rivaldo.a.rodrigues@gmail.com'];
 const ADMIN_EMAIL = 'rivaldo.a.rodrigues@gmail.com'; // legacy fallback
 
 // State Store
@@ -344,7 +344,7 @@ window.deduplicateAndSort = deduplicateAndSort;
 
 function isAdmin() {
     if (!currentUser || !currentUser.email) return false;
-    const userEmail = currentUser.email.toLowerCase();
+    const userEmail = currentUser.email.trim().toLowerCase();
     return ADMIN_EMAILS.some(adm => adm.toLowerCase() === userEmail);
 }
 
@@ -397,18 +397,12 @@ function updateUserHeaderUI() {
     const av = document.getElementById('dash-av');
     if (userProfile?.dp_url) {
         av.innerHTML = `<img src="${formatMediaUrl(userProfile.dp_url)}" alt="Avatar">`;
-        av.title = 'View profile photo';
-        av.style.cursor = 'zoom-in';
-        av.onclick = event => {
-            event.stopPropagation();
-            if (typeof previewUserDp === 'function') previewUserDp(userProfile.dp_url, name);
-        };
     } else {
         av.innerText = name[0].toUpperCase();
-        av.title = '';
-        av.style.cursor = '';
-        av.onclick = null;
     }
+    av.title = 'Open profile';
+    av.style.cursor = 'pointer';
+    av.onclick = event => { event.stopPropagation(); openProfileScreen(); };
 }
 
 function formatSmartOnlineText(otherCount) {

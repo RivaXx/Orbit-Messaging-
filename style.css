@@ -6397,3 +6397,40 @@ body.light-mode .admin-storage-card { background:linear-gradient(145deg,rgba(194
     .admin-panel-mark { width:40px; height:40px; flex-basis:40px; border-radius:13px; }
     .admin-panel-heading h2 { font-size:18px; }
 }
+
+/* Keep account controls and their menu above the weather button's stacking context. */
+.dash-header .header-actions { z-index: 3; }
+.dash-header .glass-dropdown { z-index: 101; }
+.dash-logo-wrap svg [stroke="#FFD700"] { stroke: var(--accent); }
+.dash-logo-wrap svg [fill="#FFD700"] { fill: var(--accent); }
+.liquid-glass-pod { touch-action: pan-y; user-select: none; }
+.liquid-glass-pod.pod-dragging { transition: none; cursor: grabbing; outline: 2px solid var(--accent); }
+.liquid-glass-pod.dock-bottom { width: min(440px, calc(100vw - 72px)); box-sizing: border-box; }
+.liquid-glass-pod.dock-top { width: min(440px, calc(100% - 72px)); box-sizing: border-box; }
+.liquid-glass-pod.dock-top { margin-left: var(--pod-left, 14px); margin-right: 0; }
+.liquid-glass-pod.dock-bottom { left: var(--pod-left, 50%); }
+
+/* Actual background displacement, composed before blur. Never filter text. */
+:root { --liquid-surface-blur:4px; --liquid-tint-alpha:.26; --liquid-highlight-alpha:.285; --liquid-refraction-filter:; }
+body :is(.dash-header,.liquid-glass-pod,.chat-nav-bar,.input-glass-pill,.orbit-liquid-preview-lens) {
+    backdrop-filter: var(--liquid-refraction-filter) blur(var(--liquid-surface-blur)) saturate(155%) !important;
+    -webkit-backdrop-filter: var(--liquid-refraction-filter) blur(var(--liquid-surface-blur)) saturate(155%) !important;
+    background: linear-gradient(135deg,rgba(255,255,255,.12),rgba(255,255,255,.025) 45%,rgba(255,255,255,.08)),rgba(14,20,30,var(--liquid-tint-alpha)) !important;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,var(--liquid-highlight-alpha)),inset 0 -1px 0 rgba(255,255,255,.10),0 10px 30px rgba(0,0,0,.18);
+}
+body.light-mode :is(.dash-header,.liquid-glass-pod,.chat-nav-bar,.input-glass-pill,.orbit-liquid-preview-lens) {
+    background: linear-gradient(135deg,rgba(255,255,255,.25),rgba(255,255,255,.08)),rgba(245,249,255,var(--liquid-tint-alpha)) !important;
+}
+body.orbit-glass-fast :is(.dash-header,.liquid-glass-pod,.chat-nav-bar,.input-glass-pill,.orbit-liquid-preview-lens) {
+    backdrop-filter:none!important; -webkit-backdrop-filter:none!important;
+}
+.orbit-liquid-preview { position:relative; height:136px; margin:0 0 15px; border:1px solid var(--glass-border); border-radius:20px; overflow:hidden; background:#081926; }
+.orbit-liquid-preview-pattern { position:absolute; inset:-20px; background:repeating-linear-gradient(103deg,transparent 0 18px,#65dbd9aa 19px 22px,transparent 23px 38px),repeating-linear-gradient(13deg,#12304b 0 24px,#80b9df 25px 28px,#112b44 29px 50px); }
+.orbit-liquid-preview-lens { position:absolute; inset:25px 12%; display:flex; align-items:center; justify-content:center; gap:12px; border:1px solid #ffffff50; border-radius:28px; color:#fff; }
+.orbit-liquid-preview-lens > i { font-size:25px; color:#baf6ff; }
+.orbit-liquid-preview-lens > span { font-size:16px; font-weight:800; }
+.orbit-liquid-preview-lens small { display:block; margin-top:4px; font-size:10px; font-weight:500; }
+@media (prefers-reduced-transparency: reduce) {
+    body :is(.dash-header,.liquid-glass-pod,.chat-nav-bar,.input-glass-pill,.orbit-liquid-preview-lens) { background:#17212e!important; backdrop-filter:none!important; }
+    body.light-mode :is(.dash-header,.liquid-glass-pod,.chat-nav-bar,.input-glass-pill,.orbit-liquid-preview-lens) { background:#f4f7fb!important; }
+}

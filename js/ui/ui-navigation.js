@@ -26,6 +26,7 @@ async function _prewarmRecentMessages() {
 }
 
 async function launchApp() {
+    if (typeof syncOrbitCleanupWatermark === 'function') syncOrbitCleanupWatermark().catch(() => {});
     initOrbitWeather().catch(()=>{});
     initOrbitChatServices().catch(error=>console.warn('[Orbit Services]',error.message));
     if (typeof enableOrbitBackgroundPush === 'function' && notificationPreference('orbit_device_notifications', true)) enableOrbitBackgroundPush();
@@ -111,15 +112,12 @@ async function launchApp() {
         const btnInactive = document.getElementById('btn-settings-inactive');
         if (btnInactive) btnInactive.classList.remove('hide');
         
-        const autoCleanChk = document.getElementById('chk-auto-storage-clean');
-        const autoCleanEnabled = typeof isAutoStorageCleanEnabled !== 'undefined' && isAutoStorageCleanEnabled === true;
-        if (autoCleanChk) autoCleanChk.checked = autoCleanEnabled;
-        
+        loadOrbitCleanupSettings();
         setTimeout(() => { if (!isOrbitSlowConnection() && !currentRoom && typeof scanForInactiveAccounts === 'function') scanForInactiveAccounts(); }, 10000);
-        if (autoCleanEnabled && storageToolsAvailable) {
-            setTimeout(() => { if (!isOrbitSlowConnection() && !currentRoom) adminCleanOldNonAdminMedia(); }, 15000);
-        }
     }
+    document.getElementById('admin-menu-item')?.classList.toggle('hide', !isPrimaryAdmin());
+    document.getElementById('admin-storage-section')?.classList.toggle('hide', !isPrimaryAdmin());
+    document.getElementById('btn-settings-inactive')?.classList.toggle('hide', !isPrimaryAdmin());
     updateAdminTabVisibility();
 }
 
@@ -699,11 +697,86 @@ function togglePodDockPosition(pos) {
         if (rTop) rTop.checked = true;
     }
     try { localStorage.setItem('orbit_pref_pod_dock', targetPos); } catch(e) {}
+    applyOrbitPodPosition();
     setTimeout(() => updateLiquidPodThumb(), 60);
 }
 window.togglePodDockPosition = togglePodDockPosition;
 
 let liquidPodInitialized = false;
+function applyOrbitPodPosition(fraction) {
+    const pod = document.getElementById('dash-tabs-wrapper');
+    if (!pod) return;
+    const dock = pod.classList.contains('dock-bottom') ? 'bottom' : 'top';
+    const saved = Number(localStorage.getItem(`orbit_pod_horizontal_${dock}`) ?? 0.5);
+    const ratio = Math.max(0, Math.min(1, Number.isFinite(fraction) ? fraction : saved));
+    const width = pod.getBoundingClientRect().width;
+    const available = dock === 'bottom' ? window.innerWidth : pod.parentElement.clientWidth;
+    const left = 14 + Math.max(0, available - width - 28) * ratio;
+    pod.style.setProperty('--pod-left', `${dock === 'bottom' ? left + width / 2 : left}px`);
+    return ratio;
+}
+
+function initOrbitPodDrag() {
+    const pod = document.getElementById('dash-tabs-wrapper');
+    if (!pod) return;
+    let hold = null, state = null, suppressClickUntil = 0;
+    pod.title = 'Hold for half a second, then drag left or right to place navigation';
+    applyOrbitPodPosition();
+    pod.addEventListener('pointerdown', event => {
+        if (event.button !== 0 || state) return;
+        state = {id:event.pointerId, x:event.clientX, y:event.clientY, dragging:false, scroll:pod.scrollLeft, ratio:applyOrbitPodPosition()};
+        hold = setTimeout(() => {
+            if (!state) return;
+            state.dragging = true;
+            state.startLeft = pod.getBoundingClientRect().left;
+            pod.setPointerCapture(state.id);
+            pod.classList.add('pod-dragging');
+            navigator.vibrate?.(20);
+        }, 500);
+    });
+    pod.addEventListener('pointermove', event => {
+        if (!state || event.pointerId !== state.id) return;
+        const dx = event.clientX - state.x;
+        if (!state.dragging) {
+            if (Math.hypot(dx, event.clientY - state.y) > 8) {
+                clearTimeout(hold);
+                pod.scrollLeft = state.scroll - dx;
+                suppressClickUntil = Date.now() + 400;
+            }
+            return;
+        }
+        event.preventDefault();
+        const bottom = pod.classList.contains('dock-bottom');
+        const origin = bottom ? 0 : pod.parentElement.getBoundingClientRect().left;
+        const available = bottom ? window.innerWidth : pod.parentElement.clientWidth;
+        const range = Math.max(0, available - pod.getBoundingClientRect().width - 28);
+        state.ratio = applyOrbitPodPosition(range ? (state.startLeft + dx - origin - 14) / range : 0.5);
+    });
+    function release(event) {
+        if (!state || event.pointerId !== state.id) return;
+        clearTimeout(hold);
+        if (state.dragging) {
+            suppressClickUntil = Date.now() + 500;
+            const dock = pod.classList.contains('dock-bottom') ? 'bottom' : 'top';
+            if (event.type !== 'pointercancel') localStorage.setItem(`orbit_pod_horizontal_${dock}`, String(state.ratio ?? 0.5));
+            else applyOrbitPodPosition();
+        }
+        const id = state.id;
+        state = null;
+        pod.classList.remove('pod-dragging');
+        if (pod.hasPointerCapture(id)) pod.releasePointerCapture(id);
+        updateLiquidPodThumb();
+    }
+    ['pointerup','pointercancel','lostpointercapture'].forEach(type => pod.addEventListener(type, release));
+    pod.addEventListener('pointerleave', () => {
+        if (state && !state.dragging) { clearTimeout(hold); state = null; }
+    });
+    pod.addEventListener('click', event => {
+        if (Date.now() < suppressClickUntil) { event.preventDefault(); event.stopImmediatePropagation(); }
+    }, true);
+    pod.addEventListener('contextmenu', event => event.preventDefault());
+    if (window.ResizeObserver) new ResizeObserver(() => applyOrbitPodPosition()).observe(pod);
+}
 function initLiquidPod() {
     if (liquidPodInitialized) { updateLiquidPodThumb(); return; }
     liquidPodInitialized = true;
@@ -714,7 +787,9 @@ function initLiquidPod() {
         }
     } catch(e) {}
 
+    initOrbitPodDrag();
     window.addEventListener('resize', () => {
+        applyOrbitPodPosition();
         requestAnimationFrame(() => updateLiquidPodThumb());
     });
 

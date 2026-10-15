@@ -454,6 +454,8 @@ async function fetchFreshRoomMessages(roomId, peerUserId = activeChatPeerId, vie
     try {
         const client = await ensureSupabase();
         if (!isCurrent()) return;
+        if (typeof syncOrbitCleanupWatermark === 'function') await syncOrbitCleanupWatermark();
+        if (!isCurrent()) return;
         const data = await queryRoomHistoryPage(client, aliases, null, controller.signal);
         if (!isCurrent()) return;
         const fresh = filterRoomHistory(data, aliases, peerUserId, selfId);
