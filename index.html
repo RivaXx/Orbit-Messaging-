@@ -33,10 +33,10 @@
     <script src="assets/vendor/supabase.min.js?v=2.117.3"></script>
     <!-- Document, crop and resumable upload tools load only when needed. -->
 
-    <link rel="stylesheet" href="style.css?v=media-weather-20261015-r4">
+    <link rel="stylesheet" href="style.css?v=news-profile-20261015-r5">
     <link rel="stylesheet" href="tools.css">
-<link rel="stylesheet" href="chat-upgrades.css?v=media-weather-20261015-r4">
-<link rel="stylesheet" href="photo-weather.css?v=media-weather-20261015-r4">
+<link rel="stylesheet" href="chat-upgrades.css?v=news-profile-20261015-r5">
+<link rel="stylesheet" href="photo-weather.css?v=news-profile-20261015-r5">
 </head>
 <body>
 
@@ -503,6 +503,9 @@
                 <button class="news-filter-chip active touch-fix" onclick="filterNewsCategory('global', this)">🌍 Global Top 10</button>
                 <button class="news-filter-chip touch-fix" onclick="filterNewsCategory('india', this)">🇮🇳 India Top 10</button>
                 <button class="news-filter-chip touch-fix" onclick="filterNewsCategory('tech', this)">🚀 Tech & AI</button>
+                <button class="news-filter-chip touch-fix" onclick="filterNewsCategory('finance', this)">📈 Finance</button>
+                <button class="news-filter-chip touch-fix" onclick="filterNewsCategory('entertainment', this)">🎬 Entertainment</button>
+                <button class="news-filter-chip touch-fix" onclick="filterNewsCategory('sports', this)">⚽ Sports</button>
             </div>
             <div id="news-feed-list" style="display:flex; flex-direction:column; gap:8px;"></div>
         </div>
@@ -1487,7 +1490,7 @@
                 </div>
             </div>
 
-            <div class="settings-card-group orbit-glass-controls"><div><label for="glass-quality">Rendering quality</label><select id="glass-quality" class="glass-input" onchange="setOrbitGlassQuality(this.value)"><option value="balanced">Balanced · smooth scrolling</option><option value="full">Full effects · more GPU use</option><option value="fast">Battery saver · light blur</option></select><p class="settings-subtext">Balanced keeps water static and simplifies glass while scrolling. Full effects adds animated ripples. Every mode keeps your appearance settings.</p></div><div><label for="glass-speed">Ripple speed · 0 freezes motion</label><output id="glass-speed-value" for="glass-speed">50%</output><input class="glass-slider" type="range" id="glass-speed" min="0" max="100" value="50" oninput="setOrbitGlassControl('speed', this.value)"></div><div><label for="glass-saturation">Color saturation</label><output id="glass-saturation-value" for="glass-saturation">155%</output><input class="glass-slider" type="range" id="glass-saturation" min="0" max="200" value="155" oninput="setOrbitGlassControl('saturation', this.value)"></div><div><label for="glass-highlight">Glass edge highlights</label><output id="glass-highlight-value" for="glass-highlight">55%</output><input class="glass-slider" type="range" id="glass-highlight" min="0" max="100" value="55" oninput="setOrbitGlassControl('highlight', this.value)"></div><button type="button" class="news-filter-chip touch-fix" onclick="resetOrbitGlassControls()">Reset glass controls</button></div>
+            <div class="settings-card-group orbit-glass-controls"><div><label for="glass-quality">Rendering quality</label><select id="glass-quality" class="glass-input" onchange="setOrbitGlassQuality(this.value)"><option value="balanced">Balanced · smooth scrolling</option><option value="full">Full effects · more GPU use</option><option value="fast">Battery saver · light blur</option></select><p class="settings-subtext">Balanced keeps stable water refraction with lighter nested cards; scrolling never switches the glass off. Full effects adds animated ripples. Every mode keeps your appearance settings.</p></div><div><label for="glass-speed">Ripple speed · 0 freezes motion</label><output id="glass-speed-value" for="glass-speed">50%</output><input class="glass-slider" type="range" id="glass-speed" min="0" max="100" value="50" oninput="setOrbitGlassControl('speed', this.value)"></div><div><label for="glass-saturation">Color saturation</label><output id="glass-saturation-value" for="glass-saturation">155%</output><input class="glass-slider" type="range" id="glass-saturation" min="0" max="200" value="155" oninput="setOrbitGlassControl('saturation', this.value)"></div><div><label for="glass-highlight">Glass edge highlights</label><output id="glass-highlight-value" for="glass-highlight">55%</output><input class="glass-slider" type="range" id="glass-highlight" min="0" max="100" value="55" oninput="setOrbitGlassControl('highlight', this.value)"></div><button type="button" class="news-filter-chip touch-fix" onclick="resetOrbitGlassControls()">Reset glass controls</button></div>
             <!-- Accent Palette -->
             <div class="settings-section-title"><span>ACCENT PALETTE</span></div>
             <div style="display:flex; gap:10px; margin-bottom:18px;">
@@ -2572,29 +2575,29 @@
     <div id="simple-toast" class="simple-toast">Notification</div>
 </div>
 
-<script src="js/config.js?v=media-weather-20261015-r4"></script>
-<script src="js/rooms.js?v=media-weather-20261015-r4"></script>
+<script src="js/config.js?v=news-profile-20261015-r5"></script>
+<script src="js/rooms.js?v=news-profile-20261015-r5"></script>
     <script src="js/chat-actions.js"></script>
-    <script src="js/actions/media-lightbox.js?v=media-weather-20261015-r4"></script>
-    <script src="js/actions/media-preview.js?v=media-weather-20261015-r4"></script>
-    <script src="js/actions/file-viewer.js?v=media-weather-20261015-r4"></script>
+    <script src="js/actions/media-lightbox.js?v=news-profile-20261015-r5"></script>
+    <script src="js/actions/media-preview.js?v=news-profile-20261015-r5"></script>
+    <script src="js/actions/file-viewer.js?v=news-profile-20261015-r5"></script>
     <script src="js/actions/voice-recorder.js"></script>
-    <script src="js/actions/chat-extras.js?v=media-weather-20261015-r4"></script>
-    <script src="js/messaging-notifications.js?v=media-weather-20261015-r4"></script>
+    <script src="js/actions/chat-extras.js?v=news-profile-20261015-r5"></script>
+    <script src="js/messaging-notifications.js?v=news-profile-20261015-r5"></script>
     <script src="js/chat-gestures.js"></script>
     <script src="js/chat-select.js"></script>
-    <script src="js/chat-share.js?v=media-weather-20261015-r4"></script>
-    <script src="js/chat/chat-history.js?v=media-weather-20261015-r4"></script>
-    <script src="js/chat/chat-feed.js?v=media-weather-20261015-r4"></script>
-    <script src="js/chat/chat-dispatcher.js?v=media-weather-20261015-r4"></script>
-    <script src="js/chat/chat-realtime.js?v=media-weather-20261015-r4"></script>
+    <script src="js/chat-share.js?v=news-profile-20261015-r5"></script>
+    <script src="js/chat/chat-history.js?v=news-profile-20261015-r5"></script>
+    <script src="js/chat/chat-feed.js?v=news-profile-20261015-r5"></script>
+    <script src="js/chat/chat-dispatcher.js?v=news-profile-20261015-r5"></script>
+    <script src="js/chat/chat-realtime.js?v=news-profile-20261015-r5"></script>
     <script src="js/chat.js"></script>
 <script src="js/calculator.js"></script>
     <script src="js/tools.js"></script>
     <script src="js/celestial.js"></script>
-    <script src="js/ui/ui-auth.js?v=media-weather-20261015-r4"></script>
-    <script src="js/ui/ui-navigation.js?v=media-weather-20261015-r4"></script>
-    <script src="js/ui/ui-modals.js?v=media-weather-20261015-r4"></script>
+    <script src="js/ui/ui-auth.js?v=news-profile-20261015-r5"></script>
+    <script src="js/ui/ui-navigation.js?v=news-profile-20261015-r5"></script>
+    <script src="js/ui/ui-modals.js?v=news-profile-20261015-r5"></script>
     <script src="js/ui/ui-notifications.js"></script>
 <script src="js/ui.js"></script>
 
@@ -2629,8 +2632,8 @@
  <div id="orbit-editor-filters" class="hide"><button type="button" onclick="applyOrbitMediaFilter('vivid')">Vivid</button><button type="button" onclick="applyOrbitMediaFilter('mono')">Mono</button><button type="button" onclick="applyOrbitMediaFilter('warm')">Warm</button><button type="button" onclick="applyOrbitMediaFilter('bright')">Bright</button></div>
  <div class="orbit-editor-stage"><canvas id="orbit-editor-canvas"></canvas></div>
 </div>
-<script src="js/orbit-chat-services.js?v=media-weather-20261015-r4"></script>
-<script src="js/orbit-media-editor.js?v=media-weather-20261015-r4"></script>
+<script src="js/orbit-chat-services.js?v=news-profile-20261015-r5"></script>
+<script src="js/orbit-media-editor.js?v=news-profile-20261015-r5"></script>
 <div id="modal-orbit-weather" class="glass-modal-overlay"><div class="glass-modal-box">
  <div class="modal-header-row"><strong>Weather near you</strong><button type="button" class="btn-reset" onclick="closeOrbitWeatherConsent()" aria-label="Close weather settings">✕</button></div>
  <p>Allow device location to show nearby weather below the Orbit logo. Orbit requests a fresh, high-accuracy location and shows the accuracy your device reports.</p>
@@ -2639,8 +2642,8 @@
  <button type="button" id="orbit-weather-disable" class="glass-btn-secondary hide" onclick="disableOrbitWeather()">Turn off local weather</button>
  <p class="orbit-weather-attribution">Weather by <a href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer">Open-Meteo</a> · Air quality: <a href="https://atmosphere.copernicus.eu/" target="_blank" rel="noopener noreferrer">CAMS</a> · Places by <a href="https://www.bigdatacloud.com/" target="_blank" rel="noopener noreferrer">BigDataCloud</a></p>
 </div></div>
-<script src="js/orbit-private-photos.js?v=media-weather-20261015-r4"></script>
-<script src="js/orbit-banner-weather.js?v=media-weather-20261015-r4"></script>
-<script src="js/liquid-glass.js?v=7"></script>
+<script src="js/orbit-private-photos.js?v=news-profile-20261015-r5"></script>
+<script src="js/orbit-banner-weather.js?v=news-profile-20261015-r5"></script>
+<script src="js/liquid-glass.js?v=8"></script>
 </body>
 </html>
