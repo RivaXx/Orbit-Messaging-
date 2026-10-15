@@ -99,30 +99,48 @@ async function submitEditField() {
     } catch(e) {}
 }
 
+let orbitProfilePhotoUploading = false;
 async function handleProfileAvatarUpload(e) {
     const file = e.target.files?.[0];
     e.target.value = '';
-    if (!file) return;
-
-    showToast('Updating photo...', 'success');
+    if (!file || !currentUser?.id) return;
+    if (orbitProfilePhotoUploading) { showToast('Please wait for the current photo to finish.'); return; }
+    if (!file.type.startsWith('image/')) { showToast('Choose an image file.', 'error'); return; }
+    const owner = currentUser.id;
+    orbitProfilePhotoUploading = true;
+    showToast('Uploading profile photo…', 'info');
     try {
-        const base64 = await readFileAsDataURL(file);
-        userProfile.dp_url = base64;
-        localStorage.setItem(`orbit_profile_${currentUser.id}`, JSON.stringify(userProfile));
-        updateUserHeaderUI();
-        document.getElementById('profile-large-av').innerHTML = `<img src="${base64}">`;
-        await sb.from('user_profiles').upsert({
-            user_id: currentUser.id,
-            first_name: userProfile.first_name || '',
-            last_name: userProfile.last_name || '',
-            dp_url: base64,
+        const resized = await compressImageForUpload(file, 512, 0.85);
+        if (!resized?.startsWith('data:image/')) throw new Error('This photo could not be read. Try a JPG or PNG image.');
+        const mime = resized.match(/^data:([^;,]+)/)?.[1] || 'image/jpeg';
+        const bytes = Uint8Array.from(atob(resized.split(',')[1]), char => char.charCodeAt(0));
+        const photo = new Blob([bytes], {type:mime});
+        const url = await uploadMediaToStorage(photo, 'profile-photo.jpg', mime, 'avatars');
+        if (currentUser?.id !== owner) return;
+        const client = await ensureSupabase();
+        const profile = {...(userProfile || {}), dp_url:url};
+        const {error} = await client.from('user_profiles').upsert({
+            user_id: owner,
+            first_name: profile.first_name || '',
+            last_name: profile.last_name || '',
+            dp_url: url,
             updated_at: new Date().toISOString()
         }, { onConflict: 'user_id' });
+        if (error) throw error;
+        if (currentUser?.id !== owner) return;
+        userProfile = profile;
+        try { localStorage.setItem(`orbit_profile_${owner}`, JSON.stringify(profile)); } catch (_) {}
+        updateUserHeaderUI();
+        const avatar = document.getElementById('profile-large-av');
+        if (avatar) {
+            const image = document.createElement('img'); image.src = url; image.alt = 'Your profile photo';
+            avatar.replaceChildren(image);
+        }
         await updatePresenceStatus(true);
         showToast('Profile photo updated ✓', 'success');
     } catch(err) {
-        showToast('Photo upload failed');
-    }
+        showToast(`Profile photo could not be saved: ${err.message || 'Please try again.'}`, 'error');
+    } finally { orbitProfilePhotoUploading = false; }
 }
 
 async function confirmDeleteSelfAccount() {
