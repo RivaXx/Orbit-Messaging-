@@ -610,10 +610,24 @@ function resetOrbitGlassControls() {
 function setLiquidAccent(hex, quiet = false) {
     if (!/^#[0-9a-f]{6}$/i.test(hex)) return;
     const rgb = [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16));
+    const luminance = channels => channels.map(v => v / 255).map(v => v <= .04045 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4).reduce((sum, v, i) => sum + v * [.2126,.7152,.0722][i], 0);
+    const readable = light => {
+        const background = luminance(light ? [245,249,255] : [14,20,30]);
+        let ink = rgb.slice();
+        for (let n = 0; n <= 100; n++) {
+            ink = rgb.map(v => Math.round(v + ((light ? 0 : 255) - v) * n / 100));
+            const value = luminance(ink);
+            if ((Math.max(value,background) + .05) / (Math.min(value,background) + .05) >= 4.5) break;
+        }
+        return '#' + ink.map(v => v.toString(16).padStart(2,'0')).join('');
+    };
     // Body themes define their own variables; update both scopes.
     [document.documentElement, document.body].forEach(el => {
         el.style.setProperty('--accent', hex);
-        el.style.setProperty('--accent-readable', hex);
+        el.style.removeProperty('--accent-readable');
+        el.style.setProperty('--accent-ink-dark', readable(false));
+        el.style.setProperty('--accent-ink-light', readable(true));
+        el.style.setProperty('--accent-on', luminance(rgb) > .179 ? '#000000' : '#ffffff');
         el.style.setProperty('--accent-glow', `rgba(${rgb.join(',')}, 0.35)`);
         el.style.setProperty('--accent-gradient', `linear-gradient(135deg, ${hex} 0%, ${hex}CC 100%)`);
     });
