@@ -152,7 +152,7 @@ async function openChatRoom(roomId, roomTitle, avatarUrl, isSelf = false, peerUs
         if (statusEl) {
             statusEl.innerHTML = isSelf
                 ? '<i class="fa-solid fa-cloud" style="font-size:10px;"></i> Personal Cloud'
-                : '<i class="fa-solid fa-shield-halved" style="font-size:10px; color:var(--online);"></i> E2EE Active';
+                : '<i class="fa-solid fa-shield-halved" style="font-size:10px; color:var(--online);"></i> HTTPS connection';
         }
 
         const av = document.getElementById('chat-header-avatar');
