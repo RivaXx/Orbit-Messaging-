@@ -33,10 +33,10 @@
     <script src="assets/vendor/supabase.min.js?v=2.117.3"></script>
     <!-- Document, crop and resumable upload tools load only when needed. -->
 
-    <link rel="stylesheet" href="style.css?v=glass-tabs-20261015-r3">
+    <link rel="stylesheet" href="style.css?v=media-weather-20261015-r4">
     <link rel="stylesheet" href="tools.css">
-<link rel="stylesheet" href="chat-upgrades.css?v=glass-tabs-20261015-r3">
-<link rel="stylesheet" href="photo-weather.css?v=glass-tabs-20261015-r3">
+<link rel="stylesheet" href="chat-upgrades.css?v=media-weather-20261015-r4">
+<link rel="stylesheet" href="photo-weather.css?v=media-weather-20261015-r4">
 </head>
 <body>
 
@@ -1487,7 +1487,7 @@
                 </div>
             </div>
 
-            <div class="settings-card-group orbit-glass-controls"><div><label for="glass-speed">Ripple speed · 0 freezes motion</label><output id="glass-speed-value" for="glass-speed">50%</output><input class="glass-slider" type="range" id="glass-speed" min="0" max="100" value="50" oninput="setOrbitGlassControl('speed', this.value)"></div><div><label for="glass-saturation">Color saturation</label><output id="glass-saturation-value" for="glass-saturation">155%</output><input class="glass-slider" type="range" id="glass-saturation" min="0" max="200" value="155" oninput="setOrbitGlassControl('saturation', this.value)"></div><div><label for="glass-highlight">Glass edge highlights</label><output id="glass-highlight-value" for="glass-highlight">55%</output><input class="glass-slider" type="range" id="glass-highlight" min="0" max="100" value="55" oninput="setOrbitGlassControl('highlight', this.value)"></div><button type="button" class="news-filter-chip touch-fix" onclick="resetOrbitGlassControls()">Reset glass controls</button></div>
+            <div class="settings-card-group orbit-glass-controls"><div><label for="glass-quality">Rendering quality</label><select id="glass-quality" class="glass-input" onchange="setOrbitGlassQuality(this.value)"><option value="balanced">Balanced · smooth scrolling</option><option value="full">Full effects · more GPU use</option><option value="fast">Battery saver · light blur</option></select><p class="settings-subtext">Balanced keeps water static and simplifies glass while scrolling. Full effects adds animated ripples. Every mode keeps your appearance settings.</p></div><div><label for="glass-speed">Ripple speed · 0 freezes motion</label><output id="glass-speed-value" for="glass-speed">50%</output><input class="glass-slider" type="range" id="glass-speed" min="0" max="100" value="50" oninput="setOrbitGlassControl('speed', this.value)"></div><div><label for="glass-saturation">Color saturation</label><output id="glass-saturation-value" for="glass-saturation">155%</output><input class="glass-slider" type="range" id="glass-saturation" min="0" max="200" value="155" oninput="setOrbitGlassControl('saturation', this.value)"></div><div><label for="glass-highlight">Glass edge highlights</label><output id="glass-highlight-value" for="glass-highlight">55%</output><input class="glass-slider" type="range" id="glass-highlight" min="0" max="100" value="55" oninput="setOrbitGlassControl('highlight', this.value)"></div><button type="button" class="news-filter-chip touch-fix" onclick="resetOrbitGlassControls()">Reset glass controls</button></div>
             <!-- Accent Palette -->
             <div class="settings-section-title"><span>ACCENT PALETTE</span></div>
             <div style="display:flex; gap:10px; margin-bottom:18px;">
@@ -2572,29 +2572,29 @@
     <div id="simple-toast" class="simple-toast">Notification</div>
 </div>
 
-<script src="js/config.js?v=glass-tabs-20261015-r3"></script>
-<script src="js/rooms.js?v=glass-tabs-20261015-r3"></script>
+<script src="js/config.js?v=media-weather-20261015-r4"></script>
+<script src="js/rooms.js?v=media-weather-20261015-r4"></script>
     <script src="js/chat-actions.js"></script>
-    <script src="js/actions/media-lightbox.js?v=glass-tabs-20261015-r3"></script>
-    <script src="js/actions/media-preview.js?v=glass-tabs-20261015-r3"></script>
-    <script src="js/actions/file-viewer.js?v=glass-tabs-20261015-r3"></script>
+    <script src="js/actions/media-lightbox.js?v=media-weather-20261015-r4"></script>
+    <script src="js/actions/media-preview.js?v=media-weather-20261015-r4"></script>
+    <script src="js/actions/file-viewer.js?v=media-weather-20261015-r4"></script>
     <script src="js/actions/voice-recorder.js"></script>
-    <script src="js/actions/chat-extras.js?v=glass-tabs-20261015-r3"></script>
-    <script src="js/messaging-notifications.js?v=glass-tabs-20261015-r3"></script>
+    <script src="js/actions/chat-extras.js?v=media-weather-20261015-r4"></script>
+    <script src="js/messaging-notifications.js?v=media-weather-20261015-r4"></script>
     <script src="js/chat-gestures.js"></script>
     <script src="js/chat-select.js"></script>
-    <script src="js/chat-share.js?v=glass-tabs-20261015-r3"></script>
-    <script src="js/chat/chat-history.js?v=glass-tabs-20261015-r3"></script>
-    <script src="js/chat/chat-feed.js?v=glass-tabs-20261015-r3"></script>
-    <script src="js/chat/chat-dispatcher.js?v=glass-tabs-20261015-r3"></script>
-    <script src="js/chat/chat-realtime.js?v=glass-tabs-20261015-r3"></script>
+    <script src="js/chat-share.js?v=media-weather-20261015-r4"></script>
+    <script src="js/chat/chat-history.js?v=media-weather-20261015-r4"></script>
+    <script src="js/chat/chat-feed.js?v=media-weather-20261015-r4"></script>
+    <script src="js/chat/chat-dispatcher.js?v=media-weather-20261015-r4"></script>
+    <script src="js/chat/chat-realtime.js?v=media-weather-20261015-r4"></script>
     <script src="js/chat.js"></script>
 <script src="js/calculator.js"></script>
     <script src="js/tools.js"></script>
     <script src="js/celestial.js"></script>
-    <script src="js/ui/ui-auth.js?v=glass-tabs-20261015-r3"></script>
-    <script src="js/ui/ui-navigation.js?v=glass-tabs-20261015-r3"></script>
-    <script src="js/ui/ui-modals.js?v=glass-tabs-20261015-r3"></script>
+    <script src="js/ui/ui-auth.js?v=media-weather-20261015-r4"></script>
+    <script src="js/ui/ui-navigation.js?v=media-weather-20261015-r4"></script>
+    <script src="js/ui/ui-modals.js?v=media-weather-20261015-r4"></script>
     <script src="js/ui/ui-notifications.js"></script>
 <script src="js/ui.js"></script>
 
@@ -2629,18 +2629,18 @@
  <div id="orbit-editor-filters" class="hide"><button type="button" onclick="applyOrbitMediaFilter('vivid')">Vivid</button><button type="button" onclick="applyOrbitMediaFilter('mono')">Mono</button><button type="button" onclick="applyOrbitMediaFilter('warm')">Warm</button><button type="button" onclick="applyOrbitMediaFilter('bright')">Bright</button></div>
  <div class="orbit-editor-stage"><canvas id="orbit-editor-canvas"></canvas></div>
 </div>
-<script src="js/orbit-chat-services.js?v=glass-tabs-20261015-r3"></script>
-<script src="js/orbit-media-editor.js?v=glass-tabs-20261015-r3"></script>
+<script src="js/orbit-chat-services.js?v=media-weather-20261015-r4"></script>
+<script src="js/orbit-media-editor.js?v=media-weather-20261015-r4"></script>
 <div id="modal-orbit-weather" class="glass-modal-overlay"><div class="glass-modal-box">
  <div class="modal-header-row"><strong>Weather near you</strong><button type="button" class="btn-reset" onclick="closeOrbitWeatherConsent()" aria-label="Close weather settings">✕</button></div>
  <p>Allow device location to show nearby weather below the Orbit logo. Orbit requests a fresh, high-accuracy location and shows the accuracy your device reports.</p>
- <p class="orbit-weather-privacy">Your coordinates go directly to Open-Meteo for weather and BigDataCloud for the place name. BigDataCloud uses anonymous location and network signals to improve its data. Orbit does not save your precise location.</p>
- <p id="orbit-weather-updated"></p><button type="button" class="glass-btn-primary" onclick="enableOrbitWeather()">Allow location &amp; show weather</button>
+ <p class="orbit-weather-privacy">Your coordinates go directly to Open-Meteo for weather and air quality, and BigDataCloud for the place name. BigDataCloud uses anonymous location and network signals to improve its data. Orbit does not save your precise location.</p>
+ <p id="orbit-weather-updated"></p><dl id="orbit-weather-metrics" class="orbit-weather-metrics hide"><div><dt>Humidity</dt><dd id="orbit-weather-humidity">Unavailable</dd></div><div><dt>Feels like</dt><dd id="orbit-weather-feels">Unavailable</dd></div><div><dt>Wind</dt><dd id="orbit-weather-wind">Unavailable</dd></div><div><dt>Current precipitation</dt><dd id="orbit-weather-rain">Unavailable</dd></div><div><dt>Surface pressure</dt><dd id="orbit-weather-pressure">Unavailable</dd></div><div><dt>AQI · US scale</dt><dd id="orbit-weather-aqi">Unavailable</dd></div><div><dt>PM2.5</dt><dd id="orbit-weather-pm25">Unavailable</dd></div><div><dt>PM10</dt><dd id="orbit-weather-pm10">Unavailable</dd></div><div><dt>High / low today</dt><dd id="orbit-weather-highlow">Unavailable</dd></div><div><dt>Rain chance today</dt><dd id="orbit-weather-chance">Unavailable</dd></div><div><dt>UV max today</dt><dd id="orbit-weather-uv">Unavailable</dd></div><div><dt>Sunrise / sunset</dt><dd id="orbit-weather-sun">Unavailable</dd></div></dl><p id="orbit-weather-air-status" role="status"></p><button type="button" id="orbit-weather-refresh" class="glass-btn-primary" onclick="enableOrbitWeather()">Allow location &amp; show weather</button>
  <button type="button" id="orbit-weather-disable" class="glass-btn-secondary hide" onclick="disableOrbitWeather()">Turn off local weather</button>
- <p class="orbit-weather-attribution">Weather by <a href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer">Open-Meteo</a> · Places by <a href="https://www.bigdatacloud.com/" target="_blank" rel="noopener noreferrer">BigDataCloud</a></p>
+ <p class="orbit-weather-attribution">Weather by <a href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer">Open-Meteo</a> · Air quality: <a href="https://atmosphere.copernicus.eu/" target="_blank" rel="noopener noreferrer">CAMS</a> · Places by <a href="https://www.bigdatacloud.com/" target="_blank" rel="noopener noreferrer">BigDataCloud</a></p>
 </div></div>
-<script src="js/orbit-private-photos.js?v=glass-tabs-20261015-r3"></script>
-<script src="js/orbit-banner-weather.js?v=glass-tabs-20261015-r3"></script>
-<script src="js/liquid-glass.js?v=6"></script>
+<script src="js/orbit-private-photos.js?v=media-weather-20261015-r4"></script>
+<script src="js/orbit-banner-weather.js?v=media-weather-20261015-r4"></script>
+<script src="js/liquid-glass.js?v=7"></script>
 </body>
 </html>
