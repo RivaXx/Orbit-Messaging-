@@ -44,3 +44,14 @@
 @keyframes orbit-weather-spin {to {transform:rotate(360deg);}}
 @media(max-width:340px){#modal-media-preview .media-preview-caption-row {grid-template-columns:minmax(0,1fr) 46px;gap:6px;}#modal-media-preview #preview-send-button {width:46px;height:46px;min-width:46px;}.orbit-weather-pill {padding:8px 9px;}}
 @media(prefers-reduced-motion:reduce){.orbit-weather-pill::after,.orbit-weather-glow,.orbit-weather-symbol,.orbit-weather-pill[data-weather='loading'] .orbit-weather-symbol {animation:none;}}
+
+/* Environmental details remain readable on phones and both themes. */
+.orbit-weather-copy small { white-space:normal; overflow:visible; text-overflow:clip; }
+.orbit-weather-metrics { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; margin:14px 0; }
+.orbit-weather-metrics>div { padding:11px; border:1px solid var(--glass-border); border-radius:12px; background:var(--glass-card); }
+.orbit-weather-metrics dt { color:var(--text-secondary); font-size:11px; }
+.orbit-weather-metrics dd { margin:6px 0 0; color:var(--text-primary); font-size:13px; font-weight:700; overflow-wrap:anywhere; }
+#modal-orbit-weather>.glass-modal-box { max-height:90dvh; overflow-y:auto; }
+#orbit-weather-air-status { font-size:11px!important; }
+/* Decorative weather animation must not compete with chats for frame time. */
+.orbit-weather-pill::after,.orbit-weather-glow,.orbit-weather-symbol { animation:none; }
