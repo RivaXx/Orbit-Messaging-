@@ -2,7 +2,7 @@
 -- Creates a missing bucket; preserves existing visibility, size and MIME limits.
 begin;
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
-values ('chat-assets', 'chat-assets', true, 52428800, null)
+values ('chat-assets', 'chat-assets', false, 52428800, null)
 on conflict (id) do nothing;
 
 -- Run once in Supabase SQL Editor for an existing Orbit database.
