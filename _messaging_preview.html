@@ -1,0 +1,143 @@
+<!doctype html><html><head><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="style.css"><link rel="stylesheet" href="chat-upgrades.css"><link rel="stylesheet" href="photo-weather.css"><link rel="stylesheet" href="messaging-experience.css"><style>body{display:block!important;overflow:auto!important;height:auto!important;min-height:100vh;background:#101821!important}#sample-feed{display:flex;flex-direction:column;gap:12px}#sample-feed .msg-bubble-row{width:100%}.media-preview-fullscreen-modal{height:100dvh}</style></head><body><main style="max-width:410px;margin:30px auto;padding:18px;border:1px solid var(--glass-border);border-radius:24px;background:var(--glass-card)"><h2 style="font-size:20px">Orbit · messaging preview</h2><p style="color:var(--text-secondary);font-size:12px">Synthetic examples · no messages sent</p><div id="main-chats-list"></div><h3 style="font-size:13px;margin-top:24px">PHOTO ALBUM</h3><div id="sample-feed"></div><h3 style="font-size:13px;margin-top:24px">GROUPS</h3><div id="groups-list"></div><div style="display:flex;gap:10px;margin-top:18px"><button onclick="openMediaPreviewScreen(previewPhotos)" class="glass-btn-primary">Photo quality</button><button onclick="openAddAlarmModal()" class="glass-btn-primary">Alarm settings</button></div></main><div id="modal-media-lightbox" class="media-viewer-modal">
+        <div class="lightbox-header">
+            <span id="lightbox-counter" style="color:#fff; font-weight:700; font-size:14px; letter-spacing:0.5px;">1 / 1</span>
+            <div style="display:flex; gap:10px; align-items:center;">
+                <button class="btn-reset" onclick="copyCurrentLightboxMedia()" style="color:#fff; font-size:18px; padding:6px;" title="Copy Image"><i class="fa-regular fa-copy"></i></button>
+                <button class="btn-reset" onclick="zoomLightboxIn(event)" style="color:#fff; font-size:18px; padding:6px;" title="Zoom In"><i class="fa-solid fa-magnifying-glass-plus"></i></button>
+                <button class="btn-reset" onclick="zoomLightboxOut(event)" style="color:#fff; font-size:18px; padding:6px;" title="Zoom Out"><i class="fa-solid fa-magnifying-glass-minus"></i></button>
+                <button class="btn-reset" onclick="shareCurrentLightboxMedia()" style="color:#fff; font-size:18px; padding:6px;" title="Share"><i class="fa-solid fa-arrow-up-from-bracket"></i></button>
+                <button class="btn-reset" onclick="downloadCurrentLightboxMedia()" style="color:#fff; font-size:18px; padding:6px;" title="Download"><i class="fa-solid fa-download"></i></button>
+                <button class="btn-reset" onclick="closeMediaLightbox()" style="color:#fff; font-size:22px; padding:6px;" title="Close"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+        </div>
+        <div class="lightbox-content" style="flex:1; display:flex; align-items:center; justify-content:center; overflow:hidden; position:relative;">
+            <button id="lightbox-prev-btn" class="lightbox-nav-btn prev touch-fix" onclick="prevLightboxImage(event)" title="Previous Image" aria-label="Previous Image"><i class="fa-solid fa-chevron-left"></i></button>
+            <button id="lightbox-next-btn" class="lightbox-nav-btn next touch-fix" onclick="nextLightboxImage(event)" title="Next Image" aria-label="Next Image"><i class="fa-solid fa-chevron-right"></i></button>
+            <img id="lightbox-img" src="" alt="Media" style="max-width:100%; max-height:100%; object-fit:contain; transition:transform 0.2s ease;">
+        </div>
+        <!-- Bottom Chronological Thumbnail Filmstrip -->
+        <div id="lightbox-thumbnail-strip" class="lightbox-thumbnail-strip"></div>
+    </div><div id="modal-media-preview" class="media-preview-fullscreen-modal hide">
+        <!-- Top Toolbar matching WhatsApp/Telegram exactly -->
+        <div class="media-preview-top-bar">
+            <button class="btn-reset touch-fix preview-top-btn" onclick="closeMediaPreviewScreen()" title="Close">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+            <div id="media-preview-counter" class="media-preview-counter">1 of 1</div>
+            <div class="preview-top-actions">
+                <button type="button" class="btn-reset touch-fix preview-top-btn" onclick="downloadPreviewMedia()" title="Download photo"><i class="fa-solid fa-download"></i></button>
+                <!-- HD Quality Toggle -->
+                <button type="button" id="preview-hd-toggle-btn" class="btn-reset touch-fix preview-hd-badge" onclick="toggleHdQuality()" title="Toggle HD Quality">
+                    <span>HD</span>
+                    <i id="preview-hd-check" class="fa-solid fa-check hide" style="font-size:10px; margin-left:3px;"></i>
+                </button>
+                <!-- Crop / Straighten -->
+                <button type="button" class="btn-reset touch-fix preview-top-btn" onclick="openImageCropper()" title="Crop & Straighten">
+                    <i class="fa-solid fa-crop-simple"></i>
+                </button>
+                <!-- Rotate 90° -->
+                <button type="button" class="btn-reset touch-fix preview-top-btn" onclick="rotateCurrentPreviewMedia()" title="Rotate 90°">
+                    <i class="fa-solid fa-rotate-right"></i>
+                </button>
+                <!-- Stickers / Emoji -->
+                <button type="button" class="btn-reset touch-fix preview-top-btn" onclick="openOrbitStickerEditor()" title="Add Stickers">
+                    <i class="fa-regular fa-face-smile"></i>
+                </button>
+                <!-- Text (Aa) Overlay -->
+                <button type="button" class="btn-reset touch-fix preview-top-btn" onclick="promptPreviewTextOverlay()" title="Add Text">
+                    <span style="font-weight:800; font-size:15px; font-family:sans-serif;">Aa</span>
+                </button>
+                <!-- Doodle / Pen Tool -->
+                <button type="button" class="btn-reset touch-fix preview-top-btn" onclick="togglePreviewDoodle()" title="Doodle / Draw">
+                    <i class="fa-solid fa-pen"></i>
+                </button>
+                <!-- Delete & Add More -->
+                <button type="button" class="btn-reset touch-fix preview-top-btn" onclick="deleteCurrentPreviewMedia()" title="Delete">
+                    <i class="fa-solid fa-trash-can"></i>
+                </button>
+                <button type="button" class="btn-reset touch-fix preview-top-btn" onclick="addMorePreviewMedia()" title="Add more media">
+                    <i class="fa-solid fa-plus"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Center Viewport / Carousel -->
+        <div class="media-preview-viewport" id="media-preview-viewport">
+            <button class="btn-reset touch-fix media-preview-nav prev hide" id="preview-nav-prev" onclick="navPreviewMedia(-1)" title="Previous">
+                <i class="fa-solid fa-chevron-left"></i>
+            </button>
+            <div class="media-preview-main-item" id="media-preview-main-item"></div>
+            <button class="btn-reset touch-fix media-preview-nav next hide" id="preview-nav-next" onclick="navPreviewMedia(1)" title="Next">
+                <i class="fa-solid fa-chevron-right"></i>
+            </button>
+            <!-- AI Restyle Badge floating over media -->
+            <div id="preview-restyle-badge" class="preview-restyle-badge" onclick="triggerAiRestyle()">
+                <i class="fa-solid fa-wand-magic-sparkles"></i>
+                <span>Photo filters</span>
+            </div>
+        </div>
+
+        <!-- Bottom Controls & Caption Input Bar -->
+        <div class="media-preview-bottom-bar">
+            <!-- Thumbnail Strip -->
+            <div class="media-preview-thumb-strip" id="media-preview-thumb-strip"></div>
+
+            <!-- Recipient Target Pill + Caption Bar -->
+            <div class="media-preview-recipient-row">
+                <div class="preview-recipient-pill">
+                    <span id="preview-recipient-name">@recipient</span>
+                </div>
+            </div>
+
+            <div class="media-preview-caption-row">
+                <div class="preview-caption-pill">
+                    <button type="button" class="btn-reset touch-fix" onclick="openEmojiPickerModal()" style="color:var(--text-muted); font-size:18px; margin-left:8px; display:flex; align-items:center;">
+                        <i class="fa-regular fa-face-smile"></i>
+                    </button>
+                    <input type="text" id="media-preview-caption-input" placeholder="Add a caption..." maxlength="1000" autocomplete="off" onkeydown="if(event.key==='Enter') sendPreviewMediaBatch();">
+                    <button type="button" id="btn-view-once-toggle" class="btn-reset preview-view-once-btn touch-fix" onclick="toggleViewOnceMode()" title="View once: Photo can only be viewed once">
+                        <span class="view-once-badge">1</span>
+                    </button>
+                </div>
+                <button type="button" id="preview-send-button" class="preview-send-circle-btn touch-fix" onclick="sendPreviewMediaBatch()" title="Send photo" aria-label="Send photo">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3l19 9-19 9 4-9-4-9zm4.2 8h9.3L6.7 6.4 8.8 11H7.2zm0 2l1.6 4.6 9.7-4.6H7.2z" fill="currentColor"/></svg>
+                </button>
+            </div>
+            <p id="preview-view-once-hint" class="hide">View once · Recipient can open this photo once</p>
+        </div>
+    </div><div id="modal-add-alarm" class="glass-modal-overlay">
+        <div class="glass-modal-box">
+            <div class="modal-header-row">
+                <div class="modal-title-text"><i class="fa-solid fa-bell" style="color:var(--accent);"></i> Add Alarm</div>
+                <button class="btn-reset" onclick="closeAddAlarmModal()"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div style="display:flex; flex-direction:column; gap:12px;">
+                <input type="time" id="alarm-time-inp" class="glass-input" value="07:00" style="font-size:24px; text-align:center; padding:12px;">
+                <input type="text" id="alarm-label-inp" class="glass-input" placeholder="Alarm Label (e.g. Morning Workout)">
+                <button class="glass-btn-primary" onclick="saveNewAlarm()">Save Alarm</button>
+            </div>
+        </div>
+    </div><div id="modal-voice-call" class="glass-modal-overlay">
+        <div class="call-modal-box">
+<button type="button" class="orbit-call-minimize btn-reset" onclick="minimizeOrbitCall()" aria-label="Minimize call"><i class="fa-solid fa-chevron-down"></i></button>
+            <div id="call-avatar-wrap" class="call-avatar-pulse">
+                <i class="fa-solid fa-user"></i>
+            </div>
+            <div id="call-peer-name" style="font-weight:700; font-size:22px; color:var(--text-primary); margin-bottom:4px;">Calling User...</div>
+            <div id="call-status-label" style="font-size:12.5px; color:#00E676; font-weight:700;">Connecting voice call…</div>
+            <div id="call-timer-label" style="font-size:14px; font-family:monospace; color:var(--text-secondary); margin-top:8px;">00:00</div>
+            <div class="call-action-btns">
+                <button id="call-btn-answer" class="call-btn answer hide" onclick="answerVoiceCall()" title="Answer call" style="background:#30D158;">
+                    <i class="fa-solid fa-phone"></i>
+                </button>
+                <button id="call-btn-mute" class="call-btn mute" onclick="toggleCallMute()" title="Mute Microphone">
+                    <i class="fa-solid fa-microphone"></i>
+                </button>
+                <button class="call-btn end" onclick="endVoiceCall(true)" title="End Call">
+                    <i class="fa-solid fa-phone-slash"></i>
+                </button>
+            </div>
+            <div class="orbit-call-devices"><label>Microphone<select id="orbit-call-input" onchange="changeOrbitCallDevice('input',this.value)"><option value="default">Device default</option></select></label><label>Speaker / headphones<select id="orbit-call-output" onchange="changeOrbitCallDevice('output',this.value)"><option value="default">Device default</option></select></label><small id="orbit-output-note"></small></div>
+<audio id="remote-call-audio" autoplay playsinline></audio>
+        </div>
+    </div><script src="js/config.js"></script><script src="js/rooms.js"></script><script src="js/chat/chat-feed.js"></script><script src="js/chat-gestures.js"></script><script src="js/actions/media-lightbox.js"></script><script src="js/actions/media-preview.js"></script><script src="js/tools.js"></script><script src="js/orbit-chat-services.js"></script><script src="js/messaging-experience.js"></script><script>let _activeCallPeerId=null,_activeCallRole=null;currentUser={id:'preview-user',email:'preview@example.com'};currentRoom='preview-room';userProfile={first_name:'Preview'};function showToast(text){console.log(text)};function retryMediaPreview(){};function orbitIsViewOnceMessage(){return false};function handleChatInputText(){};function formatOrbitCallDetail(text){return text.replace('Voice call · ','')};function formatOrbitMessageText(text){return escapeHtml(text)};function ensureSupabase(){return Promise.resolve({rpc:async()=>({data:{remaining:10},error:null})})};const previewPhotos=["data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20400%20400%22%3E%3Crect%20width%3D%22400%22%20height%3D%22400%22%20fill%3D%22%237ec8d9%22%2F%3E%3Ccircle%20cx%3D%22285%22%20cy%3D%2292%22%20r%3D%2242%22%20fill%3D%22%23fff2d6%22%2F%3E%3Cpath%20d%3D%22M0%20300L130%20130L235%20250L320%20180L400%20290V400H0%22%20fill%3D%22%23294f65%22%2F%3E%3Cpath%20d%3D%22M0%20330Q180%20280%20400%20345V400H0%22%20fill%3D%22%23173a3d%22%2F%3E%3Ctext%20x%3D%2222%22%20y%3D%22370%22%20fill%3D%22white%22%20font-family%3D%22sans-serif%22%20font-size%3D%2218%22%3EAlbum%20photo%201%3C%2Ftext%3E%3C%2Fsvg%3E", "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20400%20400%22%3E%3Crect%20width%3D%22400%22%20height%3D%22400%22%20fill%3D%22%23e8b179%22%2F%3E%3Ccircle%20cx%3D%22285%22%20cy%3D%2292%22%20r%3D%2242%22%20fill%3D%22%23fff2d6%22%2F%3E%3Cpath%20d%3D%22M0%20300L130%20130L235%20250L320%20180L400%20290V400H0%22%20fill%3D%22%235c6269%22%2F%3E%3Cpath%20d%3D%22M0%20330Q180%20280%20400%20345V400H0%22%20fill%3D%22%23173a3d%22%2F%3E%3Ctext%20x%3D%2222%22%20y%3D%22370%22%20fill%3D%22white%22%20font-family%3D%22sans-serif%22%20font-size%3D%2218%22%3EAlbum%20photo%202%3C%2Ftext%3E%3C%2Fsvg%3E", "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20400%20400%22%3E%3Crect%20width%3D%22400%22%20height%3D%22400%22%20fill%3D%22%239fb8df%22%2F%3E%3Ccircle%20cx%3D%22285%22%20cy%3D%2292%22%20r%3D%2242%22%20fill%3D%22%23fff2d6%22%2F%3E%3Cpath%20d%3D%22M0%20300L130%20130L235%20250L320%20180L400%20290V400H0%22%20fill%3D%22%23304e7d%22%2F%3E%3Cpath%20d%3D%22M0%20330Q180%20280%20400%20345V400H0%22%20fill%3D%22%23173a3d%22%2F%3E%3Ctext%20x%3D%2222%22%20y%3D%22370%22%20fill%3D%22white%22%20font-family%3D%22sans-serif%22%20font-size%3D%2218%22%3EAlbum%20photo%203%3C%2Ftext%3E%3C%2Fsvg%3E", "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20400%20400%22%3E%3Crect%20width%3D%22400%22%20height%3D%22400%22%20fill%3D%22%23e3c3d5%22%2F%3E%3Ccircle%20cx%3D%22285%22%20cy%3D%2292%22%20r%3D%2242%22%20fill%3D%22%23fff2d6%22%2F%3E%3Cpath%20d%3D%22M0%20300L130%20130L235%20250L320%20180L400%20290V400H0%22%20fill%3D%22%23765c75%22%2F%3E%3Cpath%20d%3D%22M0%20330Q180%20280%20400%20345V400H0%22%20fill%3D%22%23173a3d%22%2F%3E%3Ctext%20x%3D%2222%22%20y%3D%22370%22%20fill%3D%22white%22%20font-family%3D%22sans-serif%22%20font-size%3D%2218%22%3EAlbum%20photo%204%3C%2Ftext%3E%3C%2Fsvg%3E"].map((url,i)=>({url,name:'Landscape '+i,type:'image'}));globalUsersMap.set('peer',{last_seen:new Date(Date.now()-120000).toISOString(),is_online:false});renderRecentChatsFromCache([{roomId:'preview-room',title:'Alex Rodrigues',timeDisplay:'10:42',msgPreview:'4 photos',presenceDisplay:'Last seen today at 10:38',avatarHtml:'<span>A</span>'}],document.getElementById('main-chats-list'));const album={id:'album',room:currentRoom,sender_id:'preview-user',username:'Preview',created_at:new Date().toISOString(),type:'image',attachments:previewPhotos};document.getElementById('sample-feed').append(createMessageDOMNode(album),createMessageDOMNode({id:'call',room:currentRoom,sender_id:'preview-user',created_at:new Date().toISOString(),type:'call',text:'Voice call · 17 sec'}));renderGroupsListDOM([{id:'group',name:'Weekend plans',topic:'Photos, plans and good company',participants:['preview-user','peer'],created_by:'preview-user'}],document.getElementById('groups-list'));</script></body></html>
