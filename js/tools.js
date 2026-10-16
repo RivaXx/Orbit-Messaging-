@@ -59,7 +59,7 @@ function initClockSuite() {
     switchClockView(currentClockView);
     if (!clockTickInterval) {
         clockTickInterval = setInterval(() => {
-            if (currentClockView === 'world') renderWorldClocks();
+            if (currentClockView === 'world' && !document.hidden && document.getElementById('clock-view-world')?.offsetParent !== null) renderWorldClocks();
             checkTriggerAlarms();
         }, 1000);
     }
@@ -223,7 +223,7 @@ function renderAlarmsList() {
     list.innerHTML = userAlarms.map(a => `
         <div class="alarm-item touch-fix">
             <div>
-                <div class="alarm-time" style="${a.enabled ? '' : 'color:var(--text-muted);'}">${a.time}</div>
+                <div class="alarm-time" style="${a.enabled ? '' : 'color:var(--text-muted);'}">${a.snoozeAt ? new Date(a.snoozeAt).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}) : a.time}</div>
                 <div class="alarm-label">${escapeHtml(a.label || 'Alarm')}</div>
             </div>
             <div style="display:flex; align-items:center; gap:12px;">
@@ -251,25 +251,32 @@ function saveNewAlarm() {
     const timeInp = document.getElementById('alarm-time-inp');
     const labelInp = document.getElementById('alarm-label-inp');
     const time = timeInp ? timeInp.value : '07:00';
-    const label = labelInp ? labelInp.value.trim() : 'Alarm';
+    const label = labelInp ? labelInp.value.trim().slice(0,80) : 'Alarm';
+    if(!/^([01]\d|2[0-3]):[0-5]\d$/.test(time)){showToast('Choose a valid alarm time.','error');return;}
+    const musicInput=document.getElementById('orbit-alarm-music')?.value.trim();
+    if(musicInput && !orbitMusicUrl(musicInput)){showToast('Enter a valid HTTPS YouTube or YouTube Music link.','error');return;}
 
     userAlarms.push({
         id: `alm_${Date.now()}`,
         time: time,
         label: label || 'Alarm',
+        tone: document.getElementById('orbit-alarm-tone')?.value || 'orbit',
+        musicUrl: orbitMusicUrl(document.getElementById('orbit-alarm-music')?.value || ''),
         enabled: true
     });
 
     try { localStorage.setItem('orbit_alarms', JSON.stringify(userAlarms)); } catch(e) {}
     closeAddAlarmModal();
     renderAlarmsList();
-    showToast('Alarm saved ✓', 'success');
+    orbitUnlockAudio();
+    orbitClockNotify('Alarm set', `${time} · ${label || 'Alarm'}`);
 }
 
 function toggleAlarm(id, enabled) {
     const target = userAlarms.find(a => a.id === id);
     if (target) {
         target.enabled = enabled;
+        orbitClockNotify(enabled?'Alarm enabled':'Alarm disabled',`${target.time} · ${target.label||'Alarm'}`);
         try { localStorage.setItem('orbit_alarms', JSON.stringify(userAlarms)); } catch(e) {}
         renderAlarmsList();
     }
@@ -285,16 +292,17 @@ function deleteAlarm(id, event) {
 let lastCheckedAlarmMin = '';
 function checkTriggerAlarms() {
     const now = new Date();
-    const currentHM = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
-    if (currentHM === lastCheckedAlarmMin) return;
-
+    const currentHM = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+    const minuteKey = `${now.getFullYear()}-${now.getMonth()}-${now.getDate()}-${currentHM}`;
+    let changed=false;
     userAlarms.forEach(a => {
-        if (a.enabled && a.time === currentHM) {
-            lastCheckedAlarmMin = currentHM;
-            playNotificationChime();
-            showToast(`⏰ ALARM: ${a.label || 'Alarm Ringing!'}`, 'success');
+        const snoozed=Number.isFinite(a.snoozeAt);
+        if (a.enabled && (snoozed ? a.snoozeAt<=now.getTime() : a.time===currentHM && a.lastFiredMinute!==minuteKey)) {
+            a.lastFiredMinute=minuteKey;if(snoozed)a.enabled=false;changed=true;
+            orbitRingAlarm(a);
         }
     });
+    if(changed){userAlarms=userAlarms.filter(a=>!a.snoozeAt||a.enabled);localStorage.setItem('orbit_alarms',JSON.stringify(userAlarms));renderAlarmsList();}
 }
 
 // ── Stopwatch ──
@@ -312,6 +320,7 @@ function toggleStopwatch() {
     if (!swIsRunning) {
         swIsRunning = true;
         swStartTime = Date.now() - swElapsed;
+        orbitClockNotify('Stopwatch started','Tracking elapsed time.');
         btn.innerText = 'Stop';
         btn.className = 'stopwatch-btn stop touch-fix';
         if (lapBtn) {
@@ -325,6 +334,7 @@ function toggleStopwatch() {
         }, 30);
     } else {
         swIsRunning = false;
+        orbitClockNotify('Stopwatch stopped',`${(swElapsed/1000).toFixed(1)} seconds elapsed`);
         clearInterval(swInterval);
         btn.innerText = 'Start';
         btn.className = 'stopwatch-btn start touch-fix';
@@ -379,6 +389,7 @@ let timerInterval = null;
 let timerTotalSeconds = 300;
 let timerRemainingSeconds = 300;
 let timerIsRunning = false;
+let orbitTimerDeadline = 0;
 
 function toggleTimer() {
     const toggleBtn = document.getElementById('timer-btn-toggle');
@@ -394,6 +405,9 @@ function toggleTimer() {
             timerRemainingSeconds = timerTotalSeconds;
         }
 
+        orbitUnlockAudio();
+        orbitTimerDeadline=Date.now()+timerRemainingSeconds*1000;
+        orbitClockNotify('Timer started', `${Math.ceil(timerRemainingSeconds/60)} min remaining`);
         timerIsRunning = true;
         if (toggleBtn) {
             toggleBtn.innerText = 'Pause';
@@ -402,7 +416,7 @@ function toggleTimer() {
 
         clearInterval(timerInterval);
         timerInterval = setInterval(() => {
-            timerRemainingSeconds--;
+            timerRemainingSeconds=Math.max(0,Math.ceil((orbitTimerDeadline-Date.now())/1000));
             updateTimerDisplay();
 
             if (timerRemainingSeconds <= 0) {
@@ -412,13 +426,13 @@ function toggleTimer() {
                     toggleBtn.innerText = 'Start';
                     toggleBtn.className = 'stopwatch-btn start touch-fix';
                 }
-                playNotificationChime();
-                showToast('⏰ Timer finished!', 'success');
+                orbitRingAlarm({label:'Timer finished',tone:'orbit'});
             }
         }, 1000);
     } else {
         timerIsRunning = false;
         clearInterval(timerInterval);
+        orbitClockNotify('Timer paused','Tap Resume to continue.');
         if (toggleBtn) {
             toggleBtn.innerText = 'Resume';
             toggleBtn.className = 'stopwatch-btn start touch-fix';
@@ -433,6 +447,7 @@ function cancelTimer() {
     updateTimerDisplay();
     const toggleBtn = document.getElementById('timer-btn-toggle');
     if (toggleBtn) {
+        orbitClockNotify('Timer cancelled','Timer reset.');
         toggleBtn.innerText = 'Start';
         toggleBtn.className = 'stopwatch-btn start touch-fix';
     }

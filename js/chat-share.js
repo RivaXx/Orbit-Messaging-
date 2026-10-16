@@ -177,11 +177,11 @@
         }
 
         // 2. Add Friends from globalUsersMap
-        if (window.globalUsersMap && window.myFriendsSet) {
-            window.myFriendsSet.forEach(fId => {
-                const u = window.globalUsersMap.get(fId);
+        if (typeof globalUsersMap !== 'undefined' && typeof myFriendsSet !== 'undefined') {
+            myFriendsSet.forEach(fId => {
+                const u = globalUsersMap.get(fId);
                 if (u && currentUser) {
-                    const roomId = [currentUser.id, u.user_id].sort().join('_');
+                    const roomId = typeof userDirectRoomsMap !== 'undefined' && userDirectRoomsMap.get(u.user_id) || `dm_${[currentUser.id,u.user_id].sort().join('_')}`;
                     if (!targets.some(t => t.id === roomId)) {
                         const name = u.display_name || u.email?.split('@')[0] || 'Friend';
                         targets.push({
@@ -195,6 +195,11 @@
             });
         }
 
+        if(typeof allRoomsMap !== 'undefined') allRoomsMap.forEach(room=>{
+            if(!room || !Array.isArray(room.participants) || !room.participants.includes(currentUser?.id) || targets.some(t=>t.id===room.id))return;
+            const peer=room.participants.find(id=>id!==currentUser.id), user=globalUsersMap.get(peer);
+            targets.push({id:room.id,title:room.is_direct?(user?.display_name||room.name||'Direct chat'):(room.name||'Group'),isGroup:!room.is_direct,avatarHtml:'<i class="fa-solid fa-comments"></i>'});
+        });
         const filtered = targets.filter(t => !q || t.title.toLowerCase().includes(q));
 
         if (filtered.length === 0) {
@@ -274,6 +279,7 @@
         // Cache message copy BEFORE closing modal which sets messageToForward = null
         const msg = { ...messageToForward };
         if(orbitIsViewOnceMessage(msg)){showToast('View-once photos cannot be forwarded.','error');return;}
+        if(msg.type==='call'){showToast('Call records cannot be forwarded.','info');return;}
         const targetRooms = Array.from(forwardSelectedRoomIds);
         closeForwardModal();
         showToast(`Forwarding to ${targetRooms.length} chat${targetRooms.length > 1 ? 's' : ''}...`);
@@ -287,23 +293,24 @@
                 username: senderName,
                 text: msg.text || '',
                 type: msg.type || 'text',
-                attachments: msg.attachments || [],
+                attachments: await orbitCopyForwardAttachments(msg.attachments || []),
                 reply_to: null,
                 read_by: [currentUser.id],
                 is_forwarded: true,
                 created_at: new Date().toISOString()
             };
 
+            let sent=0;
+            const failed=[];
             for (const rId of targetRooms) {
-                const insertPayload = { ...payloadBase, room: rId };
-                if (typeof window.executeResilientMessageInsert === 'function') {
-                    await window.executeResilientMessageInsert(insertPayload);
-                } else {
-                    await client.from('messages').insert(insertPayload);
-                }
+                const insertPayload = { ...payloadBase, id:crypto.randomUUID(), room: rId };
+                const result = typeof window.executeResilientMessageInsert === 'function'
+                    ? await window.executeResilientMessageInsert(insertPayload)
+                    : await client.from('messages').insert(insertPayload);
+                if(result?.error) failed.push({room:rId,error:result.error}); else sent++;
             }
 
-            showToast(`Message forwarded!`, 'success');
+            showToast(failed.length ? `Forwarded to ${sent} of ${targetRooms.length} chats. ${failed[0].error.message}` : `Forwarded to ${sent} chat${sent===1?'':'s'}.`, failed.length?'error':'success');
 
             // If active room was one of the targets, reload
             if (typeof currentRoom !== 'undefined' && targetRooms.includes(currentRoom)) {

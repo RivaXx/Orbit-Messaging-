@@ -64,6 +64,8 @@ async function orbitSaveEdit() {
 
 async function orbitCopyForwardAttachments(attachments) {
     const copies=[];
+    if(typeof attachments==='string'){try{attachments=JSON.parse(attachments);}catch(_){throw new Error('Unsupported legacy attachment.');}}
+    if(!Array.isArray(attachments))throw new Error('Unsupported attachment list.');
     for(const rawAttachment of attachments){
         let attachment=rawAttachment;
         if(typeof attachment==='string'){try{attachment=JSON.parse(attachment);}catch(_){throw new Error('Unsupported legacy attachment. Download and attach it again.');}}
@@ -179,6 +181,7 @@ function orbitInitClockControls() {
     document.getElementById('orbit-clock-permission').onclick=orbitEnableClockNotifications;
 }
 orbitInitClockControls();
+if(typeof initClockSuite==='function')initClockSuite();
 
 let orbitCallReconnectTimer=null,orbitCallNotificationTag=null;
 function orbitPrepareCallPanel(incoming) {

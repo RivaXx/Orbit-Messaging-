@@ -281,7 +281,7 @@ function renderRecentChatsFromCache(cachedItems, list) {
                 </div>
                 <div class="c-preview-row">
                     <span class="c-last-msg">${escapeHtml(item.msgPreview || 'Message')}</span>
-                </div>
+                </div><div class="c-presence-line">${escapeHtml(item.presenceDisplay || '')}</div>
             </div>
         `;
         // Attach long-press selection handler — only available if chat-select.js already loaded
@@ -493,7 +493,8 @@ async function loadMainChats(fromCacheFirst = false) {
 
             const isPinned = pinnedRooms.includes(roomId);
             const isUnread = (typeof unreadRoomsSet !== 'undefined') && unreadRoomsSet.has(roomId);
-            const timeDisplay = formatSmartActivity(lastMsg.created_at);
+            const timeDisplay = orbitFormatMessageTime(lastMsg.created_at);
+            const presenceDisplay = isGroup ? `${roomMeta?.participants?.length || 0} members` : orbitChatPresence(peerUserId);
             const msgPreview = lastMsg.type === 'media' || lastMsg.attachments?.length ? '📷 Media' : (lastMsg.text || 'Message');
 
             serializableItems.push({
@@ -504,6 +505,7 @@ async function loadMainChats(fromCacheFirst = false) {
                 avatarHtml,
                 isUnread,
                 timeDisplay,
+                presenceDisplay,
                 msgPreview,
                 peerUserId
             });
@@ -530,7 +532,7 @@ async function loadMainChats(fromCacheFirst = false) {
                     </div>
                     <div class="c-preview-row">
                         <span class="c-last-msg">${escapeHtml(msgPreview)}</span>
-                    </div>
+                    </div><div class="c-presence-line">${escapeHtml(presenceDisplay)}</div>
                 </div>
             `;
             if (typeof attachChatCardSelectHandler === 'function') {
