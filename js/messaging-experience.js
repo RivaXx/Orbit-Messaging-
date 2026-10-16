@@ -32,7 +32,7 @@ function orbitBeginEdit(msg) {
     const bar=document.createElement('div');bar.id='orbit-edit-bar';bar.className='orbit-edit-bar';
     const label=document.createElement('span');label.textContent='Editing message · 10-minute window';
     const cancel=document.createElement('button');cancel.type='button';cancel.textContent='Cancel';cancel.onclick=orbitCancelEdit;
-    bar.append(label,cancel);input.closest('.input-glass-pill')?.before(bar);
+    bar.append(label,cancel);document.getElementById('chat-standard-input-row')?.before(bar);
     if(!bar.isConnected) input.parentElement.before(bar);
     input.value=msg.text;input.focus();handleChatInputText(input);
     orbitEditDeadlineTimer=setTimeout(()=>{orbitCancelEdit();showToast('The edit window has ended.','info');},Math.max(0,600000-(Date.now()-Date.parse(msg.created_at))));
@@ -228,3 +228,16 @@ async function orbitNotifyIncomingCall(row) {
 
 // Keep an edit from carrying into a different chat or account.
 document.addEventListener('click',()=>{if(orbitEditingMessage&&(currentRoom!==orbitEditingMessage.viewRoom||currentUser?.id!==orbitEditingMessage.owner))orbitCancelEdit();},true);
+
+// Ringtone preferences are available before a call, in Settings > Alerts.
+function orbitInitRingtoneSettings() {
+ const section=document.getElementById('settings-notifications');if(!section)return;
+ const panel=document.createElement('div');panel.className='orbit-clock-controls';panel.style.marginTop='16px';
+ panel.innerHTML='<label>Voice call ringtone<select id="orbit-settings-call-tone" class="glass-input"><option value="orbit">Orbit</option><option value="gentle">Gentle</option><option value="classic">Classic</option><option value="silent">Silent</option></select></label><label>Call ring volume<input id="orbit-settings-call-volume" type="range" min="0" max="0.3" step="0.01"></label><button type="button" id="orbit-settings-call-preview">Preview ringtone</button>';
+ section.append(panel);const tone=document.getElementById('orbit-settings-call-tone'),volume=document.getElementById('orbit-settings-call-volume');
+ tone.value=localStorage.getItem('orbit_call_ringtone')||'orbit';volume.value=localStorage.getItem('orbit_call_volume')??'.12';
+ tone.onchange=()=>{localStorage.setItem('orbit_call_ringtone',tone.value);const modal=document.getElementById('orbit-call-ringtone');if(modal)modal.value=tone.value;};
+ volume.oninput=()=>{localStorage.setItem('orbit_call_volume',volume.value);const modal=document.getElementById('orbit-call-volume');if(modal)modal.value=volume.value;};
+ document.getElementById('orbit-settings-call-preview').onclick=()=>{if(tone.value!=='silent')orbitPlayTone(tone.value,Number(volume.value));};
+}
+orbitInitRingtoneSettings();
