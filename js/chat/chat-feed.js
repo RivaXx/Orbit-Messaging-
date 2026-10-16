@@ -185,7 +185,7 @@ function isDirectRecipientOnline() {
 }
 
 function getTickIconHtml(msg) {
-    if (!msg) return '';
+    if (!msg || msg.type === 'call') return '';
     if (msg.status === 'failed' || msg.status === 'error') {
         const tempId = msg.client_temp_id || msg.id;
         return `<span class="msg-status-tick retry-error" onclick="event.stopPropagation(); retrySendMessage('${escapeHtml(String(tempId))}')" title="Failed to send. Tap to retry" style="color:#FF453A; cursor:pointer;"><i class="fa-solid fa-circle-exclamation"></i></span>`;
@@ -425,16 +425,16 @@ function createMessageDOMNode(msg, isConsecutive = false) {
                 if (!cleanUrl) return;
 
                 const cleanUrlNoQuery = cleanUrl.split('?')[0].split('#')[0];
-                const isImage = (msg.type === 'image') ||
+                const isImage = (!att.type && msg.type === 'image') ||
                     Boolean(cleanUrlNoQuery.match(/\.(jpg|jpeg|png|gif|webp|bmp|heic|svg)$/i)) ||
                     cleanUrl.startsWith('data:image') ||
                     Boolean(att && (att.type === 'image' || att.mimeType?.startsWith('image/')));
 
-                const isVideo = (msg.type === 'video') ||
+                const isVideo = (!att.type && msg.type === 'video') ||
                     Boolean(cleanUrlNoQuery.match(/\.(mp4|webm|mov|m4v|mkv)$/i)) ||
                     Boolean(att && att.type === 'video');
 
-                const isAudio = (msg.type === 'audio' || msg.type === 'voice') ||
+                const isAudio = (!att.type && (msg.type === 'audio' || msg.type === 'voice')) ||
                     Boolean(cleanUrlNoQuery.match(/\.(mp3|wav|ogg|opus|m4a|aac|webm)$/i)) ||
                     Boolean(att && (att.type === 'audio' || att.type === 'voice'));
 
@@ -535,7 +535,7 @@ function createMessageDOMNode(msg, isConsecutive = false) {
                 </div>
             `;
         } else if (images.length > 1) {
-            const batchKey = `bunch_${msg.id || Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+            const batchKey = `bunch_${String(msg.id || msg.client_temp_id || Date.now()).replace(/[^a-zA-Z0-9_-]/g,'')}`;
             if (!window._orbitBatches) window._orbitBatches = {};
             window._orbitBatches[batchKey] = images.map(im => im.url);
 
@@ -570,7 +570,7 @@ function createMessageDOMNode(msg, isConsecutive = false) {
             } else {
                 // 4 or more images: 2x2 grid. If > 4, 4th image has darkened overlay with +N
                 const displayImages = images.slice(0, 4);
-                const remaining = images.length - 3; // e.g. 28 total -> 3 shown + 1 with "+25"
+                const remaining = images.length - 4; // e.g. 28 total -> 3 shown + 1 with "+25"
                 mediaGridHtml = `
                     <div class="wa-image-bunch-grid bunch-4" style="position:relative; display:grid; grid-template-columns:1fr 1fr; grid-template-rows:1fr 1fr; gap:3px; max-width:320px; width:100%; border-radius:16px; overflow:hidden; margin-top:4px; aspect-ratio:1; background:rgba(0,0,0,0.25);">
                         ${mediaUploadOverlayHtml}
@@ -882,6 +882,7 @@ function createMessageDOMNode(msg, isConsecutive = false) {
                     ${formattedTextHtml}
                     <div class="msg-meta-row">
                         ${starBadgeHtml}
+                        ${msg.edited_at ? '<span class="msg-edited-label">edited</span>' : ''}
                         <span>${timeFormatted}</span>
                         ${isOwn ? getTickIconHtml(msg) : ''}
                     </div>
@@ -1534,6 +1535,9 @@ function showQuickReactionPicker(rowNode, msg, coords) {
         }
     ];
 
+    if (typeof orbitCanEditMessage === "function" && orbitCanEditMessage(msg)) {
+        menuItems.unshift({icon:"fa-solid fa-pen", label:"Edit message", action:()=>orbitBeginEdit(msg)});
+    }
     if (isOwn) {
         menuItems.push({
             icon: 'fa-solid fa-ban',

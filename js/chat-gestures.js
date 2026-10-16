@@ -282,7 +282,8 @@
      * Lightbox gestures: swipe-down-to-dismiss & pinch-to-zoom
      */
     function initLightboxGestures(modalEl, imgEl) {
-        if (!modalEl || !imgEl) return;
+        if (!modalEl || !imgEl || modalEl.dataset.gesturesReady) return;
+        modalEl.dataset.gesturesReady="true";
 
         let touchStartY = 0;
         let touchDiffY = 0;
@@ -300,12 +301,12 @@
                 const t1 = e.touches[0];
                 const t2 = e.touches[1];
                 initialPinchDist = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
-                initialScale = window.lightboxZoomLevel || 1.0;
+                initialScale = lightboxZoomLevel || 1.0;
             }
         }, { passive: true });
 
         modalEl.addEventListener('touchmove', e => {
-            if (e.touches.length === 1 && (!window.lightboxZoomLevel || window.lightboxZoomLevel <= 1.05)) {
+            if (e.touches.length === 1 && (!lightboxZoomLevel || lightboxZoomLevel <= 1.05)) {
                 touchDiffY = e.touches[0].clientY - touchStartY;
                 if (touchDiffY > 20) {
                     isSwipingDown = true;
@@ -320,7 +321,7 @@
                 const dist = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
                 const scaleRatio = dist / initialPinchDist;
                 const newScale = Math.min(Math.max(0.8, initialScale * scaleRatio), 4.0);
-                window.lightboxZoomLevel = newScale;
+                lightboxZoomLevel = newScale;
                 imgEl.style.transform = `scale(${newScale})`;
             }
         }, { passive: true });

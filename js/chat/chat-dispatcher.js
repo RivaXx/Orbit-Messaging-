@@ -376,6 +376,7 @@ setTimeout(() => {
 }, 0);
 
 async function sendMessage() {
+    if (typeof orbitEditingMessage !== "undefined" && orbitEditingMessage) return orbitSaveEdit();
     // ── Double-send guard: prevent duplicate messages from rapid clicks or Enter key-repeat ──
     if (_isSendingMessage) return;
 
@@ -546,6 +547,14 @@ async function queueMediaMessage(items, caption = '', messageType = null, target
     const id = (typeof crypto !== 'undefined' && crypto.randomUUID)
         ? crypto.randomUUID()
         : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => { const r = Math.random() * 16 | 0; return (c === 'x' ? r : (r & 3 | 8)).toString(16); });
+    if(items.some(item=>!item.file && !item.url?.startsWith('data:')))throw new Error('An original file is missing. Select the photos again.');
+    const originals = items.map((item,index)=>item.type==='image' && item.originalQuality ? index : -1).filter(index=>index>=0);
+    if (originals.length) {
+        const client = await ensureSupabase();
+        const {error} = await client.rpc('orbit_reserve_original_photos',{message_key:id,photo_indexes:originals});
+        if(error) throw new Error(error.message || 'Could not reserve original-quality allowance.');
+        if(currentUser?.id!==userAtSend || currentRoom!==roomAtSend)throw new Error('The account or chat changed. Reopen the original chat before sending.');
+    }
     const tempId = `c_${Date.now()}_${id.slice(0, 8)}`;
     let sendRoomId = roomAtSend;
     if (!isGroupChat && peerAtSend && typeof allRoomsMap !== 'undefined') {
@@ -580,7 +589,7 @@ async function queueMediaMessage(items, caption = '', messageType = null, target
         const name = item.name || file.name || `media-${index + 1}`;
         const previewUrl = (file instanceof Blob || file instanceof File) ? URL.createObjectURL(file) : (item.url || '');
         item.file = file;
-        mediaUploadInfo.push({ index, name, type, mime: file.type || 'application/octet-stream', rotation: Number(item.rotation || 0), hdQuality: !!isPreviewHdQuality, subfolder: type === 'image' ? 'images' : type === 'video' ? 'videos' : 'documents' });
+        mediaUploadInfo.push({ index, name, type, mime: file.type || 'application/octet-stream', rotation: Number(item.rotation || 0), hdQuality: !!isPreviewHdQuality, originalQuality: !!item.originalQuality, subfolder: type === 'image' ? 'images' : type === 'video' ? 'videos' : 'documents' });
         return { name, url: previewUrl, type, size: file.size, upload_pending: true, view_once: !!item.viewOnce };
     });
     const payload = {
@@ -679,7 +688,7 @@ async function _uploadQueuedMedia(item) {
             if (rotated?.startsWith('data:image/')) uploadBody = rotated;
         }
 
-        if (!info.prepared && info.type === 'image' && !/image\/(gif|svg\+xml)/i.test(info.mime) && typeof compressImageForUpload === 'function') {
+        if (!info.prepared && !info.originalQuality && info.type === 'image' && !/image\/(gif|svg\+xml)/i.test(info.mime) && typeof compressImageForUpload === 'function') {
             const isHd = info.hdQuality;
             const slowLink = ['slow-2g', '2g', '3g'].includes(navigator.connection?.effectiveType) || navigator.connection?.saveData;
             const targetDim = isHd ? 2560 : slowLink ? 720 : 1080;

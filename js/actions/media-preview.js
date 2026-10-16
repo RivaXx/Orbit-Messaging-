@@ -174,6 +174,7 @@ function openMediaPreviewScreen(items) {
         type: item.type || 'image',
         rotation: 0,
         caption: item.caption || '',
+        originalQuality: !!item.originalQuality,
         viewOnce: !!item.viewOnce
     }));
     currentPreviewIndex = 0;
@@ -188,6 +189,7 @@ function openMediaPreviewScreen(items) {
     document.getElementById('preview-hd-check')?.classList.add('hide');
     renderPreviewCarousel();
     renderPreviewThumbStrip();
+    if(typeof orbitLoadOriginalAllowance==='function')orbitLoadOriginalAllowance();
     if(typeof orbitFitPhotoPreview==='function')orbitFitPhotoPreview();
 }
 
@@ -249,6 +251,7 @@ function renderPreviewCarousel() {
         }
     }
     updatePreviewThumbSelection();
+    if(typeof orbitRenderQualityControls==='function') orbitRenderQualityControls();
 }
 
 function navPreviewMedia(delta) {
@@ -554,7 +557,8 @@ async function sendPreviewMediaBatch() {
     if (captionInput && mediaPreviewList[currentPreviewIndex]) {
         mediaPreviewList[currentPreviewIndex].caption = captionInput.value;
     }
-    const itemsToSend = mediaPreviewList.map(item => ({ ...item, viewOnce: !!isViewOnceActive || !!item.viewOnce }));
+    const itemsToSend = mediaPreviewList.map(item => ({ ...item, viewOnce: !!item.viewOnce }));
+    if(itemsToSend.length>1 && itemsToSend.some(item=>item.viewOnce)){showToast('Send view-once photos individually. Turn off view once to send an album.','info');return;}
     if (itemsToSend.length === 0 || !currentRoom || !currentUser) return;
     const uploadRoomId = mediaPreviewTargetRoom;
     const uploadUserId = mediaPreviewTargetUser;
@@ -566,10 +570,11 @@ async function sendPreviewMediaBatch() {
         showToast('Chat changed before the media was queued. Reopen the original chat and try again.', 'error');
         return;
     }
-    closeMediaPreviewScreen();
     try {
         if (typeof queueMediaMessage !== 'function') throw new Error('Background media queue is unavailable.');
-        await queueMediaMessage(itemsToSend, combinedCaption);
+        await queueMediaMessage(itemsToSend, combinedCaption, null, {roomId:uploadRoomId,userId:uploadUserId});
+        closeMediaPreviewScreen();
+        if(typeof orbitLoadOriginalAllowance==='function')orbitLoadOriginalAllowance();
     } catch (error) {
         showToast(`Could not queue media: ${error.message || 'Please try again.'}`, 'error');
     } finally {

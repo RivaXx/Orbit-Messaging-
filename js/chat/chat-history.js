@@ -21,6 +21,7 @@ function notifyFeedUserInteraction() {
 
 async function openChatRoom(roomId, roomTitle, avatarUrl, isSelf = false, peerUserId = null) {
     if (!roomId) return;
+    if(typeof orbitCancelEdit==='function')orbitCancelEdit();
     // Inbox previews are speculative; the opened conversation has priority.
     if (typeof recentChatsController !== 'undefined') recentChatsController?.abort();
     chatHistoryController?.abort();
@@ -436,6 +437,7 @@ function showChatHistoryRetry(roomId, error) {
 function retryChatHistory() {
     const roomId = currentRoom;
     if (!roomId) return;
+    if(typeof orbitCancelEdit==='function')orbitCancelEdit();
     document.getElementById('chat-history-retry')?.remove();
     fetchFreshRoomMessages(roomId, activeChatPeerId, _chatViewEpoch);
 }
@@ -444,6 +446,7 @@ async function fetchFreshRoomMessages(roomId, peerUserId = activeChatPeerId, vie
     clearTimeout(chatHistoryRetryTimer);
     chatHistoryRetryTimer = null;
     if (!roomId) return;
+    if(typeof orbitCancelEdit==='function')orbitCancelEdit();
     const selfId = currentUser?.id;
     const startedAt = Date.now();
     const aliases = resolveRoomAliases(roomId, peerUserId);

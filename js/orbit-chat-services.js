@@ -167,14 +167,12 @@ function updateVoiceCallButton(){const b=document.getElementById('btn-chat-voice
 function orbitCallRing(stop=false) {
     clearInterval(orbitRingTimer);orbitRingTimer=null;
     if(stop){if(orbitRingAudio){orbitRingAudio.close().catch(()=>{});orbitRingAudio=null;}return;}
-    try {
-        const Audio=window.AudioContext||window.webkitAudioContext;orbitRingAudio=new Audio();
-        const beep=()=>{if(!orbitRingAudio||orbitRingAudio.state!=='running')return;const now=orbitRingAudio.currentTime,g=orbitRingAudio.createGain();g.gain.setValueAtTime(.07,now);g.gain.exponentialRampToValueAtTime(.001,now+.6);g.connect(orbitRingAudio.destination);for(const frequency of [440,480]){const o=orbitRingAudio.createOscillator();o.frequency.value=frequency;o.connect(g);o.start(now);o.stop(now+.6);}};
-        beep();orbitRingTimer=setInterval(beep,2400);
-    }catch(_){/* Visual incoming call and system alert still work when audio is blocked. */}
+    const beep=()=>{if(_activeCallRole==='callee'&&localStorage.getItem('orbit_call_ringtone')==='silent')return;orbitPlayTone(_activeCallRole==='caller'?'ringback':(localStorage.getItem('orbit_call_ringtone')||'orbit'),Number(localStorage.getItem('orbit_call_volume')??'.12'));};
+    beep();orbitRingTimer=setInterval(beep,_activeCallRole==='caller'?3000:2200);
 }
 function _showVoiceCallModal({incoming=false}={}) {
     const row=orbitCallRow;
+    orbitPrepareCallPanel(incoming);
     document.getElementById('call-peer-name').textContent=row?(_activeCallRole==='caller'?row.callee_name:row.caller_name):document.getElementById('chat-target-name')?.textContent||'Orbit user';
     document.getElementById('call-btn-answer').classList.toggle('hide',!incoming);
     document.getElementById('call-btn-mute').disabled=incoming;
@@ -215,12 +213,12 @@ function _createVoicePeerConnection() {
     pc.onconnectionstatechange=async()=>{
         if(peerConnection!==pc)return;
         if(pc.connectionState==='connected'){
-            orbitCallRing(true);clearTimeout(callNoAnswerTimer);_setVoiceCallStatus('Connected');startCallTimer();
+            orbitCallRing(true);orbitCallPanelCleanup();document.getElementById('call-avatar-wrap')?.classList.add('is-connected');clearTimeout(callNoAnswerTimer);_setVoiceCallStatus('Connected · voice call');startCallTimer();
             document.getElementById('call-btn-mute').disabled=false;
             try{await orbitRpc('orbit_update_call',{call_key:_activeCallId,next_state:'connected'});}catch(error){console.warn(error.message);}
             await refreshOrbitAudioDevices();
         }else if(pc.connectionState==='failed'){showToast('Could not connect this call. Try another network.','error');await endVoiceCall(true,'failed');}
-        else if(pc.connectionState==='disconnected')_setVoiceCallStatus('Reconnecting…');
+        else if(pc.connectionState==='disconnected'){_setVoiceCallStatus('Reconnecting…');clearTimeout(orbitCallReconnectTimer);orbitCallReconnectTimer=setTimeout(()=>{if(peerConnection===pc&&pc.connectionState!=='connected')endVoiceCall(true,'failed');},20000);}
     };
     return pc;
 }
@@ -242,7 +240,7 @@ async function startVoiceCall() {
         if(currentUser?.id!==owner||_activeCallRoom!==room||epoch!==orbitCallEpoch){await orbitRpc('orbit_update_call',{call_key:row.id,next_state:'ended'});return;}
         orbitCallRow=row;_activeCallId=row.id;await orbitWatchIce(row);
         for(const candidate of orbitLocalIce.splice(0))await _sendVoiceCallSignal('candidate',{candidate});
-        _showVoiceCallModal();_setVoiceCallStatus('Calling…');
+        _showVoiceCallModal();_setVoiceCallStatus('Ringing…');orbitCallRing();
         callNoAnswerTimer=setTimeout(()=>{if(orbitCallRow?.state==='ringing')endVoiceCall(true,'missed');},47000);
         const client=await ensureSupabase();const {data}=await client.from('orbit_calls').select('*').eq('id',row.id).single();if(data)receiveOrbitCall(data);
     }catch(error){if(epoch===orbitCallEpoch){showToast(error.message||'Could not start call.','error');await endVoiceCall(false);}}
@@ -255,17 +253,17 @@ async function receiveOrbitCall(row) {
         await orbitWatchIce(row);
         if(_activeCallId!==row.id||orbitCallRow?.state!=='ringing')return;
         _showVoiceCallModal({incoming:true});_setVoiceCallStatus('Incoming voice call');orbitCallRing();
-        showNativeOrbitNotification(row.caller_name,'Incoming voice call',row.room,row.id);
+        orbitNotifyIncomingCall(row);
         callNoAnswerTimer=setTimeout(()=>{if(orbitCallRow?.state==='ringing')endVoiceCall(true,'missed');},Math.max(1000,Date.parse(row.created_at)+47000-Date.now()));
         return;
     }
     orbitCallRow=row;
-    if(orbitTerminalCalls.has(row.state)){if(!orbitCallClosing){showToast(row.state==='declined'?'Call declined.':row.state==='missed'?'Missed voice call.':'Call ended.');await endVoiceCall(false);}return;}
-    if(row.answer&&_activeCallRole==='caller'&&peerConnection&&!peerConnection.remoteDescription){try{await peerConnection.setRemoteDescription(row.answer);await _applyPendingCallCandidates();_setVoiceCallStatus('Connecting…');}catch(error){showToast(error.message,'error');}}
+    if(orbitTerminalCalls.has(row.state)){if(!orbitCallClosing){if(row.state==='missed'&&row.callee_id===currentUser.id&&document.hidden)showNativeOrbitNotification(row.caller_name,'Missed voice call',row.room,row.id);showToast(row.state==='declined'?'Call declined.':row.state==='missed'?'Missed voice call.':'Call ended.');await endVoiceCall(false);}return;}
+    if(row.answer&&_activeCallRole==='caller'&&peerConnection&&!peerConnection.remoteDescription){try{orbitCallRing(true);await peerConnection.setRemoteDescription(row.answer);await _applyPendingCallCandidates();_setVoiceCallStatus('Connecting…');}catch(error){showToast(error.message,'error');}}
 }
 async function answerVoiceCall() {
     if(_activeCallRole!=='callee'||!_pendingCallOffer||!_activeCallId||peerConnection)return;
-    const id=_activeCallId,owner=currentUser.id,epoch=++orbitCallEpoch;orbitCallRing(true);document.getElementById('call-btn-answer').classList.add('hide');_setVoiceCallStatus('Requesting microphone…');
+    const id=_activeCallId,owner=currentUser.id,epoch=++orbitCallEpoch;orbitCallRing(true);orbitCallPanelCleanup();document.getElementById('call-btn-answer').classList.add('hide');_setVoiceCallStatus('Requesting microphone…');
     try {
         const stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true}});
         if(_activeCallId!==id||currentUser?.id!==owner||epoch!==orbitCallEpoch){stream.getTracks().forEach(t=>t.stop());return;}
@@ -288,7 +286,7 @@ async function endVoiceCall(notifyPeer=true,outcome=null) {
         if(notifyPeer&&id)await orbitRpc('orbit_update_call',{call_key:id,next_state:outcome||(row?.state==='ringing'&&role==='callee'?'declined':'ended')});
     }catch(error){console.warn('[Orbit Call] End:',error.message);}
     finally {
-        orbitCallRing(true);clearTimeout(callNoAnswerTimer);clearInterval(callDurationTimer);callDurationTimer=null;callNoAnswerTimer=null;callStartTime=0;
+        orbitCallRing(true);orbitCallPanelCleanup();clearTimeout(callNoAnswerTimer);clearInterval(callDurationTimer);callDurationTimer=null;callNoAnswerTimer=null;callStartTime=0;
         if(peerConnection){peerConnection.onconnectionstatechange=null;peerConnection.onicecandidate=null;peerConnection.close();peerConnection=null;}
         localAudioStream?.getTracks().forEach(track=>track.stop());localAudioStream=null;
         const audio=document.getElementById('remote-call-audio');audio.pause();audio.srcObject=null;
