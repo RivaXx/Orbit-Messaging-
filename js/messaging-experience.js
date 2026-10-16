@@ -62,13 +62,16 @@ async function orbitSaveEdit() {
     finally{orbitEditSaving=false;}
 }
 
-async function orbitCopyForwardAttachments(attachments) {
+async function orbitCopyForwardAttachments(attachments, messageType = null) {
     const copies=[];
     if(typeof attachments==='string'){try{attachments=JSON.parse(attachments);}catch(_){throw new Error('Unsupported legacy attachment.');}}
     if(!Array.isArray(attachments))throw new Error('Unsupported attachment list.');
     for(const rawAttachment of attachments){
         let attachment=rawAttachment;
+        if(messageType==='location' && typeof attachment==='string' && /^https:\/\/maps\.google\.com\//.test(attachment)){copies.push(attachment);continue;}
         if(typeof attachment==='string'){try{attachment=JSON.parse(attachment);}catch(_){throw new Error('Unsupported legacy attachment. Download and attach it again.');}}
+        if(messageType==='contact' && attachment && !attachment.url){copies.push({name:String(attachment.name||'Orbit contact'),username:String(attachment.username||''),phone:String(attachment.phone||''),avatar:String(attachment.avatar||'')});continue;}
+        if(messageType==='poll' && attachment?.poll?.options){const poll=attachment.poll;copies.push({type:'poll',poll:{question:String(poll.question||'Poll'),multiple_answers:!!poll.multiple_answers,options:poll.options.map(option=>({text:String(option.text||''),votes:0,voters:[]}))}});continue;}
         if(!attachment || attachment.view_once || attachment.upload_pending || !attachment.url || /^(blob:|data:)/.test(attachment.url))throw new Error('Wait until the original attachment has finished uploading.');
         const raw=formatMediaUrl(attachment.url);
         const url=typeof resolveMediaUrlForAccess==='function'?await resolveMediaUrlForAccess(raw):raw;
@@ -133,6 +136,7 @@ function orbitUnlockAudio() {
 document.addEventListener('pointerdown',()=>orbitUnlockAudio(),{once:true,passive:true});
 document.addEventListener('keydown',()=>orbitUnlockAudio(),{once:true});
 function orbitPlayTone(kind='orbit',volume=.16) {
+    if(volume<=0)return;
     const context=orbitUnlockAudio();if(!context||context.state!=='running')return;
     const notes={orbit:[659,830,988,830],gentle:[523,659,784],classic:[880,880,660,880],ringback:[440,480]}[kind]||[659,830,988,830];
     notes.forEach((frequency,index)=>{const start=context.currentTime+index*.17,osc=context.createOscillator(),gain=context.createGain();
