@@ -140,17 +140,7 @@ async function snapCameraToPreview() {
     const base64 = canvas.toDataURL('image/jpeg', 0.88);
 
     closeLiveCameraModal();
-    try {
-        if (typeof queueMediaMessage !== 'function') throw new Error('Background media queue is unavailable.');
-        await queueMediaMessage([{
-            name: `Photo_${Date.now()}.jpg`,
-            url: base64,
-            type: 'image'
-        }], '');
-    } catch (error) {
-        console.warn('[Orbit] Camera media queue error:', error);
-        showToast(`Could not queue photo: ${error.message || 'Please try again.'}`, 'error');
-    }
+    openMediaPreviewScreen([{name:`Photo_${Date.now()}.jpg`,url:base64,type:'image'}]);
 }
 
 function snapAndSendCameraPhoto() {
@@ -165,28 +155,21 @@ let mediaPreviewTargetUser = null;
 
 function openMediaPreviewScreen(items) {
     if (!items || items.length === 0) return;
-    mediaPreviewTargetRoom = currentRoom;
-    mediaPreviewTargetUser = currentUser?.id || null;
-    mediaPreviewList = items.map(item => ({
-        file: item.file || null,
-        url: item.url || '',
-        name: item.name || 'media',
-        type: item.type || 'image',
-        rotation: 0,
-        caption: item.caption || '',
-        originalQuality: !!item.originalQuality,
-        viewOnce: !!item.viewOnce
-    }));
-    currentPreviewIndex = 0;
-
     const modal = document.getElementById('modal-media-preview');
-    if (!modal) return;
-    modal.classList.remove('hide');
-    modal.classList.add('active');
-    modal.setAttribute('aria-hidden','false');
-    isPreviewHdQuality=false;isViewOnceActive=false;
-    document.getElementById('preview-hd-toggle-btn')?.classList.remove('active');
-    document.getElementById('preview-hd-check')?.classList.add('hide');
+    if (!modal || !currentRoom || !currentUser?.id) return;
+    const append = modal.classList.contains('active') && mediaPreviewTargetRoom===currentRoom && mediaPreviewTargetUser===currentUser.id;
+    if(append && mediaPreviewList[currentPreviewIndex])mediaPreviewList[currentPreviewIndex].caption=document.getElementById('media-preview-caption-input')?.value || '';
+    const additions = items.map(item=>({file:item.file||null,url:item.url||'',name:item.name||'media',type:item.type||'image',rotation:0,caption:item.caption||'',originalQuality:!!item.originalQuality,viewOnce:!!item.viewOnce}));
+    if(append){currentPreviewIndex=mediaPreviewList.length;mediaPreviewList.push(...additions);}
+    else {
+        mediaPreviewList.forEach(item=>{if(item.url?.startsWith('blob:'))URL.revokeObjectURL(item.url);});
+        mediaPreviewTargetRoom=currentRoom;mediaPreviewTargetUser=currentUser.id;
+        mediaPreviewList=additions;currentPreviewIndex=0;
+        isPreviewHdQuality=false;isViewOnceActive=false;
+        document.getElementById('preview-hd-toggle-btn')?.classList.remove('active');
+        document.getElementById('preview-hd-check')?.classList.add('hide');
+    }
+    modal.classList.remove('hide');modal.classList.add('active');modal.setAttribute('aria-hidden','false');
     renderPreviewCarousel();
     renderPreviewThumbStrip();
     if(typeof orbitLoadOriginalAllowance==='function')orbitLoadOriginalAllowance();
@@ -225,7 +208,9 @@ function renderPreviewCarousel() {
     const prevBtn = document.getElementById('preview-nav-prev');
     const nextBtn = document.getElementById('preview-nav-next');
 
-    if (counter) counter.textContent = `${currentPreviewIndex + 1} of ${mediaPreviewList.length}`;
+    if (counter) counter.textContent = `${currentPreviewIndex + 1} of ${mediaPreviewList.length}${mediaPreviewList.length>1?' · Album':''}`;
+    const send=document.getElementById('preview-send-button');
+    if(send){send.dataset.count=String(mediaPreviewList.length);send.setAttribute('aria-label',mediaPreviewList.length>1?`Send album of ${mediaPreviewList.length} items`:'Send photo');}
     if (captionInput) captionInput.value = current.caption || '';
     isViewOnceActive=!!current.viewOnce;
     document.getElementById('btn-view-once-toggle')?.classList.toggle('active',isViewOnceActive);
@@ -246,6 +231,8 @@ function renderPreviewCarousel() {
     if (mainItem) {
         if (current.type === 'video') {
             mainItem.innerHTML = `<video src="${current.url}" controls autoplay playsinline style="transform:rotate(${current.rotation}deg);"></video>`;
+        } else if(current.type !== 'image') {
+            mainItem.innerHTML = `<div class="orbit-preview-document"><i class="fa-solid fa-file"></i><strong>${escapeHtml(current.name)}</strong><span>File attachment</span></div>`;
         } else {
             mainItem.innerHTML = `<img src="${current.url}" alt="Preview" style="transform:rotate(${current.rotation}deg);">`;
         }
@@ -289,7 +276,8 @@ function deleteCurrentPreviewMedia() {
         closeMediaPreviewScreen();
         return;
     }
-    mediaPreviewList.splice(currentPreviewIndex, 1);
+    const removed=mediaPreviewList.splice(currentPreviewIndex, 1)[0];
+    if(removed?.url?.startsWith('blob:'))URL.revokeObjectURL(removed.url);
     if (currentPreviewIndex >= mediaPreviewList.length) {
         currentPreviewIndex = mediaPreviewList.length - 1;
     }
@@ -313,7 +301,7 @@ function renderPreviewThumbStrip() {
     strip.style.display = 'flex';
     strip.innerHTML = mediaPreviewList.map((item, idx) => `
         <div class="preview-thumb-item ${idx === currentPreviewIndex ? 'active' : ''}" onclick="selectPreviewThumb(${idx})">
-            ${item.type === 'video' ? `<video src="${item.url}" muted></video>` : `<img src="${item.url}" alt="thumb">`}
+            ${item.type === 'video' ? `<video src="${item.url}" muted preload="metadata"></video>` : item.type === 'image' ? `<img src="${item.url}" alt="thumb" decoding="async">` : '<i class="fa-solid fa-file"></i>'}
             <button class="btn-reset touch-fix preview-thumb-del" onclick="event.stopPropagation(); deletePreviewThumb(${idx})" title="Remove"><i class="fa-solid fa-xmark"></i></button>
         </div>
     `).join('');
@@ -332,7 +320,8 @@ function deletePreviewThumb(idx) {
         closeMediaPreviewScreen();
         return;
     }
-    mediaPreviewList.splice(idx, 1);
+    const removed=mediaPreviewList.splice(idx, 1)[0];
+    if(removed?.url?.startsWith('blob:'))URL.revokeObjectURL(removed.url);
     if (currentPreviewIndex >= mediaPreviewList.length) {
         currentPreviewIndex = mediaPreviewList.length - 1;
     }
