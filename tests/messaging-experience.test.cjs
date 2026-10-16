@@ -8,7 +8,7 @@ function context(){
  const element=()=>({dataset:{},style:{},classList:{add(){},remove(){},contains(){return false;},toggle(){}},textContent:'',value:'',children:[],
   setAttribute(){},append(...items){this.children.push(...items);},replaceChildren(...items){this.children=items;},before(){},after(){},remove(){},closest(){return null;},querySelector(){return null;},querySelectorAll(){return [];},addEventListener(){},focus(){}});
  const document={hidden:false,body:{append(node){nodes.set(node.id,node);}},getElementById:id=>nodes.get(id)||null,querySelector:()=>null,querySelectorAll:()=>[],createElement:element,addEventListener(){}};
- const c=vm.createContext({document,window:{addEventListener:(name,fn)=>events[name]=fn},navigator:{onLine:true},location:{origin:'https://orbit.example'},
+ const c=vm.createContext({document,window:{addEventListener:(name,fn)=>events[name]=fn},navigator:{onLine:true},location:{origin:'https://orbit.example',href:'https://orbit.example/'},AbortController,
   localStorage:{getItem:k=>store.get(k)??null,setItem:(k,v)=>store.set(k,v)},console,crypto,Blob,File,URL,
   Date,setTimeout:(fn,delay)=>{timers.push({fn,delay});return timers.length;},clearTimeout(){},setInterval:(fn,delay)=>{timers.push({fn,delay});return timers.length;},clearInterval(){},
   currentUser:{id:'me',email:'member@example.com'},currentRoom:'room',globalUsersMap:new Map(),userAlarms:[],messageCache:new Map(),
@@ -21,10 +21,15 @@ test('editing accepts only owned text before the exact 10-minute boundary',()=>{
  assert.equal(c.orbitCanEditMessage(msg,now),true);
  for(const bad of [{sender_id:'other'},{created_at:new Date(now-600000).toISOString()},{created_at:new Date(now+1).toISOString()},{type:'call'},{attachments:[{}]},{status:'queued'},{is_deleted:true}])assert.equal(c.orbitCanEditMessage({...msg,...bad},now),false,JSON.stringify(bad));
 });
-test('network status updates without polling and keeps offline state visible',()=>{
+test('network events update immediately and keep offline state visible',()=>{
  const {c,nodes,events,timers}=context(),badge=nodes.get('orbit-connectivity');assert.equal(badge.textContent,'Online');
  c.navigator.onLine=false;events.offline();assert.match(badge.textContent,/Offline/);assert.equal(badge.className,'is-offline');
  c.navigator.onLine=true;events.online();assert.equal(badge.textContent,'Online');assert.ok(timers.some(timer=>timer.delay===3500));
+});
+test('reachability probe bypasses cached pages and detects a network without internet access',async()=>{
+ const {c,nodes}=context();let options;
+ c.fetch=async(url,init)=>{options=init;return {ok:true};};await c.orbitProbeConnectivity();assert.equal(nodes.get('orbit-connectivity').textContent,'Online');assert.equal(options.method,'HEAD');assert.equal(options.cache,'no-store');
+ c.fetch=async()=>{throw Error('Disconnected');};await c.orbitProbeConnectivity();assert.match(nodes.get('orbit-connectivity').textContent,/Connection interrupted/);
 });
 test('presence uses peer presence and respects reciprocal privacy',()=>{
  const {c,store}=context();c.globalUsersMap.set('peer',{last_seen:'presence-time',is_online:false});
