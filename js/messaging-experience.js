@@ -114,17 +114,38 @@ function orbitSetOriginalQuality(all) {
     selected.forEach(item=>item.originalQuality=enabled);orbitRenderQualityControls();
 }
 
-// Browser network availability, not a claim that every server is reachable.
+// HEAD bypasses the GET-only service-worker cache, so cached pages cannot
+// falsely report internet access. One check per minute while visible.
+let orbitConnectivityRequest=null,orbitConnectivityEpoch=0;
+async function orbitProbeConnectivity() {
+    if(typeof fetch!=='function'||!navigator.onLine)return;
+    const epoch=++orbitConnectivityEpoch;
+    orbitConnectivityRequest?.abort();
+    const controller=new AbortController();orbitConnectivityRequest=controller;
+    const timeout=setTimeout(()=>controller.abort(),5000);
+    const badge=document.getElementById('orbit-connectivity');
+    try {
+        const response=await fetch(new URL('./manifest.json',location.href),{method:'HEAD',cache:'no-store',credentials:'omit',signal:controller.signal});
+        if(!response.ok)throw new Error('Unreachable');
+        if(epoch!==orbitConnectivityEpoch||!navigator.onLine)return;
+        badge.className='is-online';badge.textContent='Online';badge.title='Orbit is reachable over the internet';
+        clearTimeout(orbitUpdateConnectivity.timer);orbitUpdateConnectivity.timer=setTimeout(()=>badge.classList.add('is-quiet'),3500);
+    }catch(_){if(epoch===orbitConnectivityEpoch&&navigator.onLine){badge.className='is-offline';badge.textContent='Connection interrupted · retrying';badge.title='Orbit could not be reached. Queued messages will retry.';}}
+    finally{clearTimeout(timeout);if(orbitConnectivityRequest===controller)orbitConnectivityRequest=null;}
+}
 function orbitUpdateConnectivity() {
     let badge=document.getElementById('orbit-connectivity');
     if(!badge){badge=document.createElement('div');badge.id='orbit-connectivity';badge.setAttribute('role','status');badge.setAttribute('aria-live','polite');document.body.append(badge);}
     const online=navigator.onLine;
     badge.className=online?'is-online':'is-offline';
-    badge.textContent=online?'Online':'Offline · messages will wait';badge.title=online?'Device network is available':'Device has no network connection';
+    badge.textContent=online?(typeof fetch==='function'?'Connecting…':'Online'):'Offline · messages will wait';badge.title=online?'Checking the connection to Orbit':'Device has no network connection';
     clearTimeout(orbitUpdateConnectivity.timer);
-    if(online)orbitUpdateConnectivity.timer=setTimeout(()=>badge.classList.add('is-quiet'),3500);
+    if(online){orbitUpdateConnectivity.timer=setTimeout(()=>badge.classList.add('is-quiet'),3500);orbitProbeConnectivity();}
+    else {orbitConnectivityEpoch++;orbitConnectivityRequest?.abort();}
 }
 window.addEventListener('online',orbitUpdateConnectivity);window.addEventListener('offline',orbitUpdateConnectivity);orbitUpdateConnectivity();
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)orbitProbeConnectivity();});
+setInterval(()=>{if(!document.hidden&&navigator.onLine)orbitProbeConnectivity();},60000);
 
 // A shared, gesture-unlocked audio context avoids creating an audio engine per ring.
 let orbitToneContext=null,orbitAlarmRingTimer=null,orbitAlarmStopTimer=null,orbitActiveAlarm=null;
