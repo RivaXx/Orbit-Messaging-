@@ -33,10 +33,11 @@
     <script src="assets/vendor/supabase.min.js?v=2.117.3"></script>
     <!-- Document, crop and resumable upload tools load only when needed. -->
 
-    <link rel="stylesheet" href="style.css?v=brand-theme-20261015-r6">
+    <link rel="stylesheet" href="style.css?v=messaging-20261016-r8">
     <link rel="stylesheet" href="tools.css">
-<link rel="stylesheet" href="chat-upgrades.css?v=brand-theme-20261015-r6">
-<link rel="stylesheet" href="photo-weather.css?v=brand-theme-20261015-r6">
+<link rel="stylesheet" href="chat-upgrades.css?v=messaging-20261016-r8">
+<link rel="stylesheet" href="photo-weather.css?v=messaging-20261016-r8">
+    <link rel="stylesheet" href="messaging-experience.css?v=messaging-20261016-r8">
 </head>
 <body>
 
@@ -2318,15 +2319,15 @@
         </div>
     </div>
 
-    <!-- WebRTC Voice Call Beta Modal -->
-    <div id="modal-voice-call" class="glass-modal-overlay">
+    <!-- Voice call controls -->
+    <div id="modal-voice-call" class="glass-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="call-peer-name">
         <div class="call-modal-box">
 <button type="button" class="orbit-call-minimize btn-reset" onclick="minimizeOrbitCall()" aria-label="Minimize call"><i class="fa-solid fa-chevron-down"></i></button>
             <div id="call-avatar-wrap" class="call-avatar-pulse">
                 <i class="fa-solid fa-user"></i>
             </div>
-            <div id="call-peer-name" style="font-weight:800; font-size:18px; color:#fff; margin-bottom:4px;">Calling User...</div>
-            <div id="call-status-label" style="font-size:12.5px; color:#00E676; font-weight:700;">Connecting P2P Audio (Beta)...</div>
+            <div id="call-peer-name" style="font-weight:700; font-size:22px; color:var(--text-primary); margin-bottom:4px;">Calling User...</div>
+            <div id="call-status-label" style="font-size:12.5px; color:#00E676; font-weight:700;">Connecting voice call…</div>
             <div id="call-timer-label" style="font-size:14px; font-family:monospace; color:var(--text-secondary); margin-top:8px;">00:00</div>
             <div class="call-action-btns">
                 <button id="call-btn-answer" class="call-btn answer hide" onclick="answerVoiceCall()" title="Answer call" style="background:#30D158;">
@@ -2557,29 +2558,29 @@
     <div id="simple-toast" class="simple-toast">Notification</div>
 </div>
 
-<script src="js/config.js?v=brand-theme-20261015-r6"></script>
-<script src="js/rooms.js?v=brand-theme-20261015-r6"></script>
+<script src="js/config.js?v=messaging-20261016-r8"></script>
+<script src="js/rooms.js?v=messaging-20261016-r8"></script>
     <script src="js/chat-actions.js"></script>
-    <script src="js/actions/media-lightbox.js?v=brand-theme-20261015-r6"></script>
-    <script src="js/actions/media-preview.js?v=brand-theme-20261015-r6"></script>
-    <script src="js/actions/file-viewer.js?v=brand-theme-20261015-r6"></script>
+    <script src="js/actions/media-lightbox.js?v=messaging-20261016-r8"></script>
+    <script src="js/actions/media-preview.js?v=messaging-20261016-r8"></script>
+    <script src="js/actions/file-viewer.js?v=messaging-20261016-r8"></script>
     <script src="js/actions/voice-recorder.js"></script>
-    <script src="js/actions/chat-extras.js?v=brand-theme-20261015-r6"></script>
-    <script src="js/messaging-notifications.js?v=brand-theme-20261015-r6"></script>
+    <script src="js/actions/chat-extras.js?v=messaging-20261016-r8"></script>
+    <script src="js/messaging-notifications.js?v=messaging-20261016-r8"></script>
     <script src="js/chat-gestures.js"></script>
     <script src="js/chat-select.js"></script>
-    <script src="js/chat-share.js?v=brand-theme-20261015-r6"></script>
-    <script src="js/chat/chat-history.js?v=brand-theme-20261015-r6"></script>
-    <script src="js/chat/chat-feed.js?v=brand-theme-20261015-r6"></script>
-    <script src="js/chat/chat-dispatcher.js?v=brand-theme-20261015-r6"></script>
-    <script src="js/chat/chat-realtime.js?v=brand-theme-20261015-r6"></script>
+    <script src="js/chat-share.js?v=messaging-20261016-r8"></script>
+    <script src="js/chat/chat-history.js?v=messaging-20261016-r8"></script>
+    <script src="js/chat/chat-feed.js?v=messaging-20261016-r8"></script>
+    <script src="js/chat/chat-dispatcher.js?v=messaging-20261016-r8"></script>
+    <script src="js/chat/chat-realtime.js?v=messaging-20261016-r8"></script>
     <script src="js/chat.js"></script>
 <script src="js/calculator.js"></script>
     <script src="js/tools.js"></script>
     <script src="js/celestial.js"></script>
-    <script src="js/ui/ui-auth.js?v=brand-theme-20261015-r6"></script>
-    <script src="js/ui/ui-navigation.js?v=brand-theme-20261015-r6"></script>
-    <script src="js/ui/ui-modals.js?v=brand-theme-20261015-r6"></script>
+    <script src="js/ui/ui-auth.js?v=messaging-20261016-r8"></script>
+    <script src="js/ui/ui-navigation.js?v=messaging-20261016-r8"></script>
+    <script src="js/ui/ui-modals.js?v=messaging-20261016-r8"></script>
     <script src="js/ui/ui-notifications.js"></script>
 <script src="js/ui.js"></script>
 
@@ -2614,8 +2615,8 @@
  <div id="orbit-editor-filters" class="hide"><button type="button" onclick="applyOrbitMediaFilter('vivid')">Vivid</button><button type="button" onclick="applyOrbitMediaFilter('mono')">Mono</button><button type="button" onclick="applyOrbitMediaFilter('warm')">Warm</button><button type="button" onclick="applyOrbitMediaFilter('bright')">Bright</button></div>
  <div class="orbit-editor-stage"><canvas id="orbit-editor-canvas"></canvas></div>
 </div>
-<script src="js/orbit-chat-services.js?v=brand-theme-20261015-r6"></script>
-<script src="js/orbit-media-editor.js?v=brand-theme-20261015-r6"></script>
+<script src="js/orbit-chat-services.js?v=messaging-20261016-r8"></script>
+<script src="js/orbit-media-editor.js?v=messaging-20261016-r8"></script>
 <div id="modal-orbit-weather" class="glass-modal-overlay"><div class="glass-modal-box">
  <div class="modal-header-row"><strong>Weather near you</strong><button type="button" class="btn-reset" onclick="closeOrbitWeatherConsent()" aria-label="Close weather settings">✕</button></div>
  <p>Allow device location to show nearby weather below the Orbit logo. Orbit requests a fresh, high-accuracy location and shows the accuracy your device reports.</p>
@@ -2624,8 +2625,9 @@
  <button type="button" id="orbit-weather-disable" class="glass-btn-secondary hide" onclick="disableOrbitWeather()">Turn off local weather</button>
  <p class="orbit-weather-attribution">Weather by <a href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer">Open-Meteo</a> · Air quality: <a href="https://atmosphere.copernicus.eu/" target="_blank" rel="noopener noreferrer">CAMS</a> · Places by <a href="https://www.bigdatacloud.com/" target="_blank" rel="noopener noreferrer">BigDataCloud</a></p>
 </div></div>
-<script src="js/orbit-private-photos.js?v=brand-theme-20261015-r6"></script>
-<script src="js/orbit-banner-weather.js?v=brand-theme-20261015-r6"></script>
+<script src="js/orbit-private-photos.js?v=messaging-20261016-r8"></script>
+<script src="js/orbit-banner-weather.js?v=messaging-20261016-r8"></script>
 <script src="js/liquid-glass.js?v=8"></script>
+    <script src="js/messaging-experience.js?v=messaging-20261016-r8"></script>
 </body>
 </html>
