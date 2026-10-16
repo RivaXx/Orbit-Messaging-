@@ -409,40 +409,8 @@
         const chatScreen = document.getElementById('screen-chat');
         if (!chatScreen || !chatScreen.classList.contains('active')) return;
 
-        showToast(`Staging ${files.length} file${files.length > 1 ? 's' : ''}...`, 'info');
-
-        for (const file of files) {
-            try {
-                let type = 'file';
-                if (file.type.startsWith('image/')) type = 'image';
-                else if (file.type.startsWith('video/')) type = 'video';
-                else if (file.type.startsWith('audio/')) type = 'audio';
-
-                const dataUrl = await new Promise((resolve) => {
-                    const reader = new FileReader();
-                    reader.onloadend = () => resolve(reader.result);
-                    reader.readAsDataURL(file);
-                });
-
-                if (typeof pendingAttachments !== 'undefined') {
-                    pendingAttachments.push({
-                        name: file.name || 'Pasted File',
-                        url: dataUrl,
-                        type: type,
-                        size: file.size || 0
-                    });
-                }
-            } catch(readErr) {
-                console.warn('[Orbit] Failed to read attachment:', readErr);
-            }
-        }
-
-        if (typeof updateMediaPreviewStrip === 'function') {
-            updateMediaPreviewStrip();
-        }
-        if (typeof updateDynamicActionButtons === 'function') {
-            updateDynamicActionButtons();
-        }
+        const items=Array.from(files).map(file=>({file,name:file.name||'Pasted file',type:file.type.startsWith('image/')?'image':file.type.startsWith('video/')?'video':file.type.startsWith('audio/')?'audio':'file',size:file.size||0,url:URL.createObjectURL(file)}));
+        openMediaPreviewScreen(items);
     }
 
     // ── Fixes for Contact Sharing & Polls ──
