@@ -1005,6 +1005,7 @@ function startCallTimer() {
         const m = String(Math.floor(elapsed / 60)).padStart(2, '0');
         const s = String(elapsed % 60).padStart(2, '0');
         if (timer) timer.innerText = `${m}:${s}`;
+        const mini=document.getElementById('orbit-call-mini-status');if(mini)mini.textContent=`${m}:${s}`;
     }, 1000);
 }
 
@@ -1016,6 +1017,9 @@ function toggleCallMute() {
         const button = document.getElementById('call-btn-mute');
         if (button) {
             button.classList.toggle('active', !track.enabled);
+            button.setAttribute('aria-pressed',String(!track.enabled));
+            button.setAttribute('aria-label',track.enabled?'Mute microphone':'Unmute microphone');
+            button.title=track.enabled?'Mute microphone':'Unmute microphone';
             const icon = button.querySelector('i');
             if (icon) icon.className = track.enabled ? 'fa-solid fa-microphone' : 'fa-solid fa-microphone-slash';
         }
