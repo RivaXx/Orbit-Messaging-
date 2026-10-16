@@ -553,6 +553,7 @@ async function queueMediaMessage(items, caption = '', messageType = null, target
         const client = await ensureSupabase();
         const {error} = await client.rpc('orbit_reserve_original_photos',{message_key:id,photo_indexes:originals});
         if(error) throw new Error(error.message || 'Could not reserve original-quality allowance.');
+        if(currentUser?.id!==userAtSend || currentRoom!==roomAtSend)throw new Error('The account or chat changed. Reopen the original chat before sending.');
     }
     const tempId = `c_${Date.now()}_${id.slice(0, 8)}`;
     let sendRoomId = roomAtSend;
