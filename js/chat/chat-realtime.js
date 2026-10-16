@@ -397,12 +397,14 @@ function handleRealtimeUpdate(payload, primaryRoomId, aliases) {
     let msgs = messageCache.get(primaryRoomId) || [];
     const idx = msgs.findIndex(m => m.id === updated.id);
     if (idx !== -1) {
+        const textChanged=msgs[idx].text!==updated.text || msgs[idx].edited_at!==updated.edited_at;
         msgs[idx] = updated;
         aliases.forEach(alias => messageCache.set(alias, msgs));
         if (currentRoom === primaryRoomId || aliases.includes(currentRoom)) {
             // Update node in-place to completely prevent screen flashing or scroll jumps
             const existingNode = document.getElementById(`msg-${updated.id}`);
             if (existingNode) {
+                if(textChanged && updated.type!=='call'){existingNode.replaceWith(createMessageDOMNode(updated,existingNode.classList.contains('grouped-consecutive')));return;}
                 if(updated.type==='call'){const detail=existingNode.querySelector('.orbit-call-message small');if(detail)detail.textContent=formatOrbitCallDetail(updated.text);}
                 const meta = existingNode.querySelector('.msg-meta-row');
                 if (meta) {
