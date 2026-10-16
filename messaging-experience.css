@@ -32,7 +32,7 @@
 .orbit-clock-controls{display:flex;flex-direction:column;gap:10px;font-size:13px;color:var(--text-primary)}
 .orbit-clock-controls label{display:flex;flex-direction:column;gap:6px}
 .orbit-clock-controls small{color:var(--text-secondary);line-height:1.5;font-size:11px}
-.orbit-ringing-alarm{position:fixed;bottom:85px;left:50%;transform:translateX(-50%);z-index:100050;width:min(360px,calc(100vw - 32px));box-sizing:border-box;display:flex;gap:12px;flex-wrap:wrap;padding:22px;background:var(--bg-panel,#18212d);border:1px solid var(--accent);box-shadow:0 10px 60px #0008;border-radius:24px;color:var(--text-primary)}
+.orbit-ringing-alarm{position:fixed;bottom:85px;left:50%;transform:translateX(-50%);z-index:100050;width:min(360px,calc(100vw - 32px));box-sizing:border-box;display:flex;gap:12px;flex-wrap:wrap;padding:22px;background:var(--bg-base,#18212d);border:1px solid var(--accent);box-shadow:0 10px 60px #0008;border-radius:24px;color:var(--text-primary)}
 .orbit-ringing-alarm[hidden]{display:none}
 .orbit-ringing-alarm strong,.orbit-ringing-alarm span{width:100%}
 .orbit-ringing-alarm strong{font-size:21px}.orbit-ringing-alarm span{font-size:12px;color:var(--text-secondary)}
@@ -49,3 +49,7 @@
 .orbit-call-hint{font-size:11px;line-height:1.5;color:var(--text-secondary);margin-top:12px}
 @media(max-width:380px){.group-list-meta{max-width:72px;white-space:normal}.group-list-card{gap:9px}.call-modal-box{padding:30px 16px 20px!important}}
 @media(prefers-reduced-motion:reduce){#orbit-connectivity,#orbit-connectivity::before,.call-avatar-pulse::after{animation:none!important;transition:none!important}}
+
+body .call-modal-box{background:rgba(var(--readable-surface-rgb),.96)!important}
+.orbit-call-devices label,.orbit-call-devices small,.orbit-call-minimize{color:var(--text-secondary)}
+#call-status-label{color:var(--accent-readable)!important}
