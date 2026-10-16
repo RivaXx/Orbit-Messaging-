@@ -293,7 +293,7 @@
                 username: senderName,
                 text: msg.text || '',
                 type: msg.type || 'text',
-                attachments: await orbitCopyForwardAttachments(msg.attachments || []),
+                attachments: await orbitCopyForwardAttachments(msg.attachments?.length ? msg.attachments : (/^(https?:\/\/)/.test(msg.text||'') && ['image','video','file','audio','voice'].includes(msg.type) ? [{url:msg.text,type:msg.type,name:'Forwarded attachment'}] : []), msg.type),
                 reply_to: null,
                 read_by: [currentUser.id],
                 is_forwarded: true,
