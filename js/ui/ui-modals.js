@@ -262,9 +262,9 @@ function loadGlobalUsers(fromCacheFirst) {
                     globalUsersArray = parsed;
                     parsed.forEach(u => globalUsersMap.set(u.user_id, u));
                     renderGlobalUsersDOM(parsed);
-                    const activeCount = parsed.filter(u => u.is_online === true && u.last_seen && (Date.now() - new Date(u.last_seen).getTime() < 120000)).length;
+                    const activeCount = parsed.filter(u => u.is_online === true && u.last_seen && (Date.now() - new Date(u.last_seen).getTime() < 65000)).length;
                     const el = document.getElementById('global-online-count');
-                    if (el) el.innerText = formatSmartOnlineText(activeCount);
+                    if (el) el.innerText = `${activeCount} online`;
                 }
             } catch(err) { localStorage.removeItem('orbit_global_cache_v26'); }
         }
@@ -317,91 +317,48 @@ async function _bgFetchGlobalUsers() {
         renderGlobalUsersDOM(clean);
 
         // Strictly count online users (is_online === true AND pinged within 120s)
-        const activeOnlineCount = clean.filter(u => u.is_online === true && u.last_seen && (Date.now() - new Date(u.last_seen).getTime() < 120000)).length;
+        const activeOnlineCount = clean.filter(u => u.is_online === true && u.last_seen && (Date.now() - new Date(u.last_seen).getTime() < 65000)).length;
         const el = document.getElementById('global-online-count');
-        if (el) el.innerText = formatSmartOnlineText(activeOnlineCount);
+        if (el) el.innerText = `${activeOnlineCount} online`;
 
     } catch(e) {}
 }
 
 function renderGlobalUsersDOM(users) {
-    const list = document.getElementById('global-list');
-    if (!list || !users) return;
-
-    if (users.length === 0) {
-        list.innerHTML = '<div style="text-align:center;padding:40px 20px;color:rgba(255,255,255,0.4);font-size:14px;">No users found</div>';
-        return;
-    }
-
-    const frag = document.createDocumentFragment();
-    users.forEach(u => {
-        const name = u.display_name || (u.email ? u.email.split('@')[0] : 'User');
-        const isUserAdmin = u.email && u.email.toLowerCase() === ADMIN_EMAIL.toLowerCase();
-        const verifiedBadge = getVerifiedBadgeHtml(isUserAdmin);
-        const handle = `@${u.email ? u.email.split('@')[0] : 'user'}`;
-        const about = 'Available';
-        const smartStatus = formatSmartActivity(u.last_seen, u.is_online);
-        const isOnline = smartStatus.startsWith('🟢');
-        const dp = u.dp_url ? formatMediaUrl(u.dp_url) : '';
-        const uid = u.user_id;
-
-        let friendActionBtnHtml = '';
-        if (currentUser && uid !== currentUser.id) {
-            if (myFriendsSet.has(uid)) {
-                friendActionBtnHtml = `
-                    <button class="btn-reset" disabled style="background:rgba(52,199,89,0.12); color:#34C759; border:1px solid rgba(52,199,89,0.3); border-radius:14px; padding:4px 9px; font-size:11px; font-weight:700; display:flex; align-items:center; gap:4px; flex-shrink:0;">
-                        <i class="fa-solid fa-check"></i> Friends
-                    </button>
-                `;
-            } else if (myOutgoingRequestsSet.has(uid)) {
-                friendActionBtnHtml = `
-                    <button class="btn-reset" disabled style="background:rgba(255,215,0,0.12); color:var(--accent); border:1px solid rgba(255,215,0,0.3); border-radius:14px; padding:4px 9px; font-size:11px; font-weight:700; display:flex; align-items:center; gap:4px; flex-shrink:0;">
-                        <i class="fa-solid fa-clock"></i> Requested
-                    </button>
-                `;
-            } else {
-                friendActionBtnHtml = `
-                    <button class="btn-reset touch-fix global-add-friend-btn" onclick="handleGlobalFriendBtnClick('${uid}', this, event)" style="background:rgba(10,132,255,0.15); color:var(--accent); border:1px solid rgba(10,132,255,0.35); border-radius:14px; padding:4px 9px; font-size:11px; font-weight:700; display:flex; align-items:center; gap:4px; flex-shrink:0; cursor:pointer;">
-                        <i class="fa-solid fa-user-plus"></i> Add
-                    </button>
-                `;
-            }
-        }
-
-        const card = document.createElement('div');
-        card.className = 'contact-glass-card touch-fix';
-        card.onclick = () => {
-            if (typeof openDirectChat === 'function') {
-                openDirectChat(uid, name, dp);
-            }
-        };
-        card.innerHTML = `
-            <div class="c-av-wrap">
-                ${dp ? `<img src="${dp}" alt="${escapeHtml(name)}" loading="lazy">` : `<span>${name[0].toUpperCase()}</span>`}
-                <div class="c-status-indicator ${isOnline ? 'online' : 'offline'}"></div>
-            </div>
-            <div class="c-info-column" style="flex:1; min-width:0;">
-                <div class="c-name-row">
-                    <div style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"><span class="c-name-text">${escapeHtml(name)}${verifiedBadge}</span><span class="c-username-handle">${escapeHtml(handle)}</span></div>
-                    <span class="c-time-stamp">${smartStatus}</span>
-                </div>
-                <div class="c-last-message">${escapeHtml(about)}</div>
-            </div>
-            ${friendActionBtnHtml}`;
-        
-        const avWrap = card.querySelector('.c-av-wrap');
-        if (avWrap) {
-            avWrap.onclick = (e) => {
-                e.stopPropagation();
-                openUserProfileInspector(uid);
-            };
-        }
-
-        frag.appendChild(card);
+    const list=document.getElementById('global-list');
+    if(!list || !Array.isArray(users))return;
+    const seen=new Set(), now=Date.now();
+    const online=user=>user.is_online===true && Number.isFinite(Date.parse(user.last_seen)) && now-Date.parse(user.last_seen)>=0 && now-Date.parse(user.last_seen)<65000;
+    const people=users.filter(user=>{if(!user?.user_id||seen.has(user.user_id))return false;seen.add(user.user_id);return true;})
+        .sort((a,b)=>Number(online(b))-Number(online(a)) || String(a.display_name||a.email||'').localeCompare(String(b.display_name||b.email||'')));
+    const count=document.getElementById('global-online-count');if(count)count.textContent=`${people.filter(online).length} online`;
+    if(!people.length){list.innerHTML='<div class="orbit-people-empty"><i class="fa-solid fa-users"></i><strong>No people to show yet</strong><span>People will appear here when the directory is available.</span></div>';return;}
+    const frag=document.createDocumentFragment();
+    people.forEach(user=>{
+        const uid=user.user_id,name=String(user.display_name||user.email?.split('@')[0]||'Orbit user');
+        const handle='@'+String(user.username||user.email?.split('@')[0]||'user');
+        const isOnline=online(user),isSelf=uid===currentUser?.id;
+        const card=document.createElement('article');card.className='contact-glass-card orbit-directory-card';card.dataset.userId=uid;
+        const avatar=document.createElement('button');avatar.type='button';avatar.className='btn-reset c-av-wrap orbit-directory-avatar';avatar.classList.toggle('is-online',isOnline);avatar.setAttribute('aria-label',`View ${name}'s profile`);
+        const initial=()=>{avatar.replaceChildren();const letter=document.createElement('span');letter.textContent=Array.from(name)[0]||'?';avatar.append(letter);};
+        if(user.dp_url){const image=document.createElement('img');image.src=formatMediaUrl(user.dp_url);image.alt='';image.loading='lazy';image.decoding='async';image.onerror=initial;avatar.append(image);}else initial();
+        avatar.onclick=()=>openUserProfileInspector(uid);
+        const open=document.createElement('button');open.type='button';open.className='btn-reset orbit-person-open';open.setAttribute('aria-label',`Chat with ${name}`);open.onclick=()=>openDirectChat(uid,name,user.dp_url||'');
+        const title=document.createElement('span');title.className='orbit-person-name';
+        const label=document.createElement('span');label.textContent=name;title.append(label);
+        if(String(user.email||'').toLowerCase()===ADMIN_EMAIL.toLowerCase()){const verified=document.createElement('span');verified.innerHTML=getVerifiedBadgeHtml(true);title.append(verified);}
+        const username=document.createElement('span');username.className='orbit-person-handle';username.textContent=handle;
+        const activity=document.createElement('span');activity.className=`orbit-person-presence${isOnline?' is-online':''}`;
+        activity.textContent=isOnline?'Online':localStorage.getItem('orbit_privacy_last_seen')==='nobody'?'Offline':Number.isFinite(Date.parse(user.last_seen))?formatSmartActivity(user.last_seen,false):'Last seen unavailable';
+        open.append(title,username,activity);
+        const action=document.createElement('button');action.type='button';action.className='btn-reset orbit-person-action';
+        if(isSelf){action.textContent='You';action.disabled=true;}
+        else if(myFriendsSet.has(uid)){action.textContent='Friends';action.disabled=true;action.classList.add('is-connected');}
+        else if(myOutgoingRequestsSet.has(uid)){action.textContent='Requested';action.disabled=true;}
+        else{action.textContent='Add friend';action.setAttribute('aria-label',`Add ${name} as a friend`);action.onclick=event=>handleGlobalFriendBtnClick(uid,action,event);}
+        card.append(avatar,open,action);frag.append(card);
     });
-
-    list.innerHTML = '';
-    list.appendChild(frag);
+    const scroll=list.scrollTop;list.replaceChildren(frag);list.scrollTop=scroll;
 }
 
 // ══════════════════════════════════════════════════════════════════════════
