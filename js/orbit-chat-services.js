@@ -258,7 +258,7 @@ async function receiveOrbitCall(row) {
         return;
     }
     orbitCallRow=row;
-    if(orbitTerminalCalls.has(row.state)){if(!orbitCallClosing){showToast(row.state==='declined'?'Call declined.':row.state==='missed'?'Missed voice call.':'Call ended.');await endVoiceCall(false);}return;}
+    if(orbitTerminalCalls.has(row.state)){if(!orbitCallClosing){if(row.state==='missed'&&row.callee_id===currentUser.id&&document.hidden)showNativeOrbitNotification(row.caller_name,'Missed voice call',row.room,row.id);showToast(row.state==='declined'?'Call declined.':row.state==='missed'?'Missed voice call.':'Call ended.');await endVoiceCall(false);}return;}
     if(row.answer&&_activeCallRole==='caller'&&peerConnection&&!peerConnection.remoteDescription){try{orbitCallRing(true);await peerConnection.setRemoteDescription(row.answer);await _applyPendingCallCandidates();_setVoiceCallStatus('Connecting…');}catch(error){showToast(error.message,'error');}}
 }
 async function answerVoiceCall() {
