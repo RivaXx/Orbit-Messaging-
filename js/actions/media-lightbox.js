@@ -178,16 +178,22 @@ document.addEventListener('keydown', (e) => {
 
 let _lbTouchStartX = 0;
 let _lbTouchStartY = 0;
+let _lbSwipeAllowed = false;
 document.addEventListener('touchstart', (e) => {
     const modal = document.getElementById('modal-media-lightbox');
     if (!modal || !modal.classList.contains('active') || !e.touches || e.touches.length === 0) return;
+    _lbSwipeAllowed = e.touches.length === 1 && lightboxZoomLevel <= 1.05 && !e.target.closest('button,input,a,#lightbox-thumbnail-strip');
     _lbTouchStartX = e.touches[0].clientX;
     _lbTouchStartY = e.touches[0].clientY;
 }, { passive: true });
 
+document.addEventListener('touchmove', e => {if(e.touches?.length>1)_lbSwipeAllowed=false;}, {passive:true});
+document.addEventListener('touchcancel', () => {_lbSwipeAllowed=false;}, {passive:true});
 document.addEventListener('touchend', (e) => {
     const modal = document.getElementById('modal-media-lightbox');
     if (!modal || !modal.classList.contains('active') || !e.changedTouches || e.changedTouches.length === 0) return;
+    if (!_lbSwipeAllowed || lightboxZoomLevel > 1.05) return;
+    _lbSwipeAllowed = false;
     const deltaX = e.changedTouches[0].clientX - _lbTouchStartX;
     const deltaY = e.changedTouches[0].clientY - _lbTouchStartY;
     if (Math.abs(deltaX) > 50 && Math.abs(deltaX) > Math.abs(deltaY) * 1.5) {
