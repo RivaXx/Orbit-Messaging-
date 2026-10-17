@@ -15,7 +15,8 @@ function orbitChatPresence(peer) {
     const user=globalUsersMap.get(peer);
     if(!user)return '';
     // Never substitute the latest message time for a user's last-seen time.
-    return formatSmartActivity(user.last_seen,user.is_online);
+    const age=Date.now()-Date.parse(user.last_seen);
+    return user.is_online===true && age>=0 && age<65000?'Online':formatSmartActivity(user.last_seen,false);
 }
 function orbitCanEditMessage(msg, now=Date.now()) {
     const age=now-Date.parse(msg?.created_at);
