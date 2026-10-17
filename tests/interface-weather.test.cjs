@@ -46,6 +46,7 @@ test('remembered session opens app without login flash and enforces six days of 
  await c.checkExistingSession();assert.equal(launches,1);assert.equal(c.document.documentElement.classList.contains('orbit-restoring'),false);
  storage.set('orbit_session_activity_me',String(Date.now()-6*86400000));await c.checkExistingSession();assert.equal(launches,1);assert.equal(signouts,1);
  storage.set('orbit_explicit_signout','true');await c.checkExistingSession();assert.equal(launches,1);
+ let reloaded=false;c.window.location.reload=()=>reloaded=true;c.orbitRememberSessionActivity();assert.equal(reloaded,true);assert.equal(storage.has('sb-example-auth-token'),false);
 });
 test('precise weather rejects stale fixes, retains best fresh fix and clears the geolocation watch',async()=>{
  const {c,timers}=setup();let success,error,cleared=0,options;
