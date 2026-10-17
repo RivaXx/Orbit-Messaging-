@@ -118,6 +118,8 @@ body .dash-title.orbit-title-shimmer{position:relative;width:max-content;backgro
 #main-chats-list .orbit-chat-unread .c-last-msg{color:var(--text-primary);font-weight:550}
 .calc-answer-preview{display:block;min-height:22px;color:var(--text-secondary);font-size:17px;line-height:1.3;text-align:right;font-variant-numeric:tabular-nums}
 .calc-answer-preview:empty{visibility:hidden}
+body.light-mode #calc-theme-wrapper .calc-screen{background:rgba(255,255,255,.86)!important;color:var(--text-primary)!important}
+body.light-mode #calc-theme-wrapper :is(.calc-screen-val,.calc-screen-expr,.calc-answer-preview){color:var(--text-primary)!important}
 /* Bound off-screen painting without changing the user's chosen glass material. */
 #main-chats-list>.contact-glass-card,#global-list>.contact-glass-card,.news-card-liquid,.trending-card-liquid{content-visibility:auto;contain-intrinsic-size:auto 92px}
 body.orbit-page-hidden .orbit-title-shimmer,body.orbit-page-hidden .orbit-weather-scene *,body.orbit-battery-saver .orbit-title-shimmer{animation-play-state:paused!important}
