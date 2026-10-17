@@ -96,4 +96,35 @@ body #global-list .orbit-directory-card{display:grid;grid-template-columns:46px 
 .orbit-preview-document{display:flex;flex-direction:column;align-items:center;gap:14px;color:#fff;text-align:center;padding:24px;max-width:100%;overflow-wrap:anywhere}
 .orbit-preview-document i{font-size:56px;color:#d1dbea}
 .preview-thumb-item>i{display:grid;place-items:center;width:100%;height:100%;color:#fff;font-size:22px}
+.dash-title.orbit-title-shimmer{position:relative;width:max-content}
+.orbit-title-shimmer::after{content:'Orbit';position:absolute;inset:0;pointer-events:none;background:linear-gradient(110deg,transparent 35%,#fff 48%,#b8f1ff 52%,transparent 65%);background-size:250% 100%;background-clip:text;-webkit-background-clip:text;-webkit-text-fill-color:transparent;animation:orbit-name-shimmer 7s ease-in-out infinite}
+@keyframes orbit-name-shimmer{0%,65%{background-position:180% 0}100%{background-position:-80% 0}}
+.orbit-banner-connection{margin-top:5px;min-height:20px}
+#orbit-banner-connection #orbit-connectivity{position:static;inset:auto;z-index:auto;width:max-content;max-width:160px;box-shadow:none;border:1px solid #35d58c22;background:#35d58c12;color:var(--text-secondary);padding:3px 7px;font-size:9px;gap:5px;transform:none;opacity:1;line-height:1.35}
+#orbit-banner-connection #orbit-connectivity::before{width:12px;height:12px;color:#35b87d}
+#orbit-banner-connection #orbit-connectivity.is-offline{color:var(--text-secondary);background:#e5ab3312;border-color:#e5ab3330}
+#orbit-banner-connection #orbit-connectivity.is-offline::before{color:#c9892b}
+#main-chats-list .c-info-wrap{min-width:0;flex:1}
+#main-chats-list .c-top-row,#main-chats-list .c-preview-row{display:flex;align-items:center;gap:8px;min-width:0}
+#main-chats-list .c-name{min-width:0;flex:1;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font-size:14px;font-weight:650}
+#main-chats-list .c-time{flex:none;font-size:10px;white-space:nowrap;font-weight:450}
+#main-chats-list .c-last-msg{min-width:0;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:12px;font-weight:400}
+#main-chats-list .c-presence-line{font-size:11px;line-height:1.45;color:var(--text-secondary);opacity:1;margin-top:5px;white-space:normal;display:block}
+#main-chats-list .c-presence-line.is-online{color:#269d70}
+#main-chats-list .c-presence-line.is-online::before{content:'';display:inline-block;width:6px;height:6px;border-radius:50%;background:currentColor;margin-right:5px;vertical-align:1px}
+.orbit-chat-markers{display:flex;gap:6px;align-items:center;flex:none;color:var(--text-secondary);font-size:10px}
+.orbit-chat-count{display:inline-grid;place-items:center;min-width:20px;height:20px;padding:0 5px;box-sizing:border-box;border-radius:12px;background:#169e72;color:#fff;font-size:10px;font-weight:700;font-variant-numeric:tabular-nums}
+.orbit-chat-count.hide{display:none}
+#main-chats-list .orbit-chat-unread .c-time{color:#269d70;font-weight:650}
+#main-chats-list .orbit-chat-unread .c-last-msg{color:var(--text-primary);font-weight:550}
+.calc-answer-preview{display:block;min-height:22px;color:var(--text-secondary);font-size:17px;line-height:1.3;text-align:right;font-variant-numeric:tabular-nums}
+.calc-answer-preview:empty{visibility:hidden}
+/* Bound off-screen painting without changing the user's chosen glass material. */
+#main-chats-list>.contact-glass-card,#global-list>.contact-glass-card,.news-card-liquid,.trending-card-liquid{content-visibility:auto;contain-intrinsic-size:auto 92px}
+body.orbit-page-hidden .orbit-title-shimmer::after,body.orbit-page-hidden .orbit-weather-scene *,body.orbit-battery-saver .orbit-title-shimmer::after{animation-play-state:paused!important}
+@media(prefers-reduced-motion:reduce){.orbit-title-shimmer::after{animation:none;display:none}}
+html.orbit-restoring #screen-auth{visibility:hidden}
+#orbit-session-loading{display:none;position:fixed;inset:0;z-index:100000;background:var(--bg-color,#0b101b);color:var(--text-primary);place-content:center;text-align:center;gap:12px;font-size:13px}
+html.orbit-restoring #orbit-session-loading{display:grid}
+#orbit-session-loading strong{font-size:28px;letter-spacing:2px}
 @media(max-width:400px){body #global-list .orbit-directory-card{grid-template-columns:42px minmax(0,1fr) auto;gap:9px;padding:12px}.orbit-directory-avatar{width:42px!important;height:42px!important;min-width:42px}.orbit-person-action{padding:7px 8px;font-size:10px}.orbit-section-heading{gap:10px}.orbit-section-heading h2{font-size:22px}.orbit-section-heading p{font-size:11px}}
