@@ -56,13 +56,13 @@
 /* Decorative weather animation must not compete with chats for frame time. */
 .orbit-weather-pill::after,.orbit-weather-glow,.orbit-weather-symbol { animation:none; }
 /* Full-screen condition scene: only a few transform/opacity layers animate. */
-#modal-orbit-weather.orbit-weather-page{padding:0;background:#122f54;isolation:isolate;overflow:hidden}
+#modal-orbit-weather.orbit-weather-page{position:fixed;inset:0;z-index:13000;padding:0;background:#122f54;isolation:isolate;overflow:hidden}
 #modal-orbit-weather.orbit-weather-page.active{display:block}
-#modal-orbit-weather .orbit-weather-scene{position:absolute;inset:0;overflow:hidden;background:linear-gradient(165deg,#3d88b4,#5fabc2 50%,#bdcdbf);z-index:-1;pointer-events:none}
+#modal-orbit-weather .orbit-weather-scene{position:absolute;inset:0;overflow:hidden;background:linear-gradient(165deg,#3d88b4,#5fabc2 50%,#bdcdbf);z-index:0;pointer-events:none}
 #modal-orbit-weather[data-night=true] .orbit-weather-scene{background:linear-gradient(165deg,#0b1634,#263d61 65%,#536076)}
 #modal-orbit-weather:is([data-weather=rain],[data-weather=storm],[data-weather=cloud]) .orbit-weather-scene{background:linear-gradient(165deg,#283e5a,#66879b 60%,#96a9b5)}
 #modal-orbit-weather[data-weather=snow] .orbit-weather-scene{background:linear-gradient(165deg,#6b8ba6,#c2d4df)}
-#modal-orbit-weather>.glass-modal-box{position:relative;box-sizing:border-box;width:min(100%,700px);max-width:none;max-height:100dvh;min-height:100dvh;margin:0 auto;padding:calc(20px + env(safe-area-inset-top)) 20px calc(24px + env(safe-area-inset-bottom));border-radius:0;border:0;background:#10223855!important;backdrop-filter:blur(9px)!important;-webkit-backdrop-filter:blur(9px)!important;color:#fff;box-shadow:none}
+#modal-orbit-weather>.glass-modal-box{position:relative;z-index:1;box-sizing:border-box;width:min(100%,700px);max-width:none;max-height:100dvh;min-height:100dvh;margin:0 auto;padding:calc(20px + env(safe-area-inset-top)) 20px calc(24px + env(safe-area-inset-bottom));border-radius:0;border:0;background:#10223855!important;backdrop-filter:blur(3px)!important;-webkit-backdrop-filter:blur(3px)!important;color:#fff;box-shadow:none}
 #modal-orbit-weather .modal-header-row{position:sticky;top:-1px;z-index:2;padding:8px 0;gap:14px}
 #modal-orbit-weather :is(p,dt){color:#e1edf5!important}#modal-orbit-weather :is(dd,strong,button,label){color:#fff}
 #modal-orbit-weather .orbit-weather-metrics>div{background:#0c203844;border-color:#ffffff30;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
