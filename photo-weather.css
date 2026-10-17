@@ -65,6 +65,7 @@
 #modal-orbit-weather>.glass-modal-box{position:relative;z-index:1;box-sizing:border-box;width:min(100%,700px);max-width:none;max-height:100dvh;min-height:100dvh;margin:0 auto;padding:calc(20px + env(safe-area-inset-top)) 20px calc(24px + env(safe-area-inset-bottom));border-radius:0;border:0;background:#10223855!important;backdrop-filter:blur(3px)!important;-webkit-backdrop-filter:blur(3px)!important;color:#fff;box-shadow:none}
 #modal-orbit-weather .modal-header-row{position:sticky;top:-1px;z-index:2;padding:8px 0;gap:14px}
 #modal-orbit-weather :is(p,dt){color:#e1edf5!important}#modal-orbit-weather :is(dd,strong,button,label){color:#fff}
+#modal-orbit-weather .glass-btn-primary{color:var(--accent-on,#08080a)}
 #modal-orbit-weather .orbit-weather-metrics>div{background:#0c203844;border-color:#ffffff30;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
 #modal-orbit-weather .orbit-weather-hero{display:flex;align-items:center;flex-direction:column;gap:8px;text-align:center;margin:22px 0 28px}
 #modal-orbit-weather .orbit-weather-hero strong{font-size:90px;font-weight:250;line-height:1;letter-spacing:-4px}
