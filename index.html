@@ -33,11 +33,11 @@
     <script src="assets/vendor/supabase.min.js?v=2.117.3"></script>
     <!-- Document, crop and resumable upload tools load only when needed. -->
 
-    <link rel="stylesheet" href="style.css?v=messaging-20261016-r8">
+    <link rel="stylesheet" href="style.css?v=albums-directory-20261016-r9">
     <link rel="stylesheet" href="tools.css">
-<link rel="stylesheet" href="chat-upgrades.css?v=messaging-20261016-r8">
-<link rel="stylesheet" href="photo-weather.css?v=messaging-20261016-r8">
-    <link rel="stylesheet" href="messaging-experience.css?v=messaging-20261016-r8">
+<link rel="stylesheet" href="chat-upgrades.css?v=albums-directory-20261016-r9">
+<link rel="stylesheet" href="photo-weather.css?v=albums-directory-20261016-r9">
+    <link rel="stylesheet" href="messaging-experience.css?v=albums-directory-20261016-r9">
 </head>
 <body>
 
@@ -419,7 +419,7 @@
 
         <!-- Tab 1: MAIN CHATS (Includes Self Chat & All Recents) -->
         <div id="tab-main-chats" class="contact-feed">
-            <div class="orbit-conversations-heading"><div><span>YOUR SPACE</span><h2>Messages</h2></div><button type="button" class="glass-icon-btn" onclick="switchTab('global')" title="Find people"><i class="fa-solid fa-pen-to-square"></i></button></div>
+            <div class="orbit-section-heading"><div><span class="orbit-section-eyebrow">YOUR SPACE</span><h2>Chats</h2><p>Your recent conversations</p></div><button type="button" class="glass-icon-btn orbit-section-action" onclick="switchTab('global')"><i class="fa-solid fa-pen-to-square"></i><span>New chat</span></button></div>
 <!-- Pinned Self Chat (Note to Self) -->
             <div id="self-chat-pill" class="contact-glass-card self-chat-card touch-fix" onclick="openSelfChat()">
                 <div class="c-av-wrap" style="border-color:var(--self-chat-blue); background:rgba(10,132,255,0.15);">
@@ -427,10 +427,10 @@
                 </div>
                 <div class="c-info-column">
                     <div class="c-name-row">
-                        <span class="c-name-text" style="color:var(--self-chat-blue);">Note to Self (You)</span>
+                        <span class="c-name-text" style="color:var(--self-chat-blue);">Note to Self</span>
                         <span class="c-time-stamp"><i class="fa-solid fa-thumbtack" style="color:var(--self-chat-blue); font-size:10px;"></i> Pinned</span>
                     </div>
-                    <div class="c-last-message">Store personal notes, reminders, files & voice memos</div>
+                    <div class="c-last-message">Your private space for notes and files</div>
                 </div>
             </div>
 
@@ -469,10 +469,7 @@
         </div>
 <!-- Tab 4: GLOBAL USERS (0ms Blazing Fast Cache-First Directory) -->
         <div id="tab-global" class="contact-feed hide">
-            <div style="display:flex; justify-content:space-between; align-items:center; padding:4px 8px 8px;">
-                <span style="font-size:11px; font-weight:800; color:var(--text-secondary); letter-spacing:1px;">GLOBAL DIRECTORY</span>
-                <span id="global-online-count" style="font-size:11px; color:var(--online); font-weight:700;">🟢 Online</span>
-            </div>
+            <div class="orbit-section-heading"><div><span class="orbit-section-eyebrow">DISCOVER</span><h2>People</h2><p>Find people and start a conversation</p></div><span id="global-online-count" class="orbit-online-summary" role="status">Checking presence…</span></div>
             <div id="global-list" style="display:flex; flex-direction:column; gap:6px;"></div>
         </div>
 
@@ -2558,29 +2555,29 @@
     <div id="simple-toast" class="simple-toast">Notification</div>
 </div>
 
-<script src="js/config.js?v=messaging-20261016-r8"></script>
-<script src="js/rooms.js?v=messaging-20261016-r8"></script>
+<script src="js/config.js?v=albums-directory-20261016-r9"></script>
+<script src="js/rooms.js?v=albums-directory-20261016-r9"></script>
     <script src="js/chat-actions.js"></script>
-    <script src="js/actions/media-lightbox.js?v=messaging-20261016-r8"></script>
-    <script src="js/actions/media-preview.js?v=messaging-20261016-r8"></script>
-    <script src="js/actions/file-viewer.js?v=messaging-20261016-r8"></script>
+    <script src="js/actions/media-lightbox.js?v=albums-directory-20261016-r9"></script>
+    <script src="js/actions/media-preview.js?v=albums-directory-20261016-r9"></script>
+    <script src="js/actions/file-viewer.js?v=albums-directory-20261016-r9"></script>
     <script src="js/actions/voice-recorder.js"></script>
-    <script src="js/actions/chat-extras.js?v=messaging-20261016-r8"></script>
-    <script src="js/messaging-notifications.js?v=messaging-20261016-r8"></script>
+    <script src="js/actions/chat-extras.js?v=albums-directory-20261016-r9"></script>
+    <script src="js/messaging-notifications.js?v=albums-directory-20261016-r9"></script>
     <script src="js/chat-gestures.js"></script>
     <script src="js/chat-select.js"></script>
-    <script src="js/chat-share.js?v=messaging-20261016-r8"></script>
-    <script src="js/chat/chat-history.js?v=messaging-20261016-r8"></script>
-    <script src="js/chat/chat-feed.js?v=messaging-20261016-r8"></script>
-    <script src="js/chat/chat-dispatcher.js?v=messaging-20261016-r8"></script>
-    <script src="js/chat/chat-realtime.js?v=messaging-20261016-r8"></script>
+    <script src="js/chat-share.js?v=albums-directory-20261016-r9"></script>
+    <script src="js/chat/chat-history.js?v=albums-directory-20261016-r9"></script>
+    <script src="js/chat/chat-feed.js?v=albums-directory-20261016-r9"></script>
+    <script src="js/chat/chat-dispatcher.js?v=albums-directory-20261016-r9"></script>
+    <script src="js/chat/chat-realtime.js?v=albums-directory-20261016-r9"></script>
     <script src="js/chat.js"></script>
 <script src="js/calculator.js"></script>
     <script src="js/tools.js"></script>
     <script src="js/celestial.js"></script>
-    <script src="js/ui/ui-auth.js?v=messaging-20261016-r8"></script>
-    <script src="js/ui/ui-navigation.js?v=messaging-20261016-r8"></script>
-    <script src="js/ui/ui-modals.js?v=messaging-20261016-r8"></script>
+    <script src="js/ui/ui-auth.js?v=albums-directory-20261016-r9"></script>
+    <script src="js/ui/ui-navigation.js?v=albums-directory-20261016-r9"></script>
+    <script src="js/ui/ui-modals.js?v=albums-directory-20261016-r9"></script>
     <script src="js/ui/ui-notifications.js"></script>
 <script src="js/ui.js"></script>
 
@@ -2615,8 +2612,8 @@
  <div id="orbit-editor-filters" class="hide"><button type="button" onclick="applyOrbitMediaFilter('vivid')">Vivid</button><button type="button" onclick="applyOrbitMediaFilter('mono')">Mono</button><button type="button" onclick="applyOrbitMediaFilter('warm')">Warm</button><button type="button" onclick="applyOrbitMediaFilter('bright')">Bright</button></div>
  <div class="orbit-editor-stage"><canvas id="orbit-editor-canvas"></canvas></div>
 </div>
-<script src="js/orbit-chat-services.js?v=messaging-20261016-r8"></script>
-<script src="js/orbit-media-editor.js?v=messaging-20261016-r8"></script>
+<script src="js/orbit-chat-services.js?v=albums-directory-20261016-r9"></script>
+<script src="js/orbit-media-editor.js?v=albums-directory-20261016-r9"></script>
 <div id="modal-orbit-weather" class="glass-modal-overlay"><div class="glass-modal-box">
  <div class="modal-header-row"><strong>Weather near you</strong><button type="button" class="btn-reset" onclick="closeOrbitWeatherConsent()" aria-label="Close weather settings">✕</button></div>
  <p>Allow device location to show nearby weather below the Orbit logo. Orbit requests a fresh, high-accuracy location and shows the accuracy your device reports.</p>
@@ -2625,9 +2622,9 @@
  <button type="button" id="orbit-weather-disable" class="glass-btn-secondary hide" onclick="disableOrbitWeather()">Turn off local weather</button>
  <p class="orbit-weather-attribution">Weather by <a href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer">Open-Meteo</a> · Air quality: <a href="https://atmosphere.copernicus.eu/" target="_blank" rel="noopener noreferrer">CAMS</a> · Places by <a href="https://www.bigdatacloud.com/" target="_blank" rel="noopener noreferrer">BigDataCloud</a></p>
 </div></div>
-<script src="js/orbit-private-photos.js?v=messaging-20261016-r8"></script>
-<script src="js/orbit-banner-weather.js?v=messaging-20261016-r8"></script>
+<script src="js/orbit-private-photos.js?v=albums-directory-20261016-r9"></script>
+<script src="js/orbit-banner-weather.js?v=albums-directory-20261016-r9"></script>
 <script src="js/liquid-glass.js?v=8"></script>
-    <script src="js/messaging-experience.js?v=messaging-20261016-r8"></script>
+    <script src="js/messaging-experience.js?v=albums-directory-20261016-r9"></script>
 </body>
 </html>
