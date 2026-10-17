@@ -6,7 +6,7 @@ async function initServiceWorker() {
         try {
             // Only the worker's activate handler knows the current cache name.
             // Deleting caches here used to erase the current offline shell.
-            const reg = await navigator.serviceWorker.register('./sw.js?v=albums-directory-20261016-sw9', { scope: './' });
+            const reg = await navigator.serviceWorker.register('./sw.js?v=interface-weather-20261017-sw10', { scope: './' });
             reg.update().catch(() => {});
             navigator.serviceWorker.addEventListener('message', event => {
                 if (event.data?.type === 'ORBIT_PUSH_VISIBLE_QUERY') {
@@ -67,7 +67,15 @@ function orbitTogglePass(inputId, iconId) {
 }
 
 async function checkExistingSession() {
+    document.documentElement.classList.add('orbit-restoring');
     try {
+        const project = new URL(SB_URL).hostname.split('.')[0];
+        if(localStorage.getItem('orbit_explicit_signout')==='true')return;
+        let cached=null;try{cached=JSON.parse(localStorage.getItem(`sb-${project}-auth-token`)||'null');}catch(_){}
+        if(cached?.user?.id && orbitSessionIdleExpired(cached.user.id)){
+            const client=await ensureSupabase();await client.auth.signOut({scope:'local'});
+            localStorage.removeItem(`sb-${project}-auth-token`);return;
+        }
         if (!navigator.onLine) {
             // Restore the local UI without waiting for an expired token refresh.
             // The SDK and server still authenticate every eventual upload/send.
@@ -79,13 +87,27 @@ async function checkExistingSession() {
         const client = await ensureSupabase();
         const { data: { session } } = await client.auth.getSession();
         if (session && session.user) {
+            if(orbitSessionIdleExpired(session.user.id)){await client.auth.signOut({scope:'local'});return;}
             currentUser = session.user;
             await launchApp();
         }
     } catch(e) {
         console.warn('Session restore note:', e);
+    } finally {
+        document.documentElement.classList.remove('orbit-restoring');
     }
 }
+const ORBIT_SESSION_IDLE_MS=6*24*60*60*1000;
+function orbitSessionIdleExpired(userId,now=Date.now()){
+    try{const last=Number(localStorage.getItem(`orbit_session_activity_${userId}`));return last>0 && now-last>=ORBIT_SESSION_IDLE_MS;}catch(_){return false;}
+}
+function orbitRememberSessionActivity(force=false){
+    if(!currentUser?.id || document.hidden)return;
+    const key=`orbit_session_activity_${currentUser.id}`,now=Date.now();
+    try{const last=Number(localStorage.getItem(key));if(force||!last||now-last>60000)localStorage.setItem(key,String(now));}catch(_){}
+}
+document.addEventListener('pointerdown',()=>orbitRememberSessionActivity(),{passive:true});
+document.addEventListener('keydown',()=>orbitRememberSessionActivity(),{passive:true});
 
 // 1. DEDICATED LOG IN HANDLER
 async function handleLogin() {
@@ -129,6 +151,7 @@ async function handleLogin() {
         }
 
         currentUser = data.user;
+        orbitRememberSessionActivity(true);
         showToast('Welcome back to Orbit!', 'success');
         await launchApp();
     } catch(e) {
@@ -565,6 +588,7 @@ async function handleVerifyForgotOtpAndReset() {
 
 async function signOut() {
     if (confirm('Sign out of Orbit?')) {
+        const signedOutId=currentUser?.id;
         if (typeof disableOrbitBackgroundPush === 'function') {
             const disconnected = await disableOrbitBackgroundPush();
             if (!disconnected) { showToast('Reconnect so Orbit can turn off notifications before signing out.', 'error'); return; }
@@ -583,6 +607,8 @@ async function signOut() {
         if (typeof unreadRoomsSet !== 'undefined') unreadRoomsSet.clear();
         if (globalRealtimeChannel) { try { await sb.removeChannel(globalRealtimeChannel); } catch (_) {} globalRealtimeChannel = null; }
         currentUser = null;
+        try{localStorage.setItem('orbit_explicit_signout','true');}catch(_){}
+        try{if(signedOutId)localStorage.removeItem(`orbit_session_activity_${signedOutId}`);}catch(_){}
         userProfile = null;
         currentRoom = null;
         activeChatPeerId = null;
