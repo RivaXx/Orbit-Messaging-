@@ -311,5 +311,5 @@ renderRecentChatsFromCache([{roomId:'group',title:"The Coaches’ Lounge",isGrou
 orbitAttachConnectivity();const connection=document.getElementById('orbit-connectivity');connection.className='is-online';connection.textContent='Online';connection.title='Simulated online state for layout verification';orbitProbeConnectivity=async()=>{};
 localStorage.setItem(orbitWeatherKey(),'true');getOrbitPreciseWeatherLocation=async()=>({coords:{latitude:0,longitude:0,accuracy:12}});
 orbitWeatherFetch=async url=>url.includes('air-quality')?{current:{time:Date.now()/1000,us_aqi:42,pm2_5:9,pm10:15}}:url.includes('reverse-geocode')?{locality:'Demo Coast'}:{timezone:'UTC',current:{time:Date.now()/1000,temperature_2m:26,weather_code:63,is_day:1,relative_humidity_2m:84,apparent_temperature:28,wind_speed_10m:14,precipitation:2.3,surface_pressure:1007},daily:{temperature_2m_max:[28],temperature_2m_min:[23],precipitation_probability_max:[80],uv_index_max:[3],sunrise:[1781690400],sunset:[1781733600]}};
-refreshOrbitWeather(true);initCalculator();['1','2','+','3'].forEach(calcInput);
+refreshOrbitWeather(true);calcIsFitScreen=false;initCalculator();['1','2','+','3'].forEach(calcInput);
 </script></body></html>
