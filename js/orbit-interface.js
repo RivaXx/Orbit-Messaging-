@@ -42,6 +42,7 @@ function orbitRefreshUnreadRows(){
   card.classList.toggle('orbit-chat-unread',item.isUnread);const badge=card.querySelector('.orbit-chat-count');if(badge){badge.textContent=count?count>99?'99+':String(count):'•';badge.classList.toggle('hide',!item.isUnread);badge.setAttribute('aria-label',count?`${count} unread messages`:'Unread messages');}
  });
  if(typeof updateTabUnreadBadges==='function')updateTabUnreadBadges();
+ const tabBadge=document.getElementById('tab-unread-chats');if(tabBadge){const rooms=new Set([...unreadRoomsSet].map(room=>orbitConversationAliases(room).sort()[0]));tabBadge.textContent=rooms.size>99?'99+':String(rooms.size);tabBadge.classList.toggle('hide',rooms.size===0);tabBadge.setAttribute('aria-label',`${rooms.size} unread conversations`);}
 }
 async function orbitRefreshUnreadCounts(){
  orbitEnsureConversationOwner();if(!orbitConversationOwner||!navigator.onLine)return;
