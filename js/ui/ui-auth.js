@@ -104,10 +104,15 @@ function orbitSessionIdleExpired(userId,now=Date.now()){
 function orbitRememberSessionActivity(force=false){
     if(!currentUser?.id || document.hidden)return;
     const key=`orbit_session_activity_${currentUser.id}`,now=Date.now();
+    if(!force&&orbitSessionIdleExpired(currentUser.id,now)){
+        try{localStorage.setItem('orbit_explicit_signout','true');const project=new URL(SB_URL).hostname.split('.')[0];localStorage.removeItem(`sb-${project}-auth-token`);}catch(_){}
+        window.location.reload();return;
+    }
     try{const last=Number(localStorage.getItem(key));if(force||!last||now-last>60000)localStorage.setItem(key,String(now));}catch(_){}
 }
 document.addEventListener('pointerdown',()=>orbitRememberSessionActivity(),{passive:true});
 document.addEventListener('keydown',()=>orbitRememberSessionActivity(),{passive:true});
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&currentUser?.id&&orbitSessionIdleExpired(currentUser.id))orbitRememberSessionActivity();});
 
 // 1. DEDICATED LOG IN HANDLER
 async function handleLogin() {
@@ -608,6 +613,7 @@ async function signOut() {
         if (globalRealtimeChannel) { try { await sb.removeChannel(globalRealtimeChannel); } catch (_) {} globalRealtimeChannel = null; }
         currentUser = null;
         try{localStorage.setItem('orbit_explicit_signout','true');}catch(_){}
+        try{const project=new URL(SB_URL).hostname.split('.')[0];localStorage.removeItem(`sb-${project}-auth-token`);}catch(_){}
         try{if(signedOutId)localStorage.removeItem(`orbit_session_activity_${signedOutId}`);}catch(_){}
         userProfile = null;
         currentRoom = null;
