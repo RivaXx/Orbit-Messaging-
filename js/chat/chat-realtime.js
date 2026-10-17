@@ -179,6 +179,7 @@ async function setupGlobalRealtimeMessageListener() {
                 const isViewingActiveRoom = currentRoom && (newMsg.room === currentRoom || currentRoomAliases.includes(newMsg.room));
 
                 if (isViewingActiveRoom) {
+                    if(typeof orbitReceiveConversationMessage==='function')orbitReceiveConversationMessage(newMsg);
                     if (!isOrbitChatVisible(newMsg.room)) triggerMessageNotification(newMsg);
                     handleRealtimeInsert(payload, currentRoom, currentRoomAliases);
                     return;
@@ -199,6 +200,7 @@ async function setupGlobalRealtimeMessageListener() {
                 }
 
                 if (isRelevant) {
+                    if(typeof orbitReceiveConversationMessage==='function')orbitReceiveConversationMessage(newMsg);
                     unreadRoomsSet.add(newMsg.room);
                     if (typeof updateTabUnreadBadges === 'function') updateTabUnreadBadges();
                     if (typeof triggerMessageNotification === 'function') {
