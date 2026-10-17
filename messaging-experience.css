@@ -96,8 +96,7 @@ body #global-list .orbit-directory-card{display:grid;grid-template-columns:46px 
 .orbit-preview-document{display:flex;flex-direction:column;align-items:center;gap:14px;color:#fff;text-align:center;padding:24px;max-width:100%;overflow-wrap:anywhere}
 .orbit-preview-document i{font-size:56px;color:#d1dbea}
 .preview-thumb-item>i{display:grid;place-items:center;width:100%;height:100%;color:#fff;font-size:22px}
-.dash-title.orbit-title-shimmer{position:relative;width:max-content}
-.orbit-title-shimmer::after{content:'Orbit';position:absolute;inset:0;pointer-events:none;background:linear-gradient(110deg,transparent 35%,#fff 48%,#b8f1ff 52%,transparent 65%);background-size:250% 100%;background-clip:text;-webkit-background-clip:text;-webkit-text-fill-color:transparent;animation:orbit-name-shimmer 7s ease-in-out infinite}
+body .dash-title.orbit-title-shimmer{position:relative;width:max-content;background:linear-gradient(110deg,var(--text-primary) 35%,var(--accent) 49%,var(--text-primary) 65%);background-size:250% 100%;background-clip:text;-webkit-background-clip:text;-webkit-text-fill-color:transparent;animation:orbit-name-shimmer 7s ease-in-out infinite}
 @keyframes orbit-name-shimmer{0%,65%{background-position:180% 0}100%{background-position:-80% 0}}
 .orbit-banner-connection{margin-top:5px;min-height:20px}
 #orbit-banner-connection #orbit-connectivity{position:static;inset:auto;z-index:auto;width:max-content;max-width:160px;box-shadow:none;border:1px solid #35d58c22;background:#35d58c12;color:var(--text-secondary);padding:3px 7px;font-size:9px;gap:5px;transform:none;opacity:1;line-height:1.35}
@@ -121,8 +120,8 @@ body #global-list .orbit-directory-card{display:grid;grid-template-columns:46px 
 .calc-answer-preview:empty{visibility:hidden}
 /* Bound off-screen painting without changing the user's chosen glass material. */
 #main-chats-list>.contact-glass-card,#global-list>.contact-glass-card,.news-card-liquid,.trending-card-liquid{content-visibility:auto;contain-intrinsic-size:auto 92px}
-body.orbit-page-hidden .orbit-title-shimmer::after,body.orbit-page-hidden .orbit-weather-scene *,body.orbit-battery-saver .orbit-title-shimmer::after{animation-play-state:paused!important}
-@media(prefers-reduced-motion:reduce){.orbit-title-shimmer::after{animation:none;display:none}}
+body.orbit-page-hidden .orbit-title-shimmer,body.orbit-page-hidden .orbit-weather-scene *,body.orbit-battery-saver .orbit-title-shimmer{animation-play-state:paused!important}
+@media(prefers-reduced-motion:reduce){body .dash-title.orbit-title-shimmer{animation:none}}
 html.orbit-restoring #screen-auth{visibility:hidden}
 #orbit-session-loading{display:none;position:fixed;inset:0;z-index:100000;background:var(--bg-color,#0b101b);color:var(--text-primary);place-content:center;text-align:center;gap:12px;font-size:13px}
 html.orbit-restoring #orbit-session-loading{display:grid}
