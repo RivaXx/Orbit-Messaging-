@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="orbit-restoring">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
@@ -33,11 +33,11 @@
     <script src="assets/vendor/supabase.min.js?v=2.117.3"></script>
     <!-- Document, crop and resumable upload tools load only when needed. -->
 
-    <link rel="stylesheet" href="style.css?v=albums-directory-20261016-r9">
+    <link rel="stylesheet" href="style.css?v=interface-weather-20261017-r10">
     <link rel="stylesheet" href="tools.css">
-<link rel="stylesheet" href="chat-upgrades.css?v=albums-directory-20261016-r9">
-<link rel="stylesheet" href="photo-weather.css?v=albums-directory-20261016-r9">
-    <link rel="stylesheet" href="messaging-experience.css?v=albums-directory-20261016-r9">
+<link rel="stylesheet" href="chat-upgrades.css?v=interface-weather-20261017-r10">
+<link rel="stylesheet" href="photo-weather.css?v=interface-weather-20261017-r10">
+    <link rel="stylesheet" href="messaging-experience.css?v=interface-weather-20261017-r10">
 </head>
 <body>
 
@@ -100,6 +100,7 @@
     <!-- ══════════════════════════════════════════════════════════════════════════
          SCREEN 1: AUTHENTICATION (Dedicated Log In & Sign Up Modes)
          ══════════════════════════════════════════════════════════════════════════ -->
+    <div id="orbit-session-loading" role="status"><strong>ORBIT</strong><span>Opening your space…</span></div>
     <div id="screen-auth" class="screen active flex center">
         <div class="auth-container">
             <div class="auth-glass-box">
@@ -305,7 +306,8 @@
                     <span class="orbit-brand-satellite" aria-hidden="true"></span><span class="orbit-brand-satellite satellite-two" aria-hidden="true"></span>
                 </div>
                 <div class="dash-title-wrap">
-                    <div class="dash-title">Orbit</div>
+                    <div class="dash-title orbit-title-shimmer">Orbit</div>
+                    <div id="orbit-banner-connection" class="orbit-banner-connection"></div>
                     <div class="dash-subtitle">Solar OS V26.1</div>
                 </div>
             </div>
@@ -620,6 +622,7 @@
                         </div>
 
                         <!-- Font, Fit & Display Settings Controls -->
+                        <button type="button" id="calc-preview-toggle" class="news-filter-chip" aria-pressed="true" onclick="toggleCalcPreview()">Live preview: On</button>
                         <div style="display:flex; align-items:center; gap:5px;">
                             <button class="btn-reset touch-fix" onclick="adjustCalcFontSize(-1)" style="font-size:11px; font-weight:800; padding:3px 7px; background:rgba(255,255,255,0.08); border:1px solid var(--glass-border); border-radius:8px; color:var(--text-primary);" title="Decrease Font">A−</button>
                             <button class="btn-reset touch-fix" onclick="adjustCalcFontSize(1)" style="font-size:12px; font-weight:800; padding:3px 7px; background:rgba(255,255,255,0.08); border:1px solid var(--glass-border); border-radius:8px; color:var(--text-primary);" title="Increase Font">A+</button>
@@ -636,6 +639,7 @@
                     <div class="calc-screen">
                         <div class="calc-screen-expr" id="calc-expr-display"></div>
                         <div class="calc-screen-val" id="calc-val-display">0</div>
+                        <output id="calc-answer-preview" class="calc-answer-preview" aria-label="Live answer preview"></output>
                     </div>
 
                     <div style="display:flex; justify-content:space-between; align-items:center; padding:0 4px;">
@@ -2555,29 +2559,29 @@
     <div id="simple-toast" class="simple-toast">Notification</div>
 </div>
 
-<script src="js/config.js?v=albums-directory-20261016-r9"></script>
-<script src="js/rooms.js?v=albums-directory-20261016-r9"></script>
+<script src="js/config.js?v=interface-weather-20261017-r10"></script>
+<script src="js/rooms.js?v=interface-weather-20261017-r10"></script>
     <script src="js/chat-actions.js"></script>
-    <script src="js/actions/media-lightbox.js?v=albums-directory-20261016-r9"></script>
-    <script src="js/actions/media-preview.js?v=albums-directory-20261016-r9"></script>
-    <script src="js/actions/file-viewer.js?v=albums-directory-20261016-r9"></script>
+    <script src="js/actions/media-lightbox.js?v=interface-weather-20261017-r10"></script>
+    <script src="js/actions/media-preview.js?v=interface-weather-20261017-r10"></script>
+    <script src="js/actions/file-viewer.js?v=interface-weather-20261017-r10"></script>
     <script src="js/actions/voice-recorder.js"></script>
-    <script src="js/actions/chat-extras.js?v=albums-directory-20261016-r9"></script>
-    <script src="js/messaging-notifications.js?v=albums-directory-20261016-r9"></script>
+    <script src="js/actions/chat-extras.js?v=interface-weather-20261017-r10"></script>
+    <script src="js/messaging-notifications.js?v=interface-weather-20261017-r10"></script>
     <script src="js/chat-gestures.js"></script>
     <script src="js/chat-select.js"></script>
-    <script src="js/chat-share.js?v=albums-directory-20261016-r9"></script>
-    <script src="js/chat/chat-history.js?v=albums-directory-20261016-r9"></script>
-    <script src="js/chat/chat-feed.js?v=albums-directory-20261016-r9"></script>
-    <script src="js/chat/chat-dispatcher.js?v=albums-directory-20261016-r9"></script>
-    <script src="js/chat/chat-realtime.js?v=albums-directory-20261016-r9"></script>
+    <script src="js/chat-share.js?v=interface-weather-20261017-r10"></script>
+    <script src="js/chat/chat-history.js?v=interface-weather-20261017-r10"></script>
+    <script src="js/chat/chat-feed.js?v=interface-weather-20261017-r10"></script>
+    <script src="js/chat/chat-dispatcher.js?v=interface-weather-20261017-r10"></script>
+    <script src="js/chat/chat-realtime.js?v=interface-weather-20261017-r10"></script>
     <script src="js/chat.js"></script>
 <script src="js/calculator.js"></script>
     <script src="js/tools.js"></script>
     <script src="js/celestial.js"></script>
-    <script src="js/ui/ui-auth.js?v=albums-directory-20261016-r9"></script>
-    <script src="js/ui/ui-navigation.js?v=albums-directory-20261016-r9"></script>
-    <script src="js/ui/ui-modals.js?v=albums-directory-20261016-r9"></script>
+    <script src="js/ui/ui-auth.js?v=interface-weather-20261017-r10"></script>
+    <script src="js/ui/ui-navigation.js?v=interface-weather-20261017-r10"></script>
+    <script src="js/ui/ui-modals.js?v=interface-weather-20261017-r10"></script>
     <script src="js/ui/ui-notifications.js"></script>
 <script src="js/ui.js"></script>
 
@@ -2612,19 +2616,20 @@
  <div id="orbit-editor-filters" class="hide"><button type="button" onclick="applyOrbitMediaFilter('vivid')">Vivid</button><button type="button" onclick="applyOrbitMediaFilter('mono')">Mono</button><button type="button" onclick="applyOrbitMediaFilter('warm')">Warm</button><button type="button" onclick="applyOrbitMediaFilter('bright')">Bright</button></div>
  <div class="orbit-editor-stage"><canvas id="orbit-editor-canvas"></canvas></div>
 </div>
-<script src="js/orbit-chat-services.js?v=albums-directory-20261016-r9"></script>
-<script src="js/orbit-media-editor.js?v=albums-directory-20261016-r9"></script>
-<div id="modal-orbit-weather" class="glass-modal-overlay"><div class="glass-modal-box">
+<script src="js/orbit-chat-services.js?v=interface-weather-20261017-r10"></script>
+<script src="js/orbit-media-editor.js?v=interface-weather-20261017-r10"></script>
+<div id="modal-orbit-weather" class="glass-modal-overlay orbit-weather-page" data-weather="idle" data-motion="calm"><div class="orbit-weather-scene" aria-hidden="true"><div class="orbit-weather-orb"></div><div class="orbit-weather-cloud cloud-a"></div><div class="orbit-weather-cloud cloud-b"></div><span class="orbit-weather-particle" style="--i:0"></span><span class="orbit-weather-particle" style="--i:1"></span><span class="orbit-weather-particle" style="--i:2"></span><span class="orbit-weather-particle" style="--i:3"></span><span class="orbit-weather-particle" style="--i:4"></span><span class="orbit-weather-particle" style="--i:5"></span><span class="orbit-weather-particle" style="--i:6"></span><span class="orbit-weather-particle" style="--i:7"></span><span class="orbit-weather-particle" style="--i:8"></span><span class="orbit-weather-particle" style="--i:9"></span><span class="orbit-weather-particle" style="--i:10"></span><span class="orbit-weather-particle" style="--i:11"></span><span class="orbit-weather-particle" style="--i:12"></span><span class="orbit-weather-particle" style="--i:13"></span></div><div class="glass-modal-box">
  <div class="modal-header-row"><strong>Weather near you</strong><button type="button" class="btn-reset" onclick="closeOrbitWeatherConsent()" aria-label="Close weather settings">✕</button></div>
- <p>Allow device location to show nearby weather below the Orbit logo. Orbit requests a fresh, high-accuracy location and shows the accuracy your device reports.</p>
+ <div class="orbit-weather-hero"><span id="orbit-weather-place">Your local forecast</span><strong id="orbit-weather-temperature">—°</strong><span id="orbit-weather-condition">Enable location to see current conditions</span></div><label class="orbit-weather-motion-label" for="orbit-weather-motion">Weather animation <select id="orbit-weather-motion" onchange="setOrbitWeatherMotion(this.value)"><option value="calm">Calm</option><option value="live">Live</option><option value="still">Still</option></select></label><p>Allow device location to show nearby weather below the Orbit logo. Orbit requests a fresh, high-accuracy location and shows the accuracy your device reports.</p>
  <p class="orbit-weather-privacy">Your coordinates go directly to Open-Meteo for weather and air quality, and BigDataCloud for the place name. BigDataCloud uses anonymous location and network signals to improve its data. Orbit does not save your precise location.</p>
  <p id="orbit-weather-updated"></p><dl id="orbit-weather-metrics" class="orbit-weather-metrics hide"><div><dt>Humidity</dt><dd id="orbit-weather-humidity">Unavailable</dd></div><div><dt>Feels like</dt><dd id="orbit-weather-feels">Unavailable</dd></div><div><dt>Wind</dt><dd id="orbit-weather-wind">Unavailable</dd></div><div><dt>Current precipitation</dt><dd id="orbit-weather-rain">Unavailable</dd></div><div><dt>Surface pressure</dt><dd id="orbit-weather-pressure">Unavailable</dd></div><div><dt>AQI · US scale</dt><dd id="orbit-weather-aqi">Unavailable</dd></div><div><dt>PM2.5</dt><dd id="orbit-weather-pm25">Unavailable</dd></div><div><dt>PM10</dt><dd id="orbit-weather-pm10">Unavailable</dd></div><div><dt>High / low today</dt><dd id="orbit-weather-highlow">Unavailable</dd></div><div><dt>Rain chance today</dt><dd id="orbit-weather-chance">Unavailable</dd></div><div><dt>UV max today</dt><dd id="orbit-weather-uv">Unavailable</dd></div><div><dt>Sunrise / sunset</dt><dd id="orbit-weather-sun">Unavailable</dd></div></dl><p id="orbit-weather-air-status" role="status"></p><button type="button" id="orbit-weather-refresh" class="glass-btn-primary" onclick="enableOrbitWeather()">Allow location &amp; show weather</button>
  <button type="button" id="orbit-weather-disable" class="glass-btn-secondary hide" onclick="disableOrbitWeather()">Turn off local weather</button>
  <p class="orbit-weather-attribution">Weather by <a href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer">Open-Meteo</a> · Air quality: <a href="https://atmosphere.copernicus.eu/" target="_blank" rel="noopener noreferrer">CAMS</a> · Places by <a href="https://www.bigdatacloud.com/" target="_blank" rel="noopener noreferrer">BigDataCloud</a></p>
 </div></div>
-<script src="js/orbit-private-photos.js?v=albums-directory-20261016-r9"></script>
-<script src="js/orbit-banner-weather.js?v=albums-directory-20261016-r9"></script>
+<script src="js/orbit-private-photos.js?v=interface-weather-20261017-r10"></script>
+<script src="js/orbit-banner-weather.js?v=interface-weather-20261017-r10"></script>
 <script src="js/liquid-glass.js?v=8"></script>
-    <script src="js/messaging-experience.js?v=albums-directory-20261016-r9"></script>
+    <script src="js/messaging-experience.js?v=interface-weather-20261017-r10"></script>
+<script src="js/orbit-interface.js?v=interface-weather-20261017-r10"></script>
 </body>
 </html>

@@ -309,6 +309,7 @@ async function _bgFetchGlobalUsers() {
         // Update memory cache
         globalUsersArray = clean;
         clean.forEach(u => globalUsersMap.set(u.user_id, u));
+        if(typeof orbitRefreshChatPresence==='function')orbitRefreshChatPresence();
 
         // Persist to disk cache
         try { localStorage.setItem('orbit_global_cache_v26', JSON.stringify(clean)); } catch(e) {}

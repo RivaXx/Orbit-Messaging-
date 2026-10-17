@@ -121,6 +121,7 @@ async function openChatRoom(roomId, roomTitle, avatarUrl, isSelf = false, peerUs
     // Clear unread state for this room and update tab badges safely
     try {
         unreadRoomsSet.delete(roomId);
+        if(typeof orbitClearConversationUnread==='function')orbitClearConversationUnread(roomId);
         if (typeof resolveRoomAliases === 'function') {
             resolveRoomAliases(roomId, activeChatPeerId).forEach(a => unreadRoomsSet.delete(a));
         }

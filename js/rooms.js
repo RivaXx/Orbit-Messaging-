@@ -269,21 +269,7 @@ function renderRecentChatsFromCache(cachedItems, list) {
                 openChatRoom(item.roomId, item.title, item.dp_url || null, false, item.peerUserId || null);
             }
         };
-        card.innerHTML = `
-            <div class="c-av-wrap" style="position:relative; ${item.isGroup ? 'background:rgba(10,132,255,0.15);border-color:var(--accent);' : ''}">
-                ${item.avatarHtml || '<i class="fa-solid fa-comments"></i>'}
-                ${item.isUnread ? '<div class="unread-blue-pulse-dot" title="New Message"></div>' : ''}
-            </div>
-            <div class="c-info-wrap">
-                <div class="c-top-row">
-                    <span class="c-name">${escapeHtml(item.title)}</span>
-                    <span class="c-time">${escapeHtml(item.timeDisplay || '')}</span>
-                </div>
-                <div class="c-preview-row">
-                    <span class="c-last-msg">${escapeHtml(item.msgPreview || 'Message')}</span>
-                </div><div class="c-presence-line">${escapeHtml(item.presenceDisplay || '')}</div>
-            </div>
-        `;
+        orbitRenderConversationCard(card,item);
         // Attach long-press selection handler — only available if chat-select.js already loaded
         if (typeof attachChatCardSelectHandler === 'function') {
             attachChatCardSelectHandler(card, item.roomId, item.title, item.isGroup);
@@ -495,7 +481,7 @@ async function loadMainChats(fromCacheFirst = false) {
             const isUnread = (typeof unreadRoomsSet !== 'undefined') && unreadRoomsSet.has(roomId);
             const timeDisplay = orbitFormatMessageTime(lastMsg.created_at);
             const presenceDisplay = isGroup ? `${roomMeta?.participants?.length || 0} members` : orbitChatPresence(peerUserId);
-            const msgPreview = lastMsg.type === 'media' || lastMsg.attachments?.length ? '📷 Media' : (lastMsg.text || 'Message');
+            const msgPreview = orbitConversationPreview(lastMsg,isGroup);
 
             serializableItems.push({
                 roomId,
@@ -504,6 +490,7 @@ async function loadMainChats(fromCacheFirst = false) {
                 isGroup,
                 avatarHtml,
                 isUnread,
+                isPinned,
                 timeDisplay,
                 presenceDisplay,
                 msgPreview,
@@ -517,24 +504,7 @@ async function loadMainChats(fromCacheFirst = false) {
                 if (typeof unreadRoomsSet !== 'undefined') unreadRoomsSet.delete(roomId);
                 openChatRoom(roomId, title, resolvedDpUrl, false, peerUserId);
             };
-            card.innerHTML = `
-                <div class="c-av-wrap" style="position:relative; ${isGroup ? 'background:rgba(10,132,255,0.15);border-color:var(--accent);' : ''}">
-                    ${avatarHtml}
-                    ${isUnread ? '<div class="unread-blue-pulse-dot" title="New Message"></div>' : ''}
-                </div>
-                <div class="c-info-wrap">
-                    <div class="c-top-row">
-                        <span class="c-name" style="display:flex; align-items:center; gap:6px;">
-                            ${escapeHtml(title)}
-                            ${isPinned ? '<i class="fa-solid fa-thumbtack" style="font-size:11px; color:var(--accent); transform:rotate(30deg);" title="Pinned"></i>' : ''}
-                        </span>
-                        <span class="c-time">${timeDisplay}</span>
-                    </div>
-                    <div class="c-preview-row">
-                        <span class="c-last-msg">${escapeHtml(msgPreview)}</span>
-                    </div><div class="c-presence-line">${escapeHtml(presenceDisplay)}</div>
-                </div>
-            `;
+            orbitRenderConversationCard(card,serializableItems[serializableItems.length-1]);
             if (typeof attachChatCardSelectHandler === 'function') {
                 attachChatCardSelectHandler(card, roomId, title, isGroup);
             }
@@ -545,6 +515,7 @@ async function loadMainChats(fromCacheFirst = false) {
         list.innerHTML = '';
         list.appendChild(frag);
         list.scrollTop = prevScroll;
+        orbitRefreshUnreadCounts();
 
         // Cache serialized items for 0ms hydration next launch
         if (currentUser && serializableItems.length > 0) {

@@ -26,6 +26,8 @@ async function _prewarmRecentMessages() {
 }
 
 async function launchApp() {
+    try{localStorage.removeItem('orbit_explicit_signout');}catch(_){}
+    if(typeof orbitRememberSessionActivity==='function')orbitRememberSessionActivity(true);
     if (typeof syncOrbitCleanupWatermark === 'function') syncOrbitCleanupWatermark().catch(() => {});
     initOrbitWeather().catch(()=>{});
     initOrbitChatServices().catch(error=>console.warn('[Orbit Services]',error.message));
@@ -189,6 +191,7 @@ function initPresenceRealtime() {
                         const existing = globalUsersMap.get(updatedUser.user_id) || {};
                         globalUsersMap.set(updatedUser.user_id, { ...existing, ...updatedUser });
                     }
+                    if(typeof orbitRefreshChatPresence==='function')orbitRefreshChatPresence();
                     const activeTab = document.querySelector('.liquid-tab-btn.active')?.getAttribute('data-tab');
                     if (activeTab === 'friends' && typeof loadFriends === 'function') {
                         loadFriends();
