@@ -37,6 +37,7 @@
   document.body.classList.toggle('orbit-glass-enabled', enabled);
   document.body.classList.toggle('orbit-water-glass', enabled && intensity > 0 && refract);
   document.body.classList.toggle('orbit-glass-full', quality === 'full');
+  document.body.classList.toggle('orbit-battery-saver', quality === 'fast');
   document.body.classList.toggle('orbit-glass-fast', intensity === 0 && blur === 0);
   const toggle = document.getElementById('glass-enabled');
   if (toggle) toggle.checked = enabled;
