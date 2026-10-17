@@ -55,3 +55,34 @@
 #orbit-weather-air-status { font-size:11px!important; }
 /* Decorative weather animation must not compete with chats for frame time. */
 .orbit-weather-pill::after,.orbit-weather-glow,.orbit-weather-symbol { animation:none; }
+/* Full-screen condition scene: only a few transform/opacity layers animate. */
+#modal-orbit-weather.orbit-weather-page{padding:0;background:#122f54;isolation:isolate;overflow:hidden}
+#modal-orbit-weather.orbit-weather-page.active{display:block}
+#modal-orbit-weather .orbit-weather-scene{position:absolute;inset:0;overflow:hidden;background:linear-gradient(165deg,#3d88b4,#5fabc2 50%,#bdcdbf);z-index:-1;pointer-events:none}
+#modal-orbit-weather[data-night=true] .orbit-weather-scene{background:linear-gradient(165deg,#0b1634,#263d61 65%,#536076)}
+#modal-orbit-weather:is([data-weather=rain],[data-weather=storm],[data-weather=cloud]) .orbit-weather-scene{background:linear-gradient(165deg,#283e5a,#66879b 60%,#96a9b5)}
+#modal-orbit-weather[data-weather=snow] .orbit-weather-scene{background:linear-gradient(165deg,#6b8ba6,#c2d4df)}
+#modal-orbit-weather>.glass-modal-box{position:relative;box-sizing:border-box;width:min(100%,700px);max-width:none;max-height:100dvh;min-height:100dvh;margin:0 auto;padding:calc(20px + env(safe-area-inset-top)) 20px calc(24px + env(safe-area-inset-bottom));border-radius:0;border:0;background:#10223855!important;backdrop-filter:blur(9px)!important;-webkit-backdrop-filter:blur(9px)!important;color:#fff;box-shadow:none}
+#modal-orbit-weather .modal-header-row{position:sticky;top:-1px;z-index:2;padding:8px 0;gap:14px}
+#modal-orbit-weather :is(p,dt){color:#e1edf5!important}#modal-orbit-weather :is(dd,strong,button,label){color:#fff}
+#modal-orbit-weather .orbit-weather-metrics>div{background:#0c203844;border-color:#ffffff30;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+#modal-orbit-weather .orbit-weather-hero{display:flex;align-items:center;flex-direction:column;gap:8px;text-align:center;margin:22px 0 28px}
+#modal-orbit-weather .orbit-weather-hero strong{font-size:90px;font-weight:250;line-height:1;letter-spacing:-4px}
+#modal-orbit-weather .orbit-weather-hero span{font-size:15px}
+#modal-orbit-weather .orbit-weather-motion-label{display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:12px;margin:20px 0}
+#orbit-weather-motion{border:1px solid #ffffff50;border-radius:12px;padding:8px 12px;background:#17354c;color:#fff;font:inherit}
+.orbit-weather-orb{position:absolute;width:180px;height:180px;right:8%;top:10%;border-radius:50%;background:radial-gradient(circle,#fff4b5,#f7d15b 65%,#f7d15b00 70%);box-shadow:0 0 90px #ffde8555;animation:orbit-sky-drift 16s ease-in-out infinite alternate}
+[data-night=true] .orbit-weather-orb{width:100px;height:100px;background:#f2f5e5;box-shadow:0 0 60px #e3eaff44}
+[data-weather=rain] .orbit-weather-orb,[data-weather=storm] .orbit-weather-orb{opacity:.12}
+.orbit-weather-cloud{position:absolute;width:360px;height:100px;border-radius:50%;background:radial-gradient(ellipse,#ffffff80,transparent 70%);top:20%;left:-10%;animation:orbit-sky-drift 24s ease-in-out infinite alternate}
+.orbit-weather-cloud.cloud-b{top:38%;left:45%;opacity:.6;animation-delay:-10s}
+.orbit-weather-particle{display:none;position:absolute;left:calc(var(--i)*7%);top:-10%;width:2px;height:45px;background:#dceeff88;transform:rotate(12deg);animation:orbit-sky-rain 1.3s linear infinite;animation-delay:calc(var(--i)*-.23s)}
+:is([data-weather=rain],[data-weather=storm]) .orbit-weather-particle{display:block}
+[data-weather=snow] .orbit-weather-particle{display:block;width:6px;height:6px;border-radius:50%;background:#fff;animation-duration:7s}
+[data-motion=calm] .orbit-weather-particle:nth-child(even){display:none}
+[data-motion=calm] .orbit-weather-particle{animation-duration:3s}
+[data-motion=still] .orbit-weather-scene *{animation:none!important}
+.orbit-battery-saver .orbit-weather-scene *{animation:none!important}
+@keyframes orbit-sky-drift{to{transform:translate3d(25px,15px,0)}}
+@keyframes orbit-sky-rain{to{transform:translate3d(-40px,110vh,0)}}
+@media(prefers-reduced-motion:reduce){.orbit-weather-scene *{animation:none!important}.orbit-weather-particle{display:none!important}}
