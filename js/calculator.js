@@ -9,6 +9,17 @@ let calcCurrentVal = '0';
 let calcExpression = '';
 let isCalcResultShown = false;
 let calcMemory = 0;
+let calcPreviewEnabled=localStorage.getItem('orbit_calc_preview')!=='false';
+function toggleCalcPreview(){calcPreviewEnabled=!calcPreviewEnabled;try{localStorage.setItem('orbit_calc_preview',String(calcPreviewEnabled));}catch(_){}updateCalcDisplay();}
+function updateCalcAnswerPreview(){
+ const output=document.getElementById('calc-answer-preview'),button=document.getElementById('calc-preview-toggle');
+ button?.setAttribute('aria-pressed',String(calcPreviewEnabled));
+ if(button)button.textContent=calcPreviewEnabled?'Live preview: On':'Live preview: Off';
+ if(!output)return;output.textContent='';
+ if(!calcPreviewEnabled||isCalcResultShown||!calcExpression||calcCurrentVal==='Error')return;
+ try{const expression=calcCurrentVal==='0' && /[%) ]$/.test(calcExpression.trim())?calcExpression.trim():`${calcExpression} ${calcCurrentVal}`;const value=evaluateCalcExpression(expression);if(Number.isFinite(value))output.textContent='= '+String(Math.round(value*100000000)/100000000);}catch(_){}
+}
+
 let calcHistory = (() => {
     try {
         const stored = localStorage.getItem('orbit_calc_history');
@@ -135,6 +146,7 @@ function highlightCalcButton(btnId) {
 }
 
 function updateCalcDisplay() {
+    updateCalcAnswerPreview();
     const exprEl = document.getElementById('calc-expr-display');
     const valEl = document.getElementById('calc-val-display');
     if (exprEl) exprEl.innerText = calcExpression;
