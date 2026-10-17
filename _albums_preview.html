@@ -1,0 +1,138 @@
+<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="style.css"><link rel="stylesheet" href="chat-upgrades.css"><link rel="stylesheet" href="photo-weather.css"><link rel="stylesheet" href="messaging-experience.css"><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"><style>body{display:block!important;overflow:auto!important;height:auto!important;min-height:100vh}main{max-width:440px;margin:16px auto;padding:16px}main>h2{font-size:20px}.note{font-size:12px;color:var(--text-secondary)}.contact-feed{padding:0!important;margin:24px 0!important;overflow:visible!important;height:auto!important}#screen-chat{display:block!important;position:static!important;height:auto!important;background:none!important}#sample-feed{display:flex;flex-direction:column;gap:12px}.msg-bubble-row{width:100%}.media-preview-fullscreen-modal{height:100dvh}#queue-result{display:block;font-size:12px;margin:12px 0}</style></head><body><main><h2>Orbit · layout check</h2><p class="note">Synthetic examples · no messages sent</p><button onclick="document.body.classList.toggle('light-mode')">Switch theme</button><div id="tab-main-chats" class="contact-feed">
+            <div class="orbit-section-heading"><div><span class="orbit-section-eyebrow">YOUR SPACE</span><h2>Chats</h2><p>Your recent conversations</p></div><button type="button" class="glass-icon-btn orbit-section-action" onclick="switchTab('global')"><i class="fa-solid fa-pen-to-square"></i><span>New chat</span></button></div>
+<!-- Pinned Self Chat (Note to Self) -->
+            <div id="self-chat-pill" class="contact-glass-card self-chat-card touch-fix" onclick="openSelfChat()">
+                <div class="c-av-wrap" style="border-color:var(--self-chat-blue); background:rgba(10,132,255,0.15);">
+                    <i class="fa-solid fa-cloud-arrow-up" style="color:var(--self-chat-blue); font-size:18px;"></i>
+                </div>
+                <div class="c-info-column">
+                    <div class="c-name-row">
+                        <span class="c-name-text" style="color:var(--self-chat-blue);">Note to Self</span>
+                        <span class="c-time-stamp"><i class="fa-solid fa-thumbtack" style="color:var(--self-chat-blue); font-size:10px;"></i> Pinned</span>
+                    </div>
+                    <div class="c-last-message">Your private space for notes and files</div>
+                </div>
+            </div>
+
+            <div id="main-chats-list" style="display:flex; flex-direction:column; gap:6px;"></div>
+        </div><div id="tab-global" class="contact-feed">
+            <div class="orbit-section-heading"><div><span class="orbit-section-eyebrow">DISCOVER</span><h2>People</h2><p>Find people and start a conversation</p></div><span id="global-online-count" class="orbit-online-summary" role="status">Checking presence…</span></div>
+            <div id="global-list" style="display:flex; flex-direction:column; gap:6px;"></div>
+        </div><section id="screen-chat" class="active"><h3>Photo album</h3><div id="sample-feed"></div><button onclick="stageDemo()">Choose demo photos</button><output id="queue-result"></output><span id="chat-target-name" hidden>Alex</span></section></main><div id="modal-media-preview" class="media-preview-fullscreen-modal hide">
+        <!-- Top Toolbar matching WhatsApp/Telegram exactly -->
+        <div class="media-preview-top-bar">
+            <button class="btn-reset touch-fix preview-top-btn" onclick="closeMediaPreviewScreen()" title="Close">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+            <div id="media-preview-counter" class="media-preview-counter">1 of 1</div>
+            <div class="preview-top-actions">
+                <button type="button" class="btn-reset touch-fix preview-top-btn" onclick="downloadPreviewMedia()" title="Download photo"><i class="fa-solid fa-download"></i></button>
+                <!-- HD Quality Toggle -->
+                <button type="button" id="preview-hd-toggle-btn" class="btn-reset touch-fix preview-hd-badge" onclick="toggleHdQuality()" title="Toggle HD Quality">
+                    <span>HD</span>
+                    <i id="preview-hd-check" class="fa-solid fa-check hide" style="font-size:10px; margin-left:3px;"></i>
+                </button>
+                <!-- Crop / Straighten -->
+                <button type="button" class="btn-reset touch-fix preview-top-btn" onclick="openImageCropper()" title="Crop & Straighten">
+                    <i class="fa-solid fa-crop-simple"></i>
+                </button>
+                <!-- Rotate 90° -->
+                <button type="button" class="btn-reset touch-fix preview-top-btn" onclick="rotateCurrentPreviewMedia()" title="Rotate 90°">
+                    <i class="fa-solid fa-rotate-right"></i>
+                </button>
+                <!-- Stickers / Emoji -->
+                <button type="button" class="btn-reset touch-fix preview-top-btn" onclick="openOrbitStickerEditor()" title="Add Stickers">
+                    <i class="fa-regular fa-face-smile"></i>
+                </button>
+                <!-- Text (Aa) Overlay -->
+                <button type="button" class="btn-reset touch-fix preview-top-btn" onclick="promptPreviewTextOverlay()" title="Add Text">
+                    <span style="font-weight:800; font-size:15px; font-family:sans-serif;">Aa</span>
+                </button>
+                <!-- Doodle / Pen Tool -->
+                <button type="button" class="btn-reset touch-fix preview-top-btn" onclick="togglePreviewDoodle()" title="Doodle / Draw">
+                    <i class="fa-solid fa-pen"></i>
+                </button>
+                <!-- Delete & Add More -->
+                <button type="button" class="btn-reset touch-fix preview-top-btn" onclick="deleteCurrentPreviewMedia()" title="Delete">
+                    <i class="fa-solid fa-trash-can"></i>
+                </button>
+                <button type="button" class="btn-reset touch-fix preview-top-btn" onclick="addMorePreviewMedia()" title="Add more media">
+                    <i class="fa-solid fa-plus"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Center Viewport / Carousel -->
+        <div class="media-preview-viewport" id="media-preview-viewport">
+            <button class="btn-reset touch-fix media-preview-nav prev hide" id="preview-nav-prev" onclick="navPreviewMedia(-1)" title="Previous">
+                <i class="fa-solid fa-chevron-left"></i>
+            </button>
+            <div class="media-preview-main-item" id="media-preview-main-item"></div>
+            <button class="btn-reset touch-fix media-preview-nav next hide" id="preview-nav-next" onclick="navPreviewMedia(1)" title="Next">
+                <i class="fa-solid fa-chevron-right"></i>
+            </button>
+            <!-- AI Restyle Badge floating over media -->
+            <div id="preview-restyle-badge" class="preview-restyle-badge" onclick="triggerAiRestyle()">
+                <i class="fa-solid fa-wand-magic-sparkles"></i>
+                <span>Photo filters</span>
+            </div>
+        </div>
+
+        <!-- Bottom Controls & Caption Input Bar -->
+        <div class="media-preview-bottom-bar">
+            <!-- Thumbnail Strip -->
+            <div class="media-preview-thumb-strip" id="media-preview-thumb-strip"></div>
+
+            <!-- Recipient Target Pill + Caption Bar -->
+            <div class="media-preview-recipient-row">
+                <div class="preview-recipient-pill">
+                    <span id="preview-recipient-name">@recipient</span>
+                </div>
+            </div>
+
+            <div class="media-preview-caption-row">
+                <div class="preview-caption-pill">
+                    <button type="button" class="btn-reset touch-fix" onclick="openEmojiPickerModal()" style="color:var(--text-muted); font-size:18px; margin-left:8px; display:flex; align-items:center;">
+                        <i class="fa-regular fa-face-smile"></i>
+                    </button>
+                    <input type="text" id="media-preview-caption-input" placeholder="Add a caption..." maxlength="1000" autocomplete="off" onkeydown="if(event.key==='Enter') sendPreviewMediaBatch();">
+                    <button type="button" id="btn-view-once-toggle" class="btn-reset preview-view-once-btn touch-fix" onclick="toggleViewOnceMode()" title="View once: Photo can only be viewed once">
+                        <span class="view-once-badge">1</span>
+                    </button>
+                </div>
+                <button type="button" id="preview-send-button" class="preview-send-circle-btn touch-fix" onclick="sendPreviewMediaBatch()" title="Send photo" aria-label="Send photo">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3l19 9-19 9 4-9-4-9zm4.2 8h9.3L6.7 6.4 8.8 11H7.2zm0 2l1.6 4.6 9.7-4.6H7.2z" fill="currentColor"/></svg>
+                </button>
+            </div>
+            <p id="preview-view-once-hint" class="hide">View once · Recipient can open this photo once</p>
+        </div>
+    </div><div id="modal-media-lightbox" class="media-viewer-modal">
+        <div class="lightbox-header">
+            <span id="lightbox-counter" style="color:#fff; font-weight:700; font-size:14px; letter-spacing:0.5px;">1 / 1</span>
+            <div style="display:flex; gap:10px; align-items:center;">
+                <button class="btn-reset" onclick="copyCurrentLightboxMedia()" style="color:#fff; font-size:18px; padding:6px;" title="Copy Image"><i class="fa-regular fa-copy"></i></button>
+                <button class="btn-reset" onclick="zoomLightboxIn(event)" style="color:#fff; font-size:18px; padding:6px;" title="Zoom In"><i class="fa-solid fa-magnifying-glass-plus"></i></button>
+                <button class="btn-reset" onclick="zoomLightboxOut(event)" style="color:#fff; font-size:18px; padding:6px;" title="Zoom Out"><i class="fa-solid fa-magnifying-glass-minus"></i></button>
+                <button class="btn-reset" onclick="shareCurrentLightboxMedia()" style="color:#fff; font-size:18px; padding:6px;" title="Share"><i class="fa-solid fa-arrow-up-from-bracket"></i></button>
+                <button class="btn-reset" onclick="downloadCurrentLightboxMedia()" style="color:#fff; font-size:18px; padding:6px;" title="Download"><i class="fa-solid fa-download"></i></button>
+                <button class="btn-reset" onclick="closeMediaLightbox()" style="color:#fff; font-size:22px; padding:6px;" title="Close"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+        </div>
+        <div class="lightbox-content" style="flex:1; display:flex; align-items:center; justify-content:center; overflow:hidden; position:relative;">
+            <button id="lightbox-prev-btn" class="lightbox-nav-btn prev touch-fix" onclick="prevLightboxImage(event)" title="Previous Image" aria-label="Previous Image"><i class="fa-solid fa-chevron-left"></i></button>
+            <button id="lightbox-next-btn" class="lightbox-nav-btn next touch-fix" onclick="nextLightboxImage(event)" title="Next Image" aria-label="Next Image"><i class="fa-solid fa-chevron-right"></i></button>
+            <img id="lightbox-img" src="" alt="Media" style="max-width:100%; max-height:100%; object-fit:contain; transition:transform 0.2s ease;">
+        </div>
+        <!-- Bottom Chronological Thumbnail Filmstrip -->
+        <div id="lightbox-thumbnail-strip" class="lightbox-thumbnail-strip"></div>
+    </div><script src="js/config.js"></script><script src="js/rooms.js"></script><script src="js/chat/chat-feed.js"></script><script src="js/chat-gestures.js"></script><script src="js/actions/media-lightbox.js"></script><script src="js/actions/media-preview.js"></script><script src="js/actions/file-viewer.js"></script><script src="js/ui/ui-modals.js"></script><script src="js/messaging-experience.js"></script><script>
+currentUser={id:'preview-user',email:'preview@example.com'};currentRoom='preview-room';userProfile={first_name:'Preview'};
+function showToast(text){document.getElementById('queue-result').textContent=text}function initScheduleButtonListener(){}function initClockSuite(){}function handleChatInputText(){}function retryMediaPreview(){}
+function formatOrbitMessageText(text){return escapeHtml(text)}function ensureSupabase(){return Promise.resolve({rpc:async()=>({data:{remaining:10},error:null})})}
+const demoPhotos=["data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%22400%22%20height%3D%22400%22%3E%3Crect%20width%3D%22400%22%20height%3D%22400%22%20fill%3D%22%23447b8a%22/%3E%3Ccircle%20cx%3D%22290%22%20cy%3D%2280%22%20r%3D%2240%22%20fill%3D%22%23ffe9ae%22/%3E%3Cpath%20d%3D%22M0%20300%20140%20100%20300%20310%20400%20200V400H0%22%20fill%3D%22%23183d45%22/%3E%3Ctext%20x%3D%2224%22%20y%3D%22365%22%20fill%3D%22white%22%20font-size%3D%2228%22%3EPhoto%201%3C/text%3E%3C/svg%3E", "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%22400%22%20height%3D%22400%22%3E%3Crect%20width%3D%22400%22%20height%3D%22400%22%20fill%3D%22%23be935e%22/%3E%3Ccircle%20cx%3D%22290%22%20cy%3D%2280%22%20r%3D%2240%22%20fill%3D%22%23ffe9ae%22/%3E%3Cpath%20d%3D%22M0%20300%20140%20100%20300%20310%20400%20200V400H0%22%20fill%3D%22%23183d45%22/%3E%3Ctext%20x%3D%2224%22%20y%3D%22365%22%20fill%3D%22white%22%20font-size%3D%2228%22%3EPhoto%202%3C/text%3E%3C/svg%3E", "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%22400%22%20height%3D%22400%22%3E%3Crect%20width%3D%22400%22%20height%3D%22400%22%20fill%3D%22%236c83b2%22/%3E%3Ccircle%20cx%3D%22290%22%20cy%3D%2280%22%20r%3D%2240%22%20fill%3D%22%23ffe9ae%22/%3E%3Cpath%20d%3D%22M0%20300%20140%20100%20300%20310%20400%20200V400H0%22%20fill%3D%22%23183d45%22/%3E%3Ctext%20x%3D%2224%22%20y%3D%22365%22%20fill%3D%22white%22%20font-size%3D%2228%22%3EPhoto%203%3C/text%3E%3C/svg%3E", "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%22400%22%20height%3D%22400%22%3E%3Crect%20width%3D%22400%22%20height%3D%22400%22%20fill%3D%22%239c718e%22/%3E%3Ccircle%20cx%3D%22290%22%20cy%3D%2280%22%20r%3D%2240%22%20fill%3D%22%23ffe9ae%22/%3E%3Cpath%20d%3D%22M0%20300%20140%20100%20300%20310%20400%20200V400H0%22%20fill%3D%22%23183d45%22/%3E%3Ctext%20x%3D%2224%22%20y%3D%22365%22%20fill%3D%22white%22%20font-size%3D%2228%22%3EPhoto%204%3C/text%3E%3C/svg%3E"];let albumCalls=0;
+async function stageDemo(){const files=await Promise.all(demoPhotos.map(async(url,i)=>new File([await(await fetch(url)).blob()],'Photo '+(i+1)+'.svg',{type:'image/svg+xml'})));handleMediaSelection({files,value:''});}
+function addMorePreviewMedia(){handleMediaSelection({files:[new File(['<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400"><rect width="400" height="400" fill="teal"/></svg>'],'Extra.svg',{type:'image/svg+xml'})],value:''});}
+async function queueMediaMessage(items,caption){albumCalls++;const attachments=items.map(item=>({...item,url:URL.createObjectURL(item.file)}));document.getElementById('sample-feed').replaceChildren(createMessageDOMNode({id:'demo-album',room:currentRoom,sender_id:currentUser.id,username:'Preview',created_at:new Date().toISOString(),type:'image',attachments,text:caption}));document.getElementById('queue-result').textContent=albumCalls+' queued message · '+items.length+' photos';}
+renderRecentChatsFromCache([{roomId:'preview-room',title:'Alex Rodrigues',timeDisplay:'10:42',msgPreview:'Photos from our trip',presenceDisplay:'Last seen today at 10:38',avatarHtml:'<span>A</span>'}],document.getElementById('main-chats-list'));
+renderGlobalUsersDOM([{user_id:'alex',display_name:'Alex Rodrigues',email:'alex@example.com',is_online:true,last_seen:new Date().toISOString()},{user_id:'sarah',display_name:'Sarah Fernandes',email:'sarah@example.com',is_online:false,last_seen:new Date(Date.now()-7200000).toISOString()},{user_id:'liam',display_name:'Liam D’Souza',email:'liam@example.com',is_online:false,last_seen:new Date(Date.now()-86400000).toISOString()}]);
+</script></body></html>
