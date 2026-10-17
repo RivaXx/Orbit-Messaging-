@@ -3,6 +3,7 @@
 // ── File Selection Handlers ──
 async function handleMediaSelection(input) {
     if (!input.files || input.files.length === 0) return;
+    if(!currentRoom || !currentUser?.id){input.value='';showToast('Open a chat before selecting photos.','info');return;}
     const files = Array.from(input.files);
     const queuedItems = files.map(file => {
         const isImg = file.type.startsWith('image/');
@@ -11,13 +12,8 @@ async function handleMediaSelection(input) {
         return { file, name: file.name, type, size: file.size };
     });
     input.value = '';
-    try {
-        if (typeof queueMediaMessage !== 'function') throw new Error('Background media queue is unavailable.');
-        await queueMediaMessage(queuedItems, '');
-    } catch (error) {
-        console.warn('[Orbit] Media queue error:', error);
-        showToast(`Could not queue media: ${error.message || 'Please try again.'}`, 'error');
-    }
+    openMediaPreviewScreen(queuedItems.map(item=>({...item,url:URL.createObjectURL(item.file)})));
+
 }
 
 async function handleDocSelection(input) {
