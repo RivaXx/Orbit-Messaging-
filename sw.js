@@ -1,51 +1,52 @@
 // Orbit Messenger — messaging delivery and storage policy repair
-const CACHE_NAME = 'orbit-interface-weather-20261017-sw10';
+const CACHE_NAME = 'orbit-app-polish-20261018-r2';
 const PRECACHE_URLS = [
-    "./messaging-experience.css?v=interface-weather-20261017-r10",
-    "./js/messaging-experience.js?v=interface-weather-20261017-r10",
-    "./js/orbit-interface.js?v=interface-weather-20261017-r10",
-    "./photo-weather.css?v=interface-weather-20261017-r10",
-    "./js/orbit-private-photos.js?v=interface-weather-20261017-r10",
-    "./js/orbit-banner-weather.js?v=interface-weather-20261017-r10",
-    "./chat-upgrades.css?v=interface-weather-20261017-r10",
-    "./js/orbit-chat-services.js?v=interface-weather-20261017-r10",
-    "./js/orbit-media-editor.js?v=interface-weather-20261017-r10",
-    "./js/messaging-notifications.js?v=interface-weather-20261017-r10",
     "./",
     "./index.html",
     "./manifest.json",
     "./orbit-icon.svg",
     "./orbit-icon.svg?v=brand-20261015",
     "./assets/vendor/tus.min.js",
-    "./js/logger.js?v=authenticated-20261011",
-    "./assets/vendor/supabase.min.js?v=2.117.3",
-    "./style.css?v=interface-weather-20261017-r10",
-    "./tools.css",
-    "./js/config.js?v=interface-weather-20261017-r10",
-    "./js/rooms.js?v=interface-weather-20261017-r10",
-    "./js/chat-actions.js",
-    "./js/actions/media-lightbox.js?v=interface-weather-20261017-r10",
-    "./js/actions/media-preview.js?v=interface-weather-20261017-r10",
-    "./js/actions/file-viewer.js?v=interface-weather-20261017-r10",
-    "./js/actions/voice-recorder.js",
-    "./js/actions/chat-extras.js?v=interface-weather-20261017-r10",
-    "./js/chat-gestures.js",
-    "./js/chat-select.js",
-    "./js/chat-share.js?v=interface-weather-20261017-r10",
-    "./js/chat/chat-history.js?v=interface-weather-20261017-r10",
-    "./js/chat/chat-feed.js?v=interface-weather-20261017-r10",
-    "./js/chat/chat-dispatcher.js?v=interface-weather-20261017-r10",
-    "./js/chat/chat-realtime.js?v=interface-weather-20261017-r10",
-    "./js/chat.js",
-    "./js/calculator.js",
-    "./js/tools.js",
-    "./js/celestial.js",
-    "./js/ui/ui-auth.js?v=interface-weather-20261017-r10",
-    "./js/ui/ui-navigation.js?v=interface-weather-20261017-r10",
-    "./js/ui/ui-modals.js?v=interface-weather-20261017-r10",
-    "./js/ui/ui-notifications.js",
-    "./js/ui.js",
-    "./js/liquid-glass.js?v=5"
+    "./js/logger.js?v=app-polish-20261018-r2",
+    "./assets/vendor/supabase.min.js?v=app-polish-20261018-r2",
+    "./style.css?v=app-polish-20261018-r2",
+    "./tools.css?v=app-polish-20261018-r2",
+    "./chat-upgrades.css?v=app-polish-20261018-r2",
+    "./photo-weather.css?v=app-polish-20261018-r2",
+    "./messaging-experience.css?v=app-polish-20261018-r2",
+    "./app-polish.css?v=app-polish-20261018-r2",
+    "./js/config.js?v=app-polish-20261018-r2",
+    "./js/rooms.js?v=app-polish-20261018-r2",
+    "./js/chat-actions.js?v=app-polish-20261018-r2",
+    "./js/actions/media-lightbox.js?v=app-polish-20261018-r2",
+    "./js/actions/media-preview.js?v=app-polish-20261018-r2",
+    "./js/actions/file-viewer.js?v=app-polish-20261018-r2",
+    "./js/actions/voice-recorder.js?v=app-polish-20261018-r2",
+    "./js/actions/chat-extras.js?v=app-polish-20261018-r2",
+    "./js/messaging-notifications.js?v=app-polish-20261018-r2",
+    "./js/chat-gestures.js?v=app-polish-20261018-r2",
+    "./js/chat-select.js?v=app-polish-20261018-r2",
+    "./js/chat-share.js?v=app-polish-20261018-r2",
+    "./js/chat/chat-history.js?v=app-polish-20261018-r2",
+    "./js/chat/chat-feed.js?v=app-polish-20261018-r2",
+    "./js/chat/chat-dispatcher.js?v=app-polish-20261018-r2",
+    "./js/chat/chat-realtime.js?v=app-polish-20261018-r2",
+    "./js/chat.js?v=app-polish-20261018-r2",
+    "./js/calculator.js?v=app-polish-20261018-r2",
+    "./js/tools.js?v=app-polish-20261018-r2",
+    "./js/celestial.js?v=app-polish-20261018-r2",
+    "./js/ui/ui-auth.js?v=app-polish-20261018-r2",
+    "./js/ui/ui-navigation.js?v=app-polish-20261018-r2",
+    "./js/ui/ui-modals.js?v=app-polish-20261018-r2",
+    "./js/ui/ui-notifications.js?v=app-polish-20261018-r2",
+    "./js/ui.js?v=app-polish-20261018-r2",
+    "./js/orbit-chat-services.js?v=app-polish-20261018-r2",
+    "./js/orbit-media-editor.js?v=app-polish-20261018-r2",
+    "./js/orbit-private-photos.js?v=app-polish-20261018-r2",
+    "./js/orbit-banner-weather.js?v=app-polish-20261018-r2",
+    "./js/liquid-glass.js?v=app-polish-20261018-r2",
+    "./js/messaging-experience.js?v=app-polish-20261018-r2",
+    "./js/orbit-interface.js?v=app-polish-20261018-r2"
 ];
 
 self.addEventListener('install', event => {
@@ -79,6 +80,8 @@ self.addEventListener('fetch', event => {
     event.respondWith((async () => {
         const cache = await caches.open(CACHE_NAME);
         const cached = await cache.match(request) || (navigation ? await cache.match('./index.html') : null);
+        // Release-tagged assets are immutable until the next worker version.
+        if(cached && shellAsset && url.searchParams.has("v"))return cached;
         const network = fetch(request).then(response => {
             if (response.ok || response.type === 'opaque') {
                 event.waitUntil(cache.put(request, response.clone()).catch(() => {}));
@@ -88,7 +91,7 @@ self.addEventListener('fetch', event => {
         event.waitUntil(network.catch(() => {}));
         if (cached && !navigation) return cached;
         if (cached && !self.navigator.onLine) return cached;
-        if (cached) return network.catch(() => cached);
+        if (cached) return Promise.race([network.catch(() => cached),new Promise(resolve=>setTimeout(()=>resolve(cached),1200))]);
         return network.catch(() => new Response('Offline. Open Orbit once while connected to save this app on your device.', { status: 503 }));
     })());
 });
