@@ -531,17 +531,15 @@ async function sendMessage() {
 // Queue media locally and render its bubble before any network transfer. The
 // actual message row is inserted only after every attachment has a durable URL.
 async function queueMediaMessage(items, caption = '', messageType = null, targetContext = null) {
-    if (!Array.isArray(items) || !items.length || !currentRoom || !currentUser?.id) return;
+    if (!Array.isArray(items) || !items.length || !currentRoom || !currentUser?.id) throw new Error('Open a chat and select media before sending.');
     const roomAtSend = targetContext?.roomId || currentRoom;
     const userAtSend = targetContext?.userId || currentUser.id;
     if (currentRoom !== roomAtSend || currentUser.id !== userAtSend) {
-        showToast('Chat changed before the media was queued. Reopen the original chat and try again.', 'error');
-        return;
+        throw new Error('Chat changed before the media was queued. Reopen the original chat and try again.');
     }
     const peerAtSend = activeChatPeerId;
     if (peerAtSend && typeof isUserBlocked === 'function' && isUserBlocked(peerAtSend)) {
-        showToast('You have blocked this user. Unblock to send messages.', 'error');
-        return;
+        throw new Error('You have blocked this user. Unblock to send messages.');
     }
 
     const id = (typeof crypto !== 'undefined' && crypto.randomUUID)
@@ -815,7 +813,13 @@ async function executeResilientMessageInsert(payload) {
         if (payload.type && payload.type !== 'text') cleanPayload.type = payload.type;
         if (safeAttachments.length) cleanPayload.attachments = safeAttachments;
         if (payload.reply_to) cleanPayload.reply_to = payload.reply_to;
-        if (payload.is_forwarded) cleanPayload.is_forwarded = true;
+        // Forwarding is metadata in the existing JSON column. Production and
+        // older installations do not have an is_forwarded database column.
+        if (payload.is_forwarded) {
+            let metadata=payload.reply_to;
+            if(typeof metadata==='string'){try{metadata=JSON.parse(metadata);}catch(_){metadata=null;}}
+            cleanPayload.reply_to={...(metadata&&typeof metadata==='object'?metadata:{}),forwarded:true};
+        }
         if (payload.metadata) cleanPayload.metadata = payload.metadata;
         const result = await client.from('messages')
             .insert([cleanPayload])
