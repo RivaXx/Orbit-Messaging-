@@ -33,7 +33,7 @@ async function handleDocSelection(input) {
     });
     try {
         if (typeof queueMediaMessage !== 'function') throw new Error('Background media queue is unavailable.');
-        await queueMediaMessage(queuedItems, '');
+        await queueMediaMessage(queuedItems, document.getElementById('msg-input')?.value||'');
     } catch(e) {
         console.warn('Doc queue error:', e);
         if (typeof showToast === 'function') showToast(`Could not queue file: ${e.message || 'Please try again.'}`, 'error');
@@ -46,7 +46,7 @@ async function handleAudioSelection(input) {
     const file = input.files[0];
     try {
         if (typeof queueMediaMessage !== 'function') throw new Error('Background media queue is unavailable.');
-        await queueMediaMessage([{ file, name: file.name || 'Voice message', type: 'audio', size: file.size }], '');
+        await queueMediaMessage([{ file, name: file.name || 'Voice message', type: 'audio', size: file.size }], document.getElementById('msg-input')?.value||'');
     } catch (error) {
         showToast(`Could not queue audio: ${error.message || 'Please try again.'}`, 'error');
     }
