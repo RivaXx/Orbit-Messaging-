@@ -58,3 +58,32 @@ test('precise weather rejects stale fixes, retains best fresh fix and clears the
  const fix=await pending;assert.equal(fix.coords.accuracy,40);assert.equal(cleared,1);assert.equal(options.enableHighAccuracy,true);assert.equal(options.maximumAge,0);
  c.setOrbitWeatherMotion('live');assert.equal(c.document.getElementById('modal-orbit-weather').dataset.motion,'live');c.setOrbitWeatherMotion('bad');assert.equal(c.document.getElementById('modal-orbit-weather').dataset.motion,'calm');
 });
+
+test('valid remembered sessions show cached UI without waiting for network auth',async()=>{
+ const {c,storage}=setup();vm.runInContext(read('js/ui/ui-auth.js'),c);let launches=0;
+ storage.set('sb-example-auth-token',JSON.stringify({user:{id:'me'},expires_at:Date.now()/1000+3600}));
+ c.ensureSupabase=async()=>{throw Error('Fast restore should not wait here');};c.launchApp=async()=>launches++;
+ await c.checkExistingSession();assert.equal(launches,1);
+});
+
+test('Google beta checks provider availability and requests PKCE on the same app origin',async()=>{
+ const {c,node,storage}=setup();c.SB_KEY='publishable';c.location={href:'https://orbit.example/',origin:'https://orbit.example',pathname:'/'};
+ c.window.location={assign:url=>c.destination=url};vm.runInContext(read('js/ui/ui-auth.js'),c);
+ let enabled=false,oauthCalls=0,options;
+ c.fetch=async()=>({ok:true,json:async()=>({external:{google:enabled}})});
+ c.ensureSupabase=async()=>({auth:{signInWithOAuth:async args=>{oauthCalls++;options=args;return {data:{url:'https://example.supabase.co/auth/v1/authorize?provider=google'}};}}});
+ await c.handleGoogleSignIn();assert.equal(oauthCalls,0);assert.match(node('auth-err').textContent,/not enabled/);
+ enabled=true;await c.handleGoogleSignIn();assert.equal(oauthCalls,1);assert.equal(options.provider,'google');
+ assert.equal(options.options.redirectTo,'https://orbit.example/?orbit_oauth=google');assert.equal(options.options.skipBrowserRedirect,true);
+ assert.ok(storage.get('orbit_google_pending'));assert.match(c.destination,/example.supabase.co\/auth\/v1\/authorize/);
+});
+
+test('Google callback scrubs its code before exchanging and restores an authenticated session',async()=>{
+ const {c,storage}=setup();c.location={href:'https://orbit.example/?orbit_oauth=google&code=one-use-code'};
+ let replaced='',launches=0,exchanges=0;c.window.history={replaceState:(_state,_title,url)=>replaced=url};
+ vm.runInContext(read('js/ui/ui-auth.js'),c);storage.set('orbit_google_pending',String(Date.now()));storage.set('orbit_explicit_signout','true');
+ c.ensureSupabase=async()=>({auth:{exchangeCodeForSession:async code=>{exchanges++;assert.equal(code,'one-use-code');assert.equal(replaced,'/');return {data:{session:{user:{id:'google-user'}}}};}}});
+ c.launchApp=async()=>launches++;await c.checkExistingSession();
+ assert.equal(launches,1);assert.equal(exchanges,1);assert.equal(c.currentUser.id,'google-user');assert.equal(storage.has('orbit_explicit_signout'),false);
+ assert.equal(storage.has('orbit_google_pending'),false);
+});

@@ -85,6 +85,16 @@ test('calls never render delivery ticks; sent text still does',()=>{
  const {c}=context();vm.runInContext(read('js/chat/chat-feed.js'),c);
  assert.equal(c.getTickIconHtml({type:'call',status:'sent'}),'');assert.notEqual(c.getTickIconHtml({type:'text',status:'sent'}),'');
 });
+
+test('forwarded text and media insert without a nonexistent forwarded column and render no false reply quote',async()=>{
+ const {c,element}=context();vm.runInContext(read('js/chat/chat-dispatcher.js'),c);let inserted;
+ c.ensureSupabase=async()=>({from:()=>({insert:payload=>{inserted=payload[0];return {abortSignal:async()=>({error:null})};}})});
+ const msg={id:'forward',room:'r',sender_id:'me',text:'Caption',type:'image',is_forwarded:true,attachments:[{url:'https://example.com/photo.jpg',type:'image'}]};
+ const result=await c.executeResilientMessageInsert(msg);assert.equal(result.error,null);assert.equal('is_forwarded' in inserted,false);assert.equal(inserted.reply_to.forwarded,true);assert.equal(inserted.attachments.length,1);
+ Object.assign(c,{escapeHtml:x=>String(x||''),orbitIsViewOnceMessage:()=>false,formatOrbitMessageText:x=>x});
+ vm.runInContext(read('js/chat/chat-feed.js'),c);const card=c.createMessageDOMNode({...inserted,created_at:new Date().toISOString()});
+ assert.match(card.innerHTML,/Forwarded/);assert.doesNotMatch(card.innerHTML,/quoted-reply-box/);assert.match(card.innerHTML,/Caption/);
+});
 test('photo albums keep every URL while displaying four tiles and an accurate remainder',()=>{
  const {c}=context();Object.assign(c,{escapeHtml:x=>String(x||''),orbitIsViewOnceMessage:()=>false,formatOrbitCallDetail:x=>x,formatOrbitMessageText:x=>x});
  vm.runInContext(read('js/chat/chat-feed.js'),c);

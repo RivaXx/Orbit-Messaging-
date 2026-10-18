@@ -51,10 +51,10 @@ test('single media preview is swapped before its blob URL is revoked',async()=>{
 });
 function weatherContext({airFailure=false}={}){
  const elements=new Map(),classes=new Set(),requests=[];
- const element=id=>{if(!elements.has(id))elements.set(id,{textContent:'',dataset:{},classList:{add:k=>classes.add(k),remove:k=>classes.delete(k),toggle:()=>{}}});return elements.get(id);};
+ const element=id=>{if(!elements.has(id))elements.set(id,{textContent:'',dataset:{},replaceChildren(...children){this.children=children;},classList:{add:k=>classes.add(k),remove:k=>classes.delete(k),toggle:()=>{}}});return elements.get(id);};
  const data={timezone:'UTC',current:{time:1700000000,temperature_2m:23,weather_code:0,is_day:1,relative_humidity_2m:0,apparent_temperature:22,wind_speed_10m:12,precipitation:0,surface_pressure:1010},
   daily:{temperature_2m_max:[28],temperature_2m_min:[18],precipitation_probability_max:[0],uv_index_max:[4.5],sunrise:[1700000000],sunset:[1700040000]}};
- const context=vm.createContext({currentUser:{id:'user'},document:{hidden:false,getElementById:element,addEventListener:()=>{}},window:{addEventListener:()=>{}},
+ const context=vm.createContext({currentUser:{id:'user'},document:{hidden:false,getElementById:element,createElement:()=>({}),addEventListener:()=>{}},window:{addEventListener:()=>{}},
   localStorage:{getItem:()=> 'true'},navigator:{},AbortController,Date,console,setTimeout:()=>0,clearTimeout:()=>{},
   fetch:async url=>{requests.push(url);if(url.includes('air-quality')){if(airFailure)throw Error('offline');return {ok:true,json:async()=>({current:{time:1700000000,us_aqi:51,pm2_5:10,pm10:20}})};}
    return {ok:true,json:async()=>url.includes('forecast')?data:{city:'Test city'}};}});
@@ -68,6 +68,9 @@ test('weather shows humidity, AQI scale and pollutants without treating zero as 
  assert.equal(element('orbit-weather-chance').textContent,'0%');
  assert.equal(element('orbit-weather-aqi').textContent,'51 · Moderate');
  assert.equal(element('orbit-weather-pm25').textContent,'10.0 µg/m³');
+ assert.match(element('orbit-weather-position').children[0].textContent,/0\.00000, 0\.00000.*±10 m/);
+ assert.equal(element('orbit-weather-position').children[1].href,'https://www.google.com/maps?q=0,0');
+ assert.equal(c.orbitWeatherPlaceName({locality:'Village',city:'Town',principalSubdivision:'State',countryName:'Country'}),'Village, Town, State, Country');
  assert.match(element('orbit-weather-details').textContent,/AQI \(US\) 51/);
  assert.ok(requests.some(url=>url.includes('relative_humidity_2m')));
  assert.equal(c.orbitAqiCategory(null),'Unavailable');
