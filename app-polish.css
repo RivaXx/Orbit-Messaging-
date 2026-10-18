@@ -1,0 +1,52 @@
+/* Ink follows the local surface, including composited glass and chat wallpapers. */
+body.light-mode {color-scheme:light;--text-primary:#142033;--text-secondary:#3d4d63;--text-muted:#536176;--bg-color:#f4f7fb}
+body.light-mode #modal-settings .settings-modal-box {background:rgba(247,250,255,.98)!important;color:#142033!important;--text-primary:#142033;--text-secondary:#3d4d63;--text-muted:#536176}
+body.light-mode #modal-settings :is(.settings-header-copy h2,.settings-section-title,.settings-card-group,.settings-card-group label,.settings-quick-btn,.orbit-clock-controls,.settings-close-btn) {color:var(--text-primary)!important}
+body.light-mode #modal-settings :is(.settings-subtext,.settings-header-copy p,.settings-section-title small,.settings-eyebrow) {color:var(--text-secondary)!important}
+body.light-mode #modal-settings :is(.settings-card-group,.settings-quick-btn,.glass-input,select) {background:rgba(255,255,255,.96)!important;border-color:#c6d1df!important}
+body.light-mode #modal-settings .settings-section-nav {background:#f7faff!important}
+body.light-mode #modal-settings .settings-section-nav button {background:#e8eef7!important;color:#26374c!important;border-color:#bdcbdc!important}
+body.light-mode #modal-settings .settings-section-nav button.active {background:#d9e5f6!important;color:#172b48!important}
+body.light-mode #screen-chat :is(.chat-input-bar,.orbit-format-toolbar) {background:rgba(246,249,255,.97)!important;color:#172438!important;--text-primary:#172438;--text-secondary:#40516a;--text-muted:#536176}
+body.light-mode #screen-chat .input-glass-pill {background:rgba(255,255,255,.98)!important;border:1px solid #aebed2!important;color:#142033!important}
+body.light-mode #screen-chat #msg-input {color:#142033!important;-webkit-text-fill-color:#142033!important;caret-color:#142033!important;background:transparent!important;text-shadow:none!important}
+body.light-mode #screen-chat #msg-input::placeholder {color:#536176!important;-webkit-text-fill-color:#536176!important}
+body.light-mode #screen-chat :is(.orbit-format-toolbar button,.chat-circle-action-btn:not(.send-active)) {color:#334963!important}
+body.light-mode #screen-chat .msg-bubble-row.own .msg-bubble-card {background:rgba(212,234,222,.97)!important;color:#122d22!important}
+body.light-mode #screen-chat .msg-bubble-row.other .msg-bubble-card {background:rgba(255,255,255,.97)!important;color:#182638!important}
+body.light-mode #screen-chat .msg-text-content {color:inherit!important;text-shadow:none!important}
+body.light-mode #screen-chat .msg-meta-row {color:#45556a!important}
+body.light-mode :is(.msg-bubble-action-menu,.reaction-quick-bar,.forward-target-card) {background:#f7faff!important;color:#142033!important}
+body.light-mode #forward-targets-list .forward-target-card :is(.c-av-wrap,div[style*="color:#fff"]) {color:#142033!important}
+body.light-mode .msg-action-menu-item:not(.danger) {color:#142033!important}
+body.light-mode :is(.chat-nav-bar,.dropdown-item,.modal-title-text,.c-name,.orbit-person-name,.group-list-name) {color:var(--text-primary)!important}
+body.light-mode #auth-err {color:#aa2435!important}
+
+.orbit-chat-list-actions {display:flex;gap:7px;flex:none}
+.orbit-chat-list-actions .orbit-section-action {min-width:0;padding:8px 10px;gap:6px;font-size:11px}
+.context-bar-actions {flex-wrap:wrap;gap:3px}
+.context-bar-btn:disabled {opacity:.35;pointer-events:none}
+body.light-mode .chats-context-bar {background:#f4f8ff!important;color:#142033!important}
+body.light-mode .context-selection-count {color:#142033!important}
+.selected-chat-card {outline:2px solid var(--accent-readable,var(--accent));outline-offset:-2px}
+.selected-chat-card .c-av-wrap::after {content:'✓';position:absolute;inset:auto -3px -3px auto;display:grid;place-items:center;width:20px;height:20px;border-radius:50%;background:var(--accent);color:var(--accent-on,#08080a);font-size:13px;border:2px solid var(--bg-base)}
+.selected-chat-card .c-av-wrap {position:relative;overflow:visible}
+#modal-media-preview.preview-sending :is(button,input) {pointer-events:none;opacity:.65}
+.wa-image-bunch-grid:not(.bunch-1)>div:focus-visible {outline:3px solid var(--accent);outline-offset:-3px}
+.wa-image-bunch-grid:not(.bunch-1) {gap:3px!important;border-radius:14px!important}
+
+#orbit-session-loading {background:var(--bg-base,#0b101b);gap:14px}
+.orbit-loading-mark {position:relative;width:88px;height:88px;margin:0 auto;isolation:isolate;overflow:hidden;border-radius:24px}
+.orbit-loading-mark img {display:block;width:88px;height:88px;object-fit:contain}
+.orbit-loading-mark>span {position:absolute;inset:-30%;background:linear-gradient(110deg,transparent 35%,#ffffff80 50%,transparent 65%);mix-blend-mode:screen;transform:translateX(-100%);animation:orbit-loading-shine 2.5s ease-in-out infinite;pointer-events:none}
+#orbit-session-loading .orbit-loading-wordmark {font:750 25px/1.3 var(--apple-font,sans-serif);letter-spacing:4px;background:linear-gradient(105deg,var(--text-primary) 25%,#8bd5ef 45%,var(--text-primary) 65%);background-size:230% 100%;background-clip:text;-webkit-background-clip:text;-webkit-text-fill-color:transparent;animation:orbit-wordmark-shine 3s linear infinite}
+@keyframes orbit-loading-shine {0%,15% {transform:translateX(-100%)}75%,100% {transform:translateX(100%)}}
+@keyframes orbit-wordmark-shine {to {background-position:-230% 0}}
+.orbit-google-beta {display:grid;gap:10px;margin-top:22px;text-align:center;font-size:11px;color:var(--text-secondary)}
+.orbit-google-beta button {border:1px solid var(--glass-border);border-radius:14px;background:rgb(var(--readable-surface-rgb));color:var(--text-primary);padding:13px 16px;min-height:44px;font:600 13px var(--apple-font,sans-serif);cursor:pointer}
+.orbit-google-beta button:disabled {opacity:.6;cursor:wait}
+#orbit-weather-position {display:flex;flex-direction:column;gap:5px;font-size:12px;line-height:1.5;margin:12px 0;padding:12px;border:1px solid var(--glass-border);border-radius:14px;background:var(--glass-card)}
+#orbit-weather-position:empty {display:none}
+#orbit-weather-position a {color:var(--accent-readable);font-weight:600}
+@media(max-width:360px){.orbit-chat-list-actions {gap:5px}.orbit-chat-list-actions .orbit-section-action {padding:8px}.orbit-chat-list-actions .orbit-section-action span {font-size:10px}.context-bar-btn {width:32px!important;min-width:32px!important}}
+@media(prefers-reduced-motion:reduce){.orbit-loading-mark>span,#orbit-session-loading .orbit-loading-wordmark {animation:none}.orbit-loading-mark>span {display:none}}

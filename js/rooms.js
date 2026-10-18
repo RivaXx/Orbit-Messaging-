@@ -121,6 +121,7 @@ function resolveRoomAliases(roomId, peerUserId = null) {
 
 // â”€â”€ Utility: Get canonical (UUID) room ID for a user pair â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 async function resolveCanonicalRoomId(otherUserId, otherUserName) {
+    const owner=currentUser?.id;if(!owner)return null;
     // 1. Check in-memory cache first
     const cached = userDirectRoomsMap.get(otherUserId);
     if (cached && !cached.startsWith('dm_')) return cached;
@@ -128,7 +129,7 @@ async function resolveCanonicalRoomId(otherUserId, otherUserName) {
     // 2. Search allRoomsMap for an existing UUID room
     for (const [rid, r] of allRoomsMap.entries()) {
         if (r.is_direct && Array.isArray(r.participants) &&
-            r.participants.includes(currentUser.id) && r.participants.includes(otherUserId)) {
+            r.participants.includes(owner) && r.participants.includes(otherUserId)) {
             userDirectRoomsMap.set(otherUserId, rid);
             return rid;
         }
@@ -141,7 +142,9 @@ async function resolveCanonicalRoomId(otherUserId, otherUserName) {
             .from('rooms')
             .select('*')
             .eq('is_direct', true)
-            .contains('participants', [currentUser.id, otherUserId]);
+            .contains('participants', [owner, otherUserId]);
+
+        if(currentUser?.id!==owner)return null;
 
         if (existingRooms && existingRooms.length > 0) {
             const r = existingRooms[0];
@@ -157,13 +160,14 @@ async function resolveCanonicalRoomId(otherUserId, otherUserName) {
             .insert([{
                 name: otherUserName || 'Direct Chat',
                 is_direct: true,
-                participants: [currentUser.id, otherUserId],
-                created_by: currentUser.id
+                participants: [owner, otherUserId],
+                created_by: owner
             }])
             .select()
             .single();
 
         if (createError) throw createError;
+        if(currentUser?.id!==owner)return null;
 
         if (newRoom) {
             allRoomsMap.set(newRoom.id, newRoom);
@@ -209,6 +213,12 @@ async function openDirectChat(otherUserId, otherUserName, otherDpUrl) {
         openChatRoom(`self_${currentUser.id}`, 'Note to Self (You)', null, true);
         return;
     }
+
+    // Opening a deleted conversation is an explicit request to show it again.
+    try{
+        const key=`orbit_hidden_rooms_${currentUser.id}`,aliases=resolveRoomAliases(getDeterministicDMId(currentUser.id,otherUserId),otherUserId);
+        localStorage.setItem(key,JSON.stringify(JSON.parse(localStorage.getItem(key)||'[]').filter(id=>!aliases.includes(id))));
+    }catch(_){}
 
     // 0ms Instant Load: check if canonical UUID room exists for this user pair
     const deterministicId = getDeterministicDMId(currentUser.id, otherUserId);
@@ -257,7 +267,8 @@ function getDeterministicDMId(uidA, uidB) {
 function renderRecentChatsFromCache(cachedItems, list) {
     if (!list || !Array.isArray(cachedItems) || cachedItems.length === 0) return;
     const frag = document.createDocumentFragment();
-    cachedItems.forEach(item => {
+    let excluded=[];try{excluded=[...JSON.parse(localStorage.getItem(`orbit_hidden_rooms_${currentUser.id}`)||'[]'),...JSON.parse(localStorage.getItem(`orbit_archived_rooms_${currentUser.id}`)||'[]')];}catch(_){}
+    cachedItems.filter(item=>!resolveRoomAliases(item.roomId).some(id=>excluded.includes(id))).forEach(item => {
         const card = document.createElement('div');
         card.className = 'contact-glass-card touch-fix';
         // Always stamp roomId so retroactive long-press attachment in chat-select.js can find it
@@ -266,7 +277,7 @@ function renderRecentChatsFromCache(cachedItems, list) {
             if (window.isInChatSelectionMode && window.isInChatSelectionMode()) return;
             if (typeof unreadRoomsSet !== 'undefined') unreadRoomsSet.delete(item.roomId);
             if (typeof openChatRoom === 'function') {
-                openChatRoom(item.roomId, item.title, item.dp_url || null, false, item.peerUserId || null);
+                openChatRoom(item.roomId, item.title, item.dp_url || null, !!item.isGroup, item.peerUserId || null);
             }
         };
         orbitRenderConversationCard(card,item);
@@ -424,7 +435,7 @@ async function loadMainChats(fromCacheFirst = false) {
 
         // Filter out hidden and archived
         const filteredEntries = Array.from(recentRoomMap.entries()).filter(([rid]) => {
-            return !hiddenRooms.includes(rid) && !archivedRooms.includes(rid);
+            return !resolveRoomAliases(rid).some(id=>hiddenRooms.includes(id)||archivedRooms.includes(id));
         });
 
         // Sort: pinned first, then chronological

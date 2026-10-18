@@ -165,6 +165,10 @@ function openMediaPreviewScreen(items) {
         mediaPreviewList.forEach(item=>{if(item.url?.startsWith('blob:'))URL.revokeObjectURL(item.url);});
         mediaPreviewTargetRoom=currentRoom;mediaPreviewTargetUser=currentUser.id;
         mediaPreviewList=additions;currentPreviewIndex=0;
+        // Keep the draft in the composer until a queue entry is accepted. Cancel
+        // and failed uploads must not discard what the user was typing.
+        const draft=document.getElementById('msg-input')?.value || '';
+        if(draft.trim() && !mediaPreviewList[0].caption)mediaPreviewList[0].caption=draft;
         isPreviewHdQuality=false;isViewOnceActive=false;
         document.getElementById('preview-hd-toggle-btn')?.classList.remove('active');
         document.getElementById('preview-hd-check')?.classList.add('hide');
@@ -552,16 +556,20 @@ async function sendPreviewMediaBatch() {
     const uploadRoomId = mediaPreviewTargetRoom;
     const uploadUserId = mediaPreviewTargetUser;
     isSendingPreviewMediaBatch = true;
+    document.getElementById('modal-media-preview')?.classList.add('preview-sending');
     let combinedCaption = '';
-    itemsToSend.forEach(item => { if (item.caption && !combinedCaption) combinedCaption = item.caption; });
+    combinedCaption=[...new Set(itemsToSend.map(item=>item.caption?.trim()).filter(Boolean))].join('\n');
     if (currentRoom !== uploadRoomId || currentUser?.id !== uploadUserId) {
         isSendingPreviewMediaBatch = false;
+        document.getElementById('modal-media-preview')?.classList.remove('preview-sending');
         showToast('Chat changed before the media was queued. Reopen the original chat and try again.', 'error');
         return;
     }
     try {
         if (typeof queueMediaMessage !== 'function') throw new Error('Background media queue is unavailable.');
         await queueMediaMessage(itemsToSend, combinedCaption, null, {roomId:uploadRoomId,userId:uploadUserId});
+        // The queue holds its own blob URLs now; release the editor previews.
+        itemsToSend.forEach(item=>{if(item.url?.startsWith('blob:'))URL.revokeObjectURL(item.url);});
         closeMediaPreviewScreen();
         if(typeof orbitLoadOriginalAllowance==='function')orbitLoadOriginalAllowance();
     } catch (error) {
@@ -569,6 +577,7 @@ async function sendPreviewMediaBatch() {
     } finally {
         hideChatMediaUploadProgress();
         isSendingPreviewMediaBatch = false;
+        document.getElementById('modal-media-preview')?.classList.remove('preview-sending');
     }
 }
 

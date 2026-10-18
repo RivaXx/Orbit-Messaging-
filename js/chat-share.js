@@ -11,6 +11,7 @@
     'use strict';
 
     let messageToForward = null;
+    let forwarding = false;
     const forwardSelectedRoomIds = new Set();
 
     /**
@@ -139,7 +140,9 @@
         }
     }
 
-    function closeForwardModal() {
+    function closeForwardModal(event) {
+        // A click on a target, search field or Send belongs to the picker.
+        if(event && event.target !== event.currentTarget)return;
         const modal = document.getElementById('modal-forward-msg');
         if (modal) modal.classList.remove('active');
         messageToForward = null;
@@ -200,7 +203,12 @@
             const peer=room.participants.find(id=>id!==currentUser.id), user=globalUsersMap.get(peer);
             targets.push({id:room.id,title:room.is_direct?(user?.display_name||room.name||'Direct chat'):(room.name||'Group'),isGroup:!room.is_direct,avatarHtml:'<i class="fa-solid fa-comments"></i>'});
         });
-        const filtered = targets.filter(t => !q || t.title.toLowerCase().includes(q));
+        const seenTargets=new Set();
+        const filtered = targets.filter(t=>{
+            if(!t.id || (q && !String(t.title||'Chat').toLowerCase().includes(q)))return false;
+            let key=t.id;try{if(typeof resolveRoomAliases==='function')key=resolveRoomAliases(t.id).sort()[0]||t.id;}catch(_){}
+            if(seenTargets.has(key))return false;seenTargets.add(key);return true;
+        });
 
         if (filtered.length === 0) {
             listEl.innerHTML = '<div style="text-align:center; padding:24px; color:var(--text-muted); font-size:13px;">No matching chats found</div>';
@@ -275,17 +283,21 @@
      * Executes forwarding of messageToForward to all selected rooms
      */
     async function executeForwardMessage() {
-        if (!messageToForward || forwardSelectedRoomIds.size === 0 || !currentUser) return;
+        if (forwarding || !messageToForward || forwardSelectedRoomIds.size === 0 || !currentUser) return;
         // Cache message copy BEFORE closing modal which sets messageToForward = null
         const msg = { ...messageToForward };
         if(orbitIsViewOnceMessage(msg)){showToast('View-once photos cannot be forwarded.','error');return;}
         if(msg.type==='call'){showToast('Call records cannot be forwarded.','info');return;}
         const targetRooms = Array.from(forwardSelectedRoomIds);
-        closeForwardModal();
+        const owner=currentUser.id;
+        forwarding=true;
+        const sendButton=document.getElementById('btn-execute-forward');
+        if(sendButton){sendButton.disabled=true;sendButton.textContent='Forwarding…';}
         showToast(`Forwarding to ${targetRooms.length} chat${targetRooms.length > 1 ? 's' : ''}...`);
 
         try {
             const client = await ensureSupabase();
+            if(currentUser?.id!==owner)throw new Error('The signed-in account changed.');
             const senderName = currentUser.user_metadata?.display_name || currentUser.email?.split('@')[0] || 'User';
 
             const payloadBase = {
@@ -294,23 +306,33 @@
                 text: msg.text || '',
                 type: msg.type || 'text',
                 attachments: await orbitCopyForwardAttachments(msg.attachments?.length ? msg.attachments : (/^(https?:\/\/)/.test(msg.text||'') && ['image','video','file','audio','voice'].includes(msg.type) ? [{url:msg.text,type:msg.type,name:'Forwarded attachment'}] : []), msg.type),
-                reply_to: null,
+                reply_to: {forwarded:true},
                 read_by: [currentUser.id],
-                is_forwarded: true,
                 created_at: new Date().toISOString()
             };
 
             let sent=0;
             const failed=[];
             for (const rId of targetRooms) {
-                const insertPayload = { ...payloadBase, id:crypto.randomUUID(), room: rId };
+                if(currentUser?.id!==owner)throw new Error('The signed-in account changed.');
+                let targetRoom=rId;
+                if(rId.startsWith('dm_') && typeof resolveCanonicalRoomId==='function'){
+                    const peer=resolveDirectPeerId(rId,owner);
+                    if(!peer){failed.push({room:rId,error:{message:'This contact could not be identified. Reopen the chat first.'}});continue;}
+                    targetRoom=await resolveCanonicalRoomId(peer,globalUsersMap.get(peer)?.display_name);
+                    if(!targetRoom){failed.push({room:rId,error:{message:'Could not open the destination chat. Please retry.'}});continue;}
+                }
+                if(currentUser?.id!==owner)throw new Error('The signed-in account changed.');
+                const insertPayload = { ...payloadBase, sender_id:owner, id:crypto.randomUUID(), room: targetRoom };
                 const result = typeof window.executeResilientMessageInsert === 'function'
                     ? await window.executeResilientMessageInsert(insertPayload)
                     : await client.from('messages').insert(insertPayload);
-                if(result?.error) failed.push({room:rId,error:result.error}); else sent++;
+                if(result?.error) failed.push({room:rId,error:result.error}); else {sent++;forwardSelectedRoomIds.delete(rId);}
             }
 
             showToast(failed.length ? `Forwarded to ${sent} of ${targetRooms.length} chats. ${failed[0].error.message}` : `Forwarded to ${sent} chat${sent===1?'':'s'}.`, failed.length?'error':'success');
+            if(!failed.length)closeForwardModal();
+            else renderForwardTargetsList(document.getElementById('forward-search-input')?.value||'');
 
             // If active room was one of the targets, reload
             if (typeof currentRoom !== 'undefined' && targetRooms.includes(currentRoom)) {
@@ -319,7 +341,7 @@
         } catch(err) {
             console.error('Forward error:', err);
             showToast(`Failed to forward: ${err.message}`, 'error');
-        }
+        } finally {forwarding=false;if(currentUser?.id!==owner)closeForwardModal();updateForwardSendBtn();}
     }
 
     // ── Inbound Share, Drag & Drop, and Paste Handlers ──

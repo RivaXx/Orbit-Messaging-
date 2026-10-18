@@ -77,4 +77,4 @@ function orbitAttachConnectivity(){const badge=document.getElementById('orbit-co
 function orbitUpdateVisualActivity(){document.body.classList.toggle('orbit-page-hidden',document.hidden);}
 document.addEventListener('DOMContentLoaded',()=>{orbitAttachConnectivity();orbitUpdateVisualActivity();});
 document.addEventListener('visibilitychange',()=>{orbitUpdateVisualActivity();if(!document.hidden){orbitRefreshChatPresence();orbitRefreshUnreadCounts();}});
-setInterval(()=>{if(!document.hidden){orbitRefreshChatPresence();if(currentUser)orbitRefreshUnreadCounts();}},45000);
+setInterval(()=>{if(!document.hidden){orbitRefreshChatPresence();if(currentUser)orbitRefreshUnreadCounts();if(document.querySelector('.liquid-tab-btn.active')?.dataset.tab==='global')renderGlobalUsersDOM(Array.from(globalUsersMap.values()));}},45000);

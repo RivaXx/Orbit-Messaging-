@@ -379,7 +379,7 @@ function createMessageDOMNode(msg, isConsecutive = false) {
                 replyObj = replyAtt.reply_to || replyAtt;
             }
         }
-        if (replyObj) {
+        if (replyObj?.id) {
             let snippet = replyObj.text || '';
             if (replyObj.type === 'voice' || replyObj.type === 'audio') snippet = '🎤 Voice Note';
             else if (replyObj.type === 'location') snippet = '📍 Location';
@@ -858,7 +858,7 @@ function createMessageDOMNode(msg, isConsecutive = false) {
 
         // ── Forwarded Message Indicator ──────────────────────────────────
         let forwardedHtml = '';
-        if (msg.is_forwarded || msg.forwarded) {
+        if (msg.is_forwarded || msg.forwarded || replyObj?.forwarded) {
             forwardedHtml = `
                 <div class="msg-forwarded-indicator" style="font-size:11px; color:var(--text-muted, #8e8e93); margin-bottom:4px; font-style:italic; display:flex; align-items:center; gap:5px; opacity:0.88;">
                     <i class="fa-solid fa-share" style="font-size:9.5px; opacity:0.75;"></i>
@@ -1399,6 +1399,7 @@ function getMessageReactionsMap(msg) {
 }
 
 function showQuickReactionPicker(rowNode, msg, coords) {
+    window.contextActiveMessage=msg;
     // Remove any existing reaction picker overlay
     document.querySelectorAll('.orbit-msg-overlay').forEach(el => el.remove());
 

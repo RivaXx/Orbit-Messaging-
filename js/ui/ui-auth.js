@@ -6,7 +6,7 @@ async function initServiceWorker() {
         try {
             // Only the worker's activate handler knows the current cache name.
             // Deleting caches here used to erase the current offline shell.
-            const reg = await navigator.serviceWorker.register('./sw.js?v=interface-weather-20261017-sw10', { scope: './' });
+            const reg = await navigator.serviceWorker.register('./sw.js?v=app-polish-20261018-r2', { scope: './' });
             reg.update().catch(() => {});
             navigator.serviceWorker.addEventListener('message', event => {
                 if (event.data?.type === 'ORBIT_PUSH_VISIBLE_QUERY') {
@@ -70,11 +70,17 @@ async function checkExistingSession() {
     document.documentElement.classList.add('orbit-restoring');
     try {
         const project = new URL(SB_URL).hostname.split('.')[0];
+        if(await orbitCompleteGoogleSignIn())return;
         if(localStorage.getItem('orbit_explicit_signout')==='true')return;
         let cached=null;try{cached=JSON.parse(localStorage.getItem(`sb-${project}-auth-token`)||'null');}catch(_){}
         if(cached?.user?.id && orbitSessionIdleExpired(cached.user.id)){
             const client=await ensureSupabase();await client.auth.signOut({scope:'local'});
             localStorage.removeItem(`sb-${project}-auth-token`);return;
+        }
+        // A still-valid local session can paint its cached shell immediately.
+        // Supabase continues to authenticate all network reads and writes.
+        if(cached?.user?.id && Number(cached.expires_at)>Date.now()/1000+30){
+            currentUser=cached.user;await launchApp();return;
         }
         if (!navigator.onLine) {
             // Restore the local UI without waiting for an expired token refresh.
@@ -97,6 +103,59 @@ async function checkExistingSession() {
         document.documentElement.classList.remove('orbit-restoring');
     }
 }
+
+async function handleGoogleSignIn(){
+    if(_authRequestInFlight)return;
+    const button=document.getElementById('auth-google-btn'),errorNode=document.getElementById('auth-err');
+    _authRequestInFlight=true;if(button){button.disabled=true;button.textContent='Connecting to Google…';}
+    if(errorNode)errorNode.style.display='none';
+    try{
+        const client=await ensureSupabase();
+        // Supabase returns an authorize URL even when a provider is disabled.
+        // Check the public provider setting so beta users stay in a usable form.
+        const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),8000);
+        try{
+            const response=await fetch(`${SB_URL}/auth/v1/settings`,{headers:{apikey:SB_KEY},signal:controller.signal});
+            if(!response.ok)throw new Error('Could not check Google sign-in. Please use email or try again.');
+            const settings=await response.json();
+            if(!settings.external?.google)throw new Error('Google sign-in beta is not enabled for Orbit yet. Please use email and password.');
+        }finally{clearTimeout(timer);}
+        localStorage.setItem('orbit_google_pending',String(Date.now()));
+        const redirect=new URL(location.pathname,location.origin);redirect.searchParams.set('orbit_oauth','google');
+        const {data,error}=await client.auth.signInWithOAuth({provider:'google',options:{redirectTo:redirect.href,skipBrowserRedirect:true,queryParams:{prompt:'select_account'}}});
+        if(error)throw error;
+        const authorize=new URL(data?.url);
+        if(authorize.origin!==new URL(SB_URL).origin)throw new Error('Invalid sign-in destination.');
+        window.location.assign(authorize.href);
+    }catch(error){
+        localStorage.removeItem('orbit_google_pending');
+        if(errorNode){errorNode.textContent=error.name==='AbortError'?'Google sign-in timed out. Try email or retry.':error.message;errorNode.style.display='block';}
+    }finally{_authRequestInFlight=false;if(button){button.disabled=false;button.textContent='Continue with Google · Beta';}}
+}
+async function orbitCompleteGoogleSignIn(){
+    if(typeof location==='undefined')return false;
+    const url=new URL(location.href);
+    if(url.searchParams.get('orbit_oauth')!=='google')return false;
+    const code=url.searchParams.get('code'),providerError=url.searchParams.has('error');
+    ['code','orbit_oauth','error','error_description','error_code'].forEach(key=>url.searchParams.delete(key));
+    window.history.replaceState({},document.title,url.pathname+url.search+url.hash);
+    const pending=Number(localStorage.getItem('orbit_google_pending'));
+    try{
+        if(providerError)throw new Error('Google sign-in was cancelled or could not finish. You can still use email.');
+        if(!code || !pending || Date.now()-pending>15*60000 || pending>Date.now())throw new Error('This Google sign-in has expired. Please try again.');
+        const client=await ensureSupabase();
+        const {data,error}=await client.auth.exchangeCodeForSession(code);
+        if(error)throw error;
+        if(!data?.session?.user)throw new Error('Google did not create a session. Please try again.');
+        currentUser=data.session.user;localStorage.removeItem('orbit_explicit_signout');orbitRememberSessionActivity(true);
+        await launchApp();
+    }catch(error){const node=document.getElementById('auth-err');if(node){node.textContent=error.message;node.style.display='block';}}
+    finally{
+        localStorage.removeItem('orbit_google_pending');
+    }
+    return true;
+}
+window.handleGoogleSignIn=handleGoogleSignIn;
 const ORBIT_SESSION_IDLE_MS=6*24*60*60*1000;
 function orbitSessionIdleExpired(userId,now=Date.now()){
     try{const last=Number(localStorage.getItem(`orbit_session_activity_${userId}`));return last>0 && now-last>=ORBIT_SESSION_IDLE_MS;}catch(_){return false;}

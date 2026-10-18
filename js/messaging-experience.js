@@ -65,12 +65,14 @@ async function orbitSaveEdit() {
 
 async function orbitCopyForwardAttachments(attachments, messageType = null) {
     const copies=[];
+    const owner=currentUser?.id;
     if(typeof attachments==='string'){try{attachments=JSON.parse(attachments);}catch(_){throw new Error('Unsupported legacy attachment.');}}
     if(!Array.isArray(attachments))throw new Error('Unsupported attachment list.');
     for(const rawAttachment of attachments){
+        if(currentUser?.id!==owner)throw new Error('The signed-in account changed.');
         let attachment=rawAttachment;
         if(messageType==='location' && typeof attachment==='string' && /^https:\/\/maps\.google\.com\//.test(attachment)){copies.push(attachment);continue;}
-        if(typeof attachment==='string'){try{attachment=JSON.parse(attachment);}catch(_){throw new Error('Unsupported legacy attachment. Download and attach it again.');}}
+        if(typeof attachment==='string'){try{attachment=JSON.parse(attachment);}catch(_){if(/^https?:\/\//.test(attachment))attachment={url:attachment,type:messageType||'file'};else throw new Error('Unsupported legacy attachment. Download and attach it again.');}}
         if(messageType==='contact' && attachment && !attachment.url){copies.push({name:String(attachment.name||'Orbit contact'),username:String(attachment.username||''),phone:String(attachment.phone||''),avatar:String(attachment.avatar||'')});continue;}
         if(messageType==='poll' && attachment?.poll?.options){const poll=attachment.poll;copies.push({type:'poll',poll:{question:String(poll.question||'Poll'),multiple_answers:!!poll.multiple_answers,options:poll.options.map(option=>({text:String(option.text||''),votes:0,voters:[]}))}});continue;}
         if(!attachment || attachment.view_once || attachment.upload_pending || !attachment.url || /^(blob:|data:)/.test(attachment.url))throw new Error('Wait until the original attachment has finished uploading.');
@@ -78,15 +80,17 @@ async function orbitCopyForwardAttachments(attachments, messageType = null) {
         const url=typeof resolveMediaUrlForAccess==='function'?await resolveMediaUrlForAccess(raw):raw;
         const response=await fetch(url);if(!response.ok)throw new Error('The original attachment is unavailable.');
         const file=await response.blob();
+        if(currentUser?.id!==owner)throw new Error('The signed-in account changed.');
         // Own the forwarded copy so deleting/restricting the original cannot break another chat.
         const copyUrl=await uploadMediaToStorage(file,attachment.name||'Attachment',file.type,attachment.type==='image'?'images':attachment.type==='video'?'videos':'documents');
+        if(currentUser?.id!==owner)throw new Error('The signed-in account changed.');
         copies.push({name:attachment.name||'Attachment',type:attachment.type||'file',size:file.size,url:copyUrl});
     }
     return copies;
 }
 async function orbitLoadOriginalAllowance() {
     const owner=currentUser?.id;if(!owner)return;
-    try{const client=await ensureSupabase(),{data,error}=await client.rpc('orbit_original_photo_allowance');if(error)throw error;if(currentUser?.id===owner){orbitOriginalAllowance=data;orbitRenderQualityControls();}}
+    try{const client=await ensureSupabase(),{data,error}=await client.rpc('orbit_original_photo_allowance');if(error)throw error;if(currentUser?.id===owner){orbitOriginalAllowance=Number.isFinite(data?.remaining)?data:null;orbitRenderQualityControls();}}
     catch(_){orbitOriginalAllowance=null;}
 }
 function orbitRenderQualityControls() {

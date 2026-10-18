@@ -70,15 +70,16 @@ async function launchApp() {
         setupGlobalRealtimeMessageListener();
     }
 
-    // Repair legacy avatar-sized login tokens before background network work.
-    // The cached interface above remains available during this one-time repair.
+    // A token refresh or legacy avatar repair must never hold the loading screen.
+    document.documentElement.classList.remove('orbit-restoring');
     if (navigator.onLine) {
-        try {
+        (async()=>{try {
+            const owner=currentUser?.id;
             const client = await ensureSupabase();
             const result = await client.auth.getSession();
             const session = await ensureCompactAuthSession(client, result.data?.session);
-            if (session?.user?.id === currentUser?.id) currentUser = session.user;
-        } catch (error) { console.warn('[Orbit] Session repair could not finish: ' + error.message); }
+            if (currentUser?.id===owner && session?.user?.id === owner) currentUser = session.user;
+        } catch (error) { console.warn('[Orbit] Session repair could not finish: ' + error.message); }})();
     }
     if (navigator.onLine) Promise.allSettled([
         fetchUserProfile(),
@@ -190,13 +191,14 @@ function initPresenceRealtime() {
                     if (typeof globalUsersMap !== 'undefined') {
                         const existing = globalUsersMap.get(updatedUser.user_id) || {};
                         globalUsersMap.set(updatedUser.user_id, { ...existing, ...updatedUser });
+                        globalUsersArray=Array.from(globalUsersMap.values());
                     }
                     if(typeof orbitRefreshChatPresence==='function')orbitRefreshChatPresence();
                     const activeTab = document.querySelector('.liquid-tab-btn.active')?.getAttribute('data-tab');
                     if (activeTab === 'friends' && typeof loadFriends === 'function') {
                         loadFriends();
                     } else if (activeTab === 'global' && typeof loadGlobalUsers === 'function') {
-                        loadGlobalUsers(false);
+                        renderGlobalUsersDOM(globalUsersArray);
                     }
                 })
                 .subscribe();
