@@ -120,6 +120,24 @@
         showContextBar();
     }
 
+    function beginChatSelection() {
+        exitChatSelectionMode();
+        isSelectionMode=true;
+        updateContextBarDOM();showContextBar();
+        showToast('Select chats, then choose Delete for me, Archive, Pin or Mute.','info');
+    }
+    function selectAllChats() {
+        if(!isSelectionMode)beginChatSelection();
+        const cards=Array.from(document.querySelectorAll('#main-chats-list [data-room-id]'));
+        const allSelected=cards.length>0 && cards.every(card=>selectedRooms.has(card.dataset.roomId));
+        selectedRooms.clear();
+        cards.forEach(card=>{
+            card.classList.toggle('selected-chat-card',!allSelected);
+            if(!allSelected)selectedRooms.set(card.dataset.roomId,{cardEl:card,title:card.querySelector('.c-name')?.textContent||'Chat',isGroup:card.dataset.group==='true'});
+        });
+        updateContextBarDOM();
+    }
+
     /**
      * Toggles a room in selection mode
      */
@@ -183,6 +201,7 @@
 
         const size = selectedRooms.size;
         if (countEl) countEl.innerText = `${size} selected`;
+        document.querySelectorAll('.context-bar-actions button:not(#btn-context-select-all)').forEach(button=>button.disabled=size===0);
 
         // Info button only visible if 1 chat selected
         if (infoBtn) {
@@ -328,12 +347,12 @@
         const size = selectedRooms.size;
         const first = Array.from(selectedRooms.values())[0];
         const confirmMsg = size === 1
-            ? `Delete conversation with "${first.title}" for yourself? Your chat list will no longer show this chat.`
-            : `Delete ${size} conversations for yourself?`;
+            ? `Delete conversation with "${first.title}" from this device's chat list? Other people keep their messages. You can reopen the chat from Global.`
+            : `Delete ${size} conversations from this device's chat list? Other people keep their messages. You can reopen them from Global.`;
 
         if (!confirm(confirmMsg)) return;
 
-        const roomIds = Array.from(selectedRooms.keys());
+        const roomIds = [...new Set(Array.from(selectedRooms.keys()).flatMap(id=>typeof resolveRoomAliases==='function'?resolveRoomAliases(id):[id]))];
 
         // Update local hidden/deleted rooms
         try {
@@ -343,6 +362,8 @@
                 if (!hidden.includes(id)) hidden.push(id);
                 // Clear local messages cache
                 localStorage.removeItem(`orbit_cache_msgs_${id}`);
+                if(typeof messageCache!=='undefined')messageCache.delete(id);
+                if(typeof unreadRoomsSet!=='undefined')unreadRoomsSet.delete(id);
             });
             localStorage.setItem(hiddenKey, JSON.stringify(hidden));
 
@@ -353,9 +374,12 @@
             localStorage.setItem(recentKey, JSON.stringify(filtered));
         } catch(e) {}
 
+        selectedRooms.forEach(({cardEl})=>cardEl?.remove());
+
         showToast(`${size} chat${size > 1 ? 's' : ''} deleted for you`);
         exitChatSelectionMode();
         if (typeof loadMainChats === 'function') loadMainChats();
+        if(typeof updateTabUnreadBadges==='function')updateTabUnreadBadges();
     }
 
     // Expose to window
@@ -374,6 +398,8 @@
     };
 
     window.exitChatSelectionMode = exitChatSelectionMode;
+    window.beginChatSelection=beginChatSelection;
+    window.selectAllChats=selectAllChats;
     window.handleContextInfo = handleContextInfo;
     window.handleContextPin = handleContextPin;
     window.handleContextMute = handleContextMute;

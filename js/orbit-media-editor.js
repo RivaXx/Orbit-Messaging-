@@ -7,14 +7,8 @@ function orbitUpdateEditedImage(item,canvas){
     if(item.url?.startsWith('blob:'))URL.revokeObjectURL(item.url);
     item.file=orbitBlobFromData(canvas.toDataURL('image/jpeg',.94));item.url=URL.createObjectURL(item.file);item.rotation=0;item.name=item.name.replace(/\.[^.]+$/,'')+'.jpg';
 }
-async function handleMediaSelection(input){
-    if(!currentUser||!currentRoom){showToast('Open a chat before selecting media.','error');input.value='';return;}
-    const items=Array.from(input.files||[]).filter(file=>file.type.startsWith('image/')||file.type.startsWith('video/')).map(file=>({file,url:URL.createObjectURL(file),name:file.name,type:file.type.startsWith('video/')?'video':'image',caption:'',rotation:0}));
-    input.value='';if(!items.length)return;
-    if(document.getElementById('modal-media-preview').classList.contains('active')){
-        orbitSaveCaption();mediaPreviewList.push(...items);currentPreviewIndex=mediaPreviewList.length-items.length;renderPreviewCarousel();renderPreviewThumbStrip();
-    }else openMediaPreviewScreen(items);
-}
+// Selection and album dispatch are owned by media-preview.js. The editor only
+// changes the selected item's pixels; it must never split an album into sends.
 async function snapCameraToPreview(){
     const video=document.getElementById('live-camera-video');if(!video?.videoWidth){showToast('Wait for the camera to start.');return;}
     const canvas=document.createElement('canvas');canvas.width=video.videoWidth;canvas.height=video.videoHeight;canvas.getContext('2d').drawImage(video,0,0);
@@ -69,20 +63,6 @@ function toggleViewOnceMode(){
     const item=mediaPreviewList[currentPreviewIndex];if(!item)return;
     if(item.type!=='image'||isGroupChat||isSelfChat){showToast('View once is available for photos in direct chats.');return;}
     item.viewOnce=!item.viewOnce;isViewOnceActive=item.viewOnce;document.getElementById('btn-view-once-toggle').classList.toggle('active',item.viewOnce);document.getElementById('btn-view-once-toggle').setAttribute('aria-pressed',String(item.viewOnce));document.getElementById('preview-view-once-hint').classList.toggle('hide',!item.viewOnce);
-}
-async function sendPreviewMediaBatch(){
-    if(isSendingPreviewMediaBatch)return;orbitSaveCaption();
-    const room=mediaPreviewTargetRoom,owner=mediaPreviewTargetUser;if(!mediaPreviewList.length||currentRoom!==room||currentUser?.id!==owner){showToast('Reopen media from the original chat.','error');return;}
-    isSendingPreviewMediaBatch=true;document.getElementById('modal-media-preview').classList.add('preview-sending');
-    try{
-        while(mediaPreviewList.length){
-            if(currentRoom!==room||currentUser?.id!==owner)throw new Error('The signed-in account or chat changed.');
-            const item=mediaPreviewList[0];await queueMediaMessage([{...item}],item.caption||'');
-            mediaPreviewList.shift();if(item.url?.startsWith('blob:'))URL.revokeObjectURL(item.url);
-        }
-        closeMediaPreviewScreen();
-    }catch(error){currentPreviewIndex=0;renderPreviewCarousel();renderPreviewThumbStrip();showToast(error.message,'error');}
-    finally{isSendingPreviewMediaBatch=false;document.getElementById('modal-media-preview').classList.remove('preview-sending');}
 }
 const orbitEditorStage=document.getElementById('orbit-editor-canvas');
 orbitEditorStage.addEventListener('pointerdown',orbitEditorPointerDown);orbitEditorStage.addEventListener('pointermove',orbitEditorPointerMove);

@@ -59,6 +59,7 @@ function stopOrbitWeather(){
     document.getElementById('orbit-weather-metrics')?.classList.add('hide');
     document.getElementById('orbit-weather-air-status').textContent='';
     document.getElementById('orbit-weather-updated').textContent='';
+    document.getElementById('orbit-weather-position')?.replaceChildren();
     const page=document.getElementById('modal-orbit-weather');if(page){page.dataset.weather='idle';page.dataset.night='false';}
     const temperature=document.getElementById('orbit-weather-temperature');if(temperature)temperature.textContent='—°';
     const place=document.getElementById('orbit-weather-place');if(place)place.textContent='Your local forecast';
@@ -88,18 +89,34 @@ function getOrbitPreciseWeatherLocation(){
     if(!navigator.geolocation)return Promise.reject(new Error('Location is not available on this device.'));
     return new Promise((resolve,reject)=>{
         let best=null,watch=null,done=false;
-        const timeout=setTimeout(()=>finish(best?null:new Error('Could not get a location fix. Turn on device location and retry.')),18000);
+        const timeout=setTimeout(()=>finish(best?null:new Error('Could not get a location fix. Turn on precise device location and retry outdoors.')),25000);
         function finish(error){if(done)return;done=true;clearTimeout(timeout);if(watch!==null)navigator.geolocation.clearWatch(watch);orbitWeatherGeoCancel=null;if(error)reject(error);else resolve(best);}
         orbitWeatherGeoCancel=()=>finish(new Error('Location request cancelled.'));
         watch=navigator.geolocation.watchPosition(position=>{
             const coords=position.coords;
             if(!Number.isFinite(coords.latitude)||!Number.isFinite(coords.longitude)||!Number.isFinite(coords.accuracy)||coords.accuracy<0||coords.latitude<-90||coords.latitude>90||coords.longitude<-180||coords.longitude>180)return;
-            if(Number.isFinite(position.timestamp)&&Date.now()-position.timestamp>30000)return;
+            if(Number.isFinite(position.timestamp)&&(Date.now()-position.timestamp>15000||position.timestamp>Date.now()+5000))return;
             if(!best||coords.accuracy<best.coords.accuracy)best=position;
-            if(coords.accuracy<=30)finish(null);
-        },error=>finish(best&&error.code!==1?null:new Error(error.code===1?'Location permission denied. Enable it in your browser settings to see weather.':'Location is unavailable. Turn on device location and retry.')),{enableHighAccuracy:true,maximumAge:0,timeout:15000});
+            if(coords.accuracy<=20)finish(null);
+        },error=>{
+            if(error.code===1)finish(new Error('Location permission denied. Enable precise location in your browser and device settings.'));
+            else if(best)finish(null);
+            // A watch may report a timeout before a later GPS fix. Keep waiting
+            // within the overall limit instead of accepting the first failure.
+            else if(error.code!==3)finish(new Error('Location is unavailable. Turn on device location and retry.'));
+        },{enableHighAccuracy:true,maximumAge:0,timeout:20000});
         if(done&&watch!==null)navigator.geolocation.clearWatch(watch);
     });
+}
+function orbitWeatherPlaceName(place){
+    return [...new Set([place?.locality,place?.city,place?.principalSubdivision,place?.countryName].filter(value=>typeof value==='string'&&value.trim()).map(value=>value.trim()))].join(', ')||'Your device location';
+}
+function orbitRenderWeatherPosition(latitude,longitude,accuracy){
+    const panel=document.getElementById('orbit-weather-position');if(!panel)return;
+    const text=document.createElement('span');
+    text.textContent=`Device coordinates ${latitude.toFixed(5)}, ${longitude.toFixed(5)} · accuracy ±${Math.round(accuracy)} m${accuracy>1000?' · Approximate location':''}`;
+    const link=document.createElement('a');link.href=`https://www.google.com/maps?q=${latitude},${longitude}`;link.target='_blank';link.rel='noopener noreferrer';link.textContent='Check this location on a map';
+    panel.replaceChildren(text,link);
 }
 async function orbitWeatherFetch(url,signal){const response=await fetch(url,{signal,cache:'no-store',referrerPolicy:'no-referrer'});if(!response.ok)throw new Error('Weather service is temporarily unavailable.');return response.json();}
 async function refreshOrbitWeather(explicit=false){
@@ -127,7 +144,8 @@ async function refreshOrbitWeather(explicit=false){
         const current=weather.current;
         if(!Number.isFinite(current?.temperature_2m)||!Number.isFinite(current?.weather_code)||!Number.isFinite(current?.time))throw new Error('Weather data is unavailable. Try again.');
         const condition=orbitWeatherCode(current.weather_code,current.is_day===1);
-        const location=place?.locality||place?.city||place?.principalSubdivision||'Your location';
+        const location=orbitWeatherPlaceName(place);
+        orbitRenderWeatherPosition(latitude,longitude,accuracy);
         const page=document.getElementById('modal-orbit-weather');page.dataset.weather=condition.kind;page.dataset.night=String(current.is_day!==1);
         document.getElementById('orbit-weather-place').textContent=location;
         document.getElementById('orbit-weather-temperature').textContent=`${Math.round(current.temperature_2m)}°`;

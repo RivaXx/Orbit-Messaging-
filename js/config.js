@@ -68,7 +68,7 @@ function getSupabase() {
     if (clientFactory) {
         try {
             sb = clientFactory(SB_URL, SB_KEY, {
-                auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false },
+                auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false, flowType:'pkce' },
                 global: {
                     fetch: async (input, init = {}) => {
                         const url = typeof input === 'string' ? input : input?.url || String(input);
