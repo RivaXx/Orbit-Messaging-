@@ -331,7 +331,7 @@ function renderGlobalUsersDOM(users) {
     const seen=new Set(), now=Date.now();
     const online=user=>user.is_online===true && Number.isFinite(Date.parse(user.last_seen)) && now-Date.parse(user.last_seen)>=0 && now-Date.parse(user.last_seen)<65000;
     const people=users.filter(user=>{if(!user?.user_id||seen.has(user.user_id))return false;seen.add(user.user_id);return true;})
-        .sort((a,b)=>Number(online(b))-Number(online(a)) || String(a.display_name||a.email||'').localeCompare(String(b.display_name||b.email||'')));
+        .sort((a,b)=>Number(online(b))-Number(online(a)) || (Date.parse(b.last_seen)||0)-(Date.parse(a.last_seen)||0) || String(a.display_name||a.email||'').localeCompare(String(b.display_name||b.email||'')));
     const count=document.getElementById('global-online-count');if(count)count.textContent=`${people.filter(online).length} online`;
     if(!people.length){list.innerHTML='<div class="orbit-people-empty"><i class="fa-solid fa-users"></i><strong>No people to show yet</strong><span>People will appear here when the directory is available.</span></div>';return;}
     const frag=document.createDocumentFragment();
