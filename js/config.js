@@ -334,7 +334,9 @@ let blockedUsersSet = (() => {
 function deduplicateAndSort(msgs) {
     if (!msgs || msgs.length === 0) return [];
     const seen = new Set();
+    if (typeof orbitNormalizeMessage === 'function') msgs = msgs.map(orbitNormalizeMessage);
     return msgs.filter(m => {
+        if (typeof orbitIsMessageHidden === 'function' && orbitIsMessageHidden(m?.id)) return false;
         if (!m || !m.id || seen.has(m.id)) return false;
         seen.add(m.id);
         return true;
