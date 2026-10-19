@@ -17,6 +17,15 @@ function baseContext(){
   liveNewsCache:{},currentNewsCategory:'global',escapeHtml:s=>String(s).replaceAll('"','&quot;')});
  return {context,element,cache,toasts};
 }
+test('own profile shows the authentication joining date without requesting another profile',()=>{
+ const {context:c,element}=baseContext();
+ c.currentUser={id:'user',email:'preview@example.com',created_at:'2026-01-12T00:00:00Z'};
+ c.userProfile={first_name:'Preview',username:'preview'};
+ vm.runInContext(fs.readFileSync(path.join(root,'js/ui/ui-modals.js'),'utf8'),c);
+ c.openProfileScreen();
+ assert.equal(element('profile-joined-val').textContent,new Date(c.currentUser.created_at).toLocaleDateString(undefined,{year:'numeric',month:'long',day:'numeric'}));
+ c.currentUser.created_at=undefined;c.openProfileScreen();assert.equal(element('profile-joined-val').textContent,'Unavailable');
+});
 test('profile photo uses resized avatar upload and changes local state only after confirmed save',async()=>{
  const {context:c,element,cache,toasts}=baseContext();let saved,folder;
  c.compressImageForUpload=async()=> 'data:image/jpeg;base64,YXZhdGFy';
