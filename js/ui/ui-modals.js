@@ -18,6 +18,9 @@ function openProfileScreen() {
     document.getElementById('profile-display-name-val').innerText = name;
     document.getElementById('profile-about-val').innerText = about;
     document.getElementById('profile-username-val').innerText = username;
+    const joined = document.getElementById('profile-joined-val');
+    const joinedAt = new Date(currentUser.created_at);
+    if (joined) joined.textContent = Number.isFinite(joinedAt.getTime()) ? joinedAt.toLocaleDateString(undefined,{year:'numeric',month:'long',day:'numeric'}) : 'Unavailable';
 
     const av = document.getElementById('profile-large-av');
     if (userProfile?.dp_url) {

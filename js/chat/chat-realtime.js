@@ -115,7 +115,10 @@ async function setupRealtimeChatSubscription(roomId, viewEpoch = _chatViewEpoch)
             }, payload => handleRealtimeDelete(payload, roomId, aliases))
             .on('broadcast', { event: 'delete_message' }, payload => {
                 const delId = payload.payload?.id;
-                if (delId) handleMessageDeleted(delId, roomId, aliases);
+                // Broadcasts are hints only: verify the database before hiding anything.
+                if (delId) client.from('messages').select('id,room,text,attachments,type,deleted_at').eq('id',delId).maybeSingle().then(({data,error})=>{
+                    if (!error && data && aliases.includes(data.room) && (data.deleted_at || data.text === '🚫 This message was deleted')) orbitRememberDeletion(data);
+                }).catch(()=>{});
             })
             .on('broadcast', { event: 'poll_vote' }, payload => {
                 const voteData = payload.payload;
@@ -207,6 +210,9 @@ async function setupGlobalRealtimeMessageListener() {
                         triggerMessageNotification(newMsg);
                     }
                 }
+            })
+            .on('postgres_changes', {event:'UPDATE',schema:'public',table:'messages'}, payload => {
+                if (payload.new?.deleted_at || payload.new?.text === '🚫 This message was deleted') orbitRememberDeletion(payload.new);
             })
             .subscribe();
     } catch(e) {
@@ -394,7 +400,11 @@ function handleRealtimeInsert(payload, primaryRoomId, aliases) {
 }
 
 function handleRealtimeUpdate(payload, primaryRoomId, aliases) {
-    const updated = payload.new;
+    const raw = payload.new;
+    if (raw?.deleted_at || raw?.text === '🚫 This message was deleted') {
+        if (typeof orbitRememberDeletion === 'function') orbitRememberDeletion(raw);
+    }
+    const updated = typeof orbitNormalizeMessage === 'function' ? orbitNormalizeMessage(raw) : raw;
     if (!updated || !aliases.includes(updated.room)) return;
     let msgs = messageCache.get(primaryRoomId) || [];
     const idx = msgs.findIndex(m => m.id === updated.id);
