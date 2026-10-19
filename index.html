@@ -35,18 +35,18 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" media="print" onload="this.media='all'">
     
     <!-- Standalone Client-Side Error Logger (Captures all uncaught errors & rejections) -->
-    <script defer src="js/logger.js?v=message-comfort-20261019-r2"></script>
+    <script defer src="js/logger.js?v=calculator-profile-20261019-r1"></script>
     
     <!-- Core Supabase Client -->
-    <script defer src="assets/vendor/supabase.min.js?v=message-comfort-20261019-r2"></script>
+    <script defer src="assets/vendor/supabase.min.js?v=calculator-profile-20261019-r1"></script>
     <!-- Document, crop and resumable upload tools load only when needed. -->
 
-    <link rel="stylesheet" href="style.css?v=message-comfort-20261019-r2">
-    <link rel="stylesheet" href="tools.css?v=message-comfort-20261019-r2">
-<link rel="stylesheet" href="chat-upgrades.css?v=message-comfort-20261019-r2">
-<link rel="stylesheet" href="photo-weather.css?v=message-comfort-20261019-r2">
-    <link rel="stylesheet" href="messaging-experience.css?v=message-comfort-20261019-r2">
-    <link rel="stylesheet" href="app-polish.css?v=message-comfort-20261019-r2">
+    <link rel="stylesheet" href="style.css?v=calculator-profile-20261019-r1">
+    <link rel="stylesheet" href="tools.css?v=calculator-profile-20261019-r1">
+<link rel="stylesheet" href="chat-upgrades.css?v=calculator-profile-20261019-r1">
+<link rel="stylesheet" href="photo-weather.css?v=calculator-profile-20261019-r1">
+    <link rel="stylesheet" href="messaging-experience.css?v=calculator-profile-20261019-r1">
+    <link rel="stylesheet" href="app-polish.css?v=calculator-profile-20261019-r1">
 </head>
 <body>
 <script>try{document.body.classList.toggle('light-mode',localStorage.getItem('orbit_theme')==='light');}catch(_){}</script>
@@ -605,6 +605,14 @@
 
         <!-- Tab 9: PRO iOS & VISIONOS CALCULATOR SUITE -->
         <div id="tab-calculator" class="contact-feed hide">
+            <div class="calc-app-bar">
+                <button type="button" class="calc-back" onclick="switchTab('main-chats')" aria-label="Back to chats"><i class="fa-solid fa-arrow-left" aria-hidden="true"></i></button>
+                <strong id="calc-app-title">Calculator</strong>
+            </div>
+                    <details id="calc-settings" class="calc-settings">
+                        <summary aria-label="Calculator settings"><i class="fa-solid fa-sliders" aria-hidden="true"></i> Settings</summary>
+                        <div class="calc-settings-panel">
+                            <h3>Calculator settings</h3>
             <!-- Top Mode Switcher Bar -->
             <div class="calc-submode-bar" style="display:flex; justify-content:center; gap:8px; margin-bottom:12px; padding:0 4px; flex-wrap:wrap;">
                 <button id="calc-submode-btn-calc" class="news-filter-chip active touch-fix" onclick="switchCalcSubmode('calc')">
@@ -618,9 +626,6 @@
                 </button>
             </div>
 
-            <!-- Panel 1: Calculator (Standard & Scientific) -->
-            <div id="calc-submode-calc" class="calc-submode-panel">
-                <div class="calc-container" id="calc-theme-wrapper">
                     <!-- Dual Theme Switcher & Fit / Font / Display Controls -->
                     <div style="display:flex; justify-content:space-between; align-items:center; gap:6px; margin-bottom:4px; flex-wrap:wrap; padding:0 2px;">
                         <!-- Theme Switcher -->
@@ -647,6 +652,13 @@
                             </button>
                         </div>
                     </div>
+
+                        </div>
+                    </details>
+            <!-- Panel 1: Calculator (Standard & Scientific) -->
+            <div id="calc-submode-calc" class="calc-submode-panel">
+                <div class="calc-container" id="calc-theme-wrapper">
+
 
                     <div class="calc-screen">
                         <div class="calc-screen-expr" id="calc-expr-display"></div>
@@ -2587,32 +2599,32 @@
     <div id="simple-toast" class="simple-toast">Notification</div>
 </div>
 
-<script defer src="js/config.js?v=message-comfort-20261019-r2"></script>
-<script defer src="js/rooms.js?v=message-comfort-20261019-r2"></script>
-    <script defer src="js/chat-actions.js?v=message-comfort-20261019-r2"></script>
-    <script defer src="js/actions/media-lightbox.js?v=message-comfort-20261019-r2"></script>
-    <script defer src="js/actions/media-preview.js?v=message-comfort-20261019-r2"></script>
-    <script defer src="js/actions/file-viewer.js?v=message-comfort-20261019-r2"></script>
-    <script defer src="js/actions/voice-recorder.js?v=message-comfort-20261019-r2"></script>
-    <script defer src="js/actions/chat-extras.js?v=message-comfort-20261019-r2"></script>
-    <script defer src="js/messaging-notifications.js?v=message-comfort-20261019-r2"></script>
-    <script defer src="js/chat-gestures.js?v=message-comfort-20261019-r2"></script>
-    <script defer src="js/chat-select.js?v=message-comfort-20261019-r2"></script>
-    <script defer src="js/chat-share.js?v=message-comfort-20261019-r2"></script>
-    <script defer src="js/chat/message-controls.js?v=message-comfort-20261019-r2"></script>
-<script defer src="js/chat/chat-history.js?v=message-comfort-20261019-r2"></script>
-    <script defer src="js/chat/chat-feed.js?v=message-comfort-20261019-r2"></script>
-    <script defer src="js/chat/chat-dispatcher.js?v=message-comfort-20261019-r2"></script>
-    <script defer src="js/chat/chat-realtime.js?v=message-comfort-20261019-r2"></script>
-    <script defer src="js/chat.js?v=message-comfort-20261019-r2"></script>
-<script defer src="js/calculator.js?v=message-comfort-20261019-r2"></script>
-    <script defer src="js/tools.js?v=message-comfort-20261019-r2"></script>
-    <script defer src="js/celestial.js?v=message-comfort-20261019-r2"></script>
-    <script defer src="js/ui/ui-auth.js?v=message-comfort-20261019-r2"></script>
-    <script defer src="js/ui/ui-navigation.js?v=message-comfort-20261019-r2"></script>
-    <script defer src="js/ui/ui-modals.js?v=message-comfort-20261019-r2"></script>
-    <script defer src="js/ui/ui-notifications.js?v=message-comfort-20261019-r2"></script>
-<script defer src="js/ui.js?v=message-comfort-20261019-r2"></script>
+<script defer src="js/config.js?v=calculator-profile-20261019-r1"></script>
+<script defer src="js/rooms.js?v=calculator-profile-20261019-r1"></script>
+    <script defer src="js/chat-actions.js?v=calculator-profile-20261019-r1"></script>
+    <script defer src="js/actions/media-lightbox.js?v=calculator-profile-20261019-r1"></script>
+    <script defer src="js/actions/media-preview.js?v=calculator-profile-20261019-r1"></script>
+    <script defer src="js/actions/file-viewer.js?v=calculator-profile-20261019-r1"></script>
+    <script defer src="js/actions/voice-recorder.js?v=calculator-profile-20261019-r1"></script>
+    <script defer src="js/actions/chat-extras.js?v=calculator-profile-20261019-r1"></script>
+    <script defer src="js/messaging-notifications.js?v=calculator-profile-20261019-r1"></script>
+    <script defer src="js/chat-gestures.js?v=calculator-profile-20261019-r1"></script>
+    <script defer src="js/chat-select.js?v=calculator-profile-20261019-r1"></script>
+    <script defer src="js/chat-share.js?v=calculator-profile-20261019-r1"></script>
+    <script defer src="js/chat/message-controls.js?v=calculator-profile-20261019-r1"></script>
+<script defer src="js/chat/chat-history.js?v=calculator-profile-20261019-r1"></script>
+    <script defer src="js/chat/chat-feed.js?v=calculator-profile-20261019-r1"></script>
+    <script defer src="js/chat/chat-dispatcher.js?v=calculator-profile-20261019-r1"></script>
+    <script defer src="js/chat/chat-realtime.js?v=calculator-profile-20261019-r1"></script>
+    <script defer src="js/chat.js?v=calculator-profile-20261019-r1"></script>
+<script defer src="js/calculator.js?v=calculator-profile-20261019-r1"></script>
+    <script defer src="js/tools.js?v=calculator-profile-20261019-r1"></script>
+    <script defer src="js/celestial.js?v=calculator-profile-20261019-r1"></script>
+    <script defer src="js/ui/ui-auth.js?v=calculator-profile-20261019-r1"></script>
+    <script defer src="js/ui/ui-navigation.js?v=calculator-profile-20261019-r1"></script>
+    <script defer src="js/ui/ui-modals.js?v=calculator-profile-20261019-r1"></script>
+    <script defer src="js/ui/ui-notifications.js?v=calculator-profile-20261019-r1"></script>
+<script defer src="js/ui.js?v=calculator-profile-20261019-r1"></script>
 
     <!-- WhatsApp View Once Fullscreen Viewer Modal -->
     <div id="modal-view-once-viewer" class="glass-modal-overlay view-once-modal-overlay hide" aria-hidden="true" onclick="closeViewOnceViewer()">
@@ -2645,8 +2657,8 @@
  <div id="orbit-editor-filters" class="hide"><button type="button" onclick="applyOrbitMediaFilter('vivid')">Vivid</button><button type="button" onclick="applyOrbitMediaFilter('mono')">Mono</button><button type="button" onclick="applyOrbitMediaFilter('warm')">Warm</button><button type="button" onclick="applyOrbitMediaFilter('bright')">Bright</button></div>
  <div class="orbit-editor-stage"><canvas id="orbit-editor-canvas"></canvas></div>
 </div>
-<script defer src="js/orbit-chat-services.js?v=message-comfort-20261019-r2"></script>
-<script defer src="js/orbit-media-editor.js?v=message-comfort-20261019-r2"></script>
+<script defer src="js/orbit-chat-services.js?v=calculator-profile-20261019-r1"></script>
+<script defer src="js/orbit-media-editor.js?v=calculator-profile-20261019-r1"></script>
 <div id="modal-orbit-weather" class="glass-modal-overlay orbit-weather-page" data-weather="idle" data-motion="calm"><div class="orbit-weather-scene" aria-hidden="true"><div class="orbit-weather-orb"></div><div class="orbit-weather-cloud cloud-a"></div><div class="orbit-weather-cloud cloud-b"></div><span class="orbit-weather-particle" style="--i:0"></span><span class="orbit-weather-particle" style="--i:1"></span><span class="orbit-weather-particle" style="--i:2"></span><span class="orbit-weather-particle" style="--i:3"></span><span class="orbit-weather-particle" style="--i:4"></span><span class="orbit-weather-particle" style="--i:5"></span><span class="orbit-weather-particle" style="--i:6"></span><span class="orbit-weather-particle" style="--i:7"></span><span class="orbit-weather-particle" style="--i:8"></span><span class="orbit-weather-particle" style="--i:9"></span><span class="orbit-weather-particle" style="--i:10"></span><span class="orbit-weather-particle" style="--i:11"></span><span class="orbit-weather-particle" style="--i:12"></span><span class="orbit-weather-particle" style="--i:13"></span></div><div class="glass-modal-box">
  <div class="modal-header-row"><strong>Weather near you</strong><button type="button" class="btn-reset" onclick="closeOrbitWeatherConsent()" aria-label="Close weather settings">✕</button></div>
  <div class="orbit-weather-hero"><span id="orbit-weather-place">Your local forecast</span><strong id="orbit-weather-temperature">—°</strong><span id="orbit-weather-condition">Enable location to see current conditions</span></div><label class="orbit-weather-motion-label" for="orbit-weather-motion">Weather animation <select id="orbit-weather-motion" onchange="setOrbitWeatherMotion(this.value)"><option value="calm">Calm</option><option value="live">Live</option><option value="still">Still</option></select></label><p>Allow device location to show nearby weather below the Orbit logo. Orbit requests a fresh, high-accuracy location and shows the accuracy your device reports.</p>
@@ -2655,10 +2667,10 @@
  <button type="button" id="orbit-weather-disable" class="glass-btn-secondary hide" onclick="disableOrbitWeather()">Turn off local weather</button>
  <p class="orbit-weather-attribution">Weather by <a href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer">Open-Meteo</a> · Air quality: <a href="https://atmosphere.copernicus.eu/" target="_blank" rel="noopener noreferrer">CAMS</a> · Places by <a href="https://www.bigdatacloud.com/" target="_blank" rel="noopener noreferrer">BigDataCloud</a></p>
 </div></div>
-<script defer src="js/orbit-private-photos.js?v=message-comfort-20261019-r2"></script>
-<script defer src="js/orbit-banner-weather.js?v=message-comfort-20261019-r2"></script>
-<script defer src="js/liquid-glass.js?v=message-comfort-20261019-r2"></script>
-    <script defer src="js/messaging-experience.js?v=message-comfort-20261019-r2"></script>
-<script defer src="js/orbit-interface.js?v=message-comfort-20261019-r2"></script>
+<script defer src="js/orbit-private-photos.js?v=calculator-profile-20261019-r1"></script>
+<script defer src="js/orbit-banner-weather.js?v=calculator-profile-20261019-r1"></script>
+<script defer src="js/liquid-glass.js?v=calculator-profile-20261019-r1"></script>
+    <script defer src="js/messaging-experience.js?v=calculator-profile-20261019-r1"></script>
+<script defer src="js/orbit-interface.js?v=calculator-profile-20261019-r1"></script>
 </body>
 </html>
