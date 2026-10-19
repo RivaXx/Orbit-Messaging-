@@ -87,3 +87,22 @@ test('Google callback scrubs its code before exchanging and restores an authenti
  assert.equal(launches,1);assert.equal(exchanges,1);assert.equal(c.currentUser.id,'google-user');assert.equal(storage.has('orbit_explicit_signout'),false);
  assert.equal(storage.has('orbit_google_pending'),false);
 });
+
+
+test('calculator settings keyboard does not change a calculation; Escape closes settings',()=>{
+ const {c,node,events}=setup();vm.runInContext(read('js/calculator.js'),c);
+ c.calcInput('7');c.calcInput('+');c.calcInput('8');node('calc-settings').open=true;
+ events.keydown({key:'9',preventDefault(){}});assert.equal(vm.runInContext('calcCurrentVal',c),'8');
+ let prevented=false;events.keydown({key:'Escape',preventDefault(){prevented=true;}});
+ assert.equal(node('calc-settings').open,false);assert.equal(prevented,true);
+ assert.equal(node('calc-answer-preview').textContent,'= 15');
+});
+test('calculator settings remain available across converter and date modes',()=>{
+ const {c,node}=setup();c.scheduleCalcLayout=()=>{};vm.runInContext(read('js/tools.js'),c);
+ c.initUnitConverter=()=>{};c.initDateCalculator=()=>{};
+ for(const [mode,label] of [['converter','Unit converter'],['date','Date calculator'],['calc','Calculator']]){
+  node('calc-settings').open=true;c.switchCalcSubmode(mode);
+  assert.equal(node('calc-settings').open,false);assert.equal(node('calc-app-title').textContent,label);
+ }
+ c.switchCalcSubmode('invalid');assert.equal(node('calc-app-title').textContent,'Calculator');
+});
