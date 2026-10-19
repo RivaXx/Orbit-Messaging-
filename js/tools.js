@@ -1488,6 +1488,12 @@ const CONVERTER_UNITS_DATA = {
 };
 
 function switchCalcSubmode(submode) {
+    if (!['calc','converter','date'].includes(submode)) return;
+    const menu = document.getElementById('calc-settings');
+    if (menu) menu.open = false;
+    const title = document.getElementById('calc-app-title');
+    if (title) title.textContent = {calc:'Calculator',converter:'Unit converter',date:'Date calculator'}[submode];
+    if (typeof scheduleCalcLayout === 'function') scheduleCalcLayout();
     document.querySelectorAll('.calc-submode-bar .news-filter-chip').forEach(b => b.classList.remove('active'));
     const activeBtn = document.getElementById(`calc-submode-btn-${submode}`);
     if (activeBtn) activeBtn.classList.add('active');
