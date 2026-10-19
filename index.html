@@ -35,18 +35,18 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" media="print" onload="this.media='all'">
     
     <!-- Standalone Client-Side Error Logger (Captures all uncaught errors & rejections) -->
-    <script defer src="js/logger.js?v=app-polish-20261018-r2"></script>
+    <script defer src="js/logger.js?v=message-comfort-20261019-r2"></script>
     
     <!-- Core Supabase Client -->
-    <script defer src="assets/vendor/supabase.min.js?v=app-polish-20261018-r2"></script>
+    <script defer src="assets/vendor/supabase.min.js?v=message-comfort-20261019-r2"></script>
     <!-- Document, crop and resumable upload tools load only when needed. -->
 
-    <link rel="stylesheet" href="style.css?v=app-polish-20261018-r2">
-    <link rel="stylesheet" href="tools.css?v=app-polish-20261018-r2">
-<link rel="stylesheet" href="chat-upgrades.css?v=app-polish-20261018-r2">
-<link rel="stylesheet" href="photo-weather.css?v=app-polish-20261018-r2">
-    <link rel="stylesheet" href="messaging-experience.css?v=app-polish-20261018-r2">
-    <link rel="stylesheet" href="app-polish.css?v=app-polish-20261018-r2">
+    <link rel="stylesheet" href="style.css?v=message-comfort-20261019-r2">
+    <link rel="stylesheet" href="tools.css?v=message-comfort-20261019-r2">
+<link rel="stylesheet" href="chat-upgrades.css?v=message-comfort-20261019-r2">
+<link rel="stylesheet" href="photo-weather.css?v=message-comfort-20261019-r2">
+    <link rel="stylesheet" href="messaging-experience.css?v=message-comfort-20261019-r2">
+    <link rel="stylesheet" href="app-polish.css?v=message-comfort-20261019-r2">
 </head>
 <body>
 <script>try{document.body.classList.toggle('light-mode',localStorage.getItem('orbit_theme')==='light');}catch(_){}</script>
@@ -1060,6 +1060,10 @@
             </div>
 
             <!-- Account Deletion Action -->
+            <div class="profile-card-group"><div class="profile-section-item">
+                <div class="profile-item-icon"><i class="fa-regular fa-calendar"></i></div>
+                <div class="profile-item-content"><div class="profile-item-label">Joined Orbit · only visible to you</div><div id="profile-joined-val" class="profile-item-value">—</div></div>
+            </div></div>
             <div class="profile-card-group" style="padding:4px 16px;">
                 <div class="profile-section-item touch-fix" onclick="confirmDeleteSelfAccount()">
                     <div class="profile-item-icon"><i class="fa-solid fa-trash-can" style="color:#FF453A;"></i></div>
@@ -1115,6 +1119,12 @@
                 </button>
                 <!-- Chat Options Dropdown Menu -->
                 <div id="chat-options-dropdown" class="chat-options-dropdown hide">
+                    <button type="button" class="chat-option-item btn-reset" onclick="orbitStartMessageSelection()"><i class="fa-solid fa-check-double"></i> Select messages</button>
+                    <label class="chat-option-item" for="chat-bubble-style">Bubble appearance
+                        <select id="chat-bubble-style" onchange="orbitSetBubbleStyle(this.value)">
+                            <option value="balanced">Balanced glass</option><option value="blue">Blue glass</option><option value="green">Green glass</option><option value="solid">High contrast</option>
+                        </select>
+                    </label>
                     <div class="chat-option-item" onclick="openChatWallpaperSettings()">
                         <i class="fa-solid fa-image" style="color:var(--accent); width:18px;"></i>
                         <span>Chat Wallpaper</span>
@@ -1163,6 +1173,12 @@
             </button>
         </div>
 
+        <div id="message-selection-bar" hidden role="region" aria-label="Selected messages">
+            <button type="button" onclick="orbitEndMessageSelection()" aria-label="Cancel message selection">✕</button>
+            <span id="message-selection-count" aria-live="polite">0 selected</span>
+            <button type="button" id="message-delete-me" onclick="orbitDeleteSelected(false)">For me</button>
+            <button type="button" id="message-delete-everyone" onclick="orbitDeleteSelected(true)" title="Only your delivered messages">For everyone</button>
+        </div>
         <!-- Chat Message Stream Feed -->
         <div id="chat-feed" class="chat-feed-container"></div>
 
@@ -2571,31 +2587,32 @@
     <div id="simple-toast" class="simple-toast">Notification</div>
 </div>
 
-<script defer src="js/config.js?v=app-polish-20261018-r2"></script>
-<script defer src="js/rooms.js?v=app-polish-20261018-r2"></script>
-    <script defer src="js/chat-actions.js?v=app-polish-20261018-r2"></script>
-    <script defer src="js/actions/media-lightbox.js?v=app-polish-20261018-r2"></script>
-    <script defer src="js/actions/media-preview.js?v=app-polish-20261018-r2"></script>
-    <script defer src="js/actions/file-viewer.js?v=app-polish-20261018-r2"></script>
-    <script defer src="js/actions/voice-recorder.js?v=app-polish-20261018-r2"></script>
-    <script defer src="js/actions/chat-extras.js?v=app-polish-20261018-r2"></script>
-    <script defer src="js/messaging-notifications.js?v=app-polish-20261018-r2"></script>
-    <script defer src="js/chat-gestures.js?v=app-polish-20261018-r2"></script>
-    <script defer src="js/chat-select.js?v=app-polish-20261018-r2"></script>
-    <script defer src="js/chat-share.js?v=app-polish-20261018-r2"></script>
-    <script defer src="js/chat/chat-history.js?v=app-polish-20261018-r2"></script>
-    <script defer src="js/chat/chat-feed.js?v=app-polish-20261018-r2"></script>
-    <script defer src="js/chat/chat-dispatcher.js?v=app-polish-20261018-r2"></script>
-    <script defer src="js/chat/chat-realtime.js?v=app-polish-20261018-r2"></script>
-    <script defer src="js/chat.js?v=app-polish-20261018-r2"></script>
-<script defer src="js/calculator.js?v=app-polish-20261018-r2"></script>
-    <script defer src="js/tools.js?v=app-polish-20261018-r2"></script>
-    <script defer src="js/celestial.js?v=app-polish-20261018-r2"></script>
-    <script defer src="js/ui/ui-auth.js?v=app-polish-20261018-r2"></script>
-    <script defer src="js/ui/ui-navigation.js?v=app-polish-20261018-r2"></script>
-    <script defer src="js/ui/ui-modals.js?v=app-polish-20261018-r2"></script>
-    <script defer src="js/ui/ui-notifications.js?v=app-polish-20261018-r2"></script>
-<script defer src="js/ui.js?v=app-polish-20261018-r2"></script>
+<script defer src="js/config.js?v=message-comfort-20261019-r2"></script>
+<script defer src="js/rooms.js?v=message-comfort-20261019-r2"></script>
+    <script defer src="js/chat-actions.js?v=message-comfort-20261019-r2"></script>
+    <script defer src="js/actions/media-lightbox.js?v=message-comfort-20261019-r2"></script>
+    <script defer src="js/actions/media-preview.js?v=message-comfort-20261019-r2"></script>
+    <script defer src="js/actions/file-viewer.js?v=message-comfort-20261019-r2"></script>
+    <script defer src="js/actions/voice-recorder.js?v=message-comfort-20261019-r2"></script>
+    <script defer src="js/actions/chat-extras.js?v=message-comfort-20261019-r2"></script>
+    <script defer src="js/messaging-notifications.js?v=message-comfort-20261019-r2"></script>
+    <script defer src="js/chat-gestures.js?v=message-comfort-20261019-r2"></script>
+    <script defer src="js/chat-select.js?v=message-comfort-20261019-r2"></script>
+    <script defer src="js/chat-share.js?v=message-comfort-20261019-r2"></script>
+    <script defer src="js/chat/message-controls.js?v=message-comfort-20261019-r2"></script>
+<script defer src="js/chat/chat-history.js?v=message-comfort-20261019-r2"></script>
+    <script defer src="js/chat/chat-feed.js?v=message-comfort-20261019-r2"></script>
+    <script defer src="js/chat/chat-dispatcher.js?v=message-comfort-20261019-r2"></script>
+    <script defer src="js/chat/chat-realtime.js?v=message-comfort-20261019-r2"></script>
+    <script defer src="js/chat.js?v=message-comfort-20261019-r2"></script>
+<script defer src="js/calculator.js?v=message-comfort-20261019-r2"></script>
+    <script defer src="js/tools.js?v=message-comfort-20261019-r2"></script>
+    <script defer src="js/celestial.js?v=message-comfort-20261019-r2"></script>
+    <script defer src="js/ui/ui-auth.js?v=message-comfort-20261019-r2"></script>
+    <script defer src="js/ui/ui-navigation.js?v=message-comfort-20261019-r2"></script>
+    <script defer src="js/ui/ui-modals.js?v=message-comfort-20261019-r2"></script>
+    <script defer src="js/ui/ui-notifications.js?v=message-comfort-20261019-r2"></script>
+<script defer src="js/ui.js?v=message-comfort-20261019-r2"></script>
 
     <!-- WhatsApp View Once Fullscreen Viewer Modal -->
     <div id="modal-view-once-viewer" class="glass-modal-overlay view-once-modal-overlay hide" aria-hidden="true" onclick="closeViewOnceViewer()">
@@ -2628,8 +2645,8 @@
  <div id="orbit-editor-filters" class="hide"><button type="button" onclick="applyOrbitMediaFilter('vivid')">Vivid</button><button type="button" onclick="applyOrbitMediaFilter('mono')">Mono</button><button type="button" onclick="applyOrbitMediaFilter('warm')">Warm</button><button type="button" onclick="applyOrbitMediaFilter('bright')">Bright</button></div>
  <div class="orbit-editor-stage"><canvas id="orbit-editor-canvas"></canvas></div>
 </div>
-<script defer src="js/orbit-chat-services.js?v=app-polish-20261018-r2"></script>
-<script defer src="js/orbit-media-editor.js?v=app-polish-20261018-r2"></script>
+<script defer src="js/orbit-chat-services.js?v=message-comfort-20261019-r2"></script>
+<script defer src="js/orbit-media-editor.js?v=message-comfort-20261019-r2"></script>
 <div id="modal-orbit-weather" class="glass-modal-overlay orbit-weather-page" data-weather="idle" data-motion="calm"><div class="orbit-weather-scene" aria-hidden="true"><div class="orbit-weather-orb"></div><div class="orbit-weather-cloud cloud-a"></div><div class="orbit-weather-cloud cloud-b"></div><span class="orbit-weather-particle" style="--i:0"></span><span class="orbit-weather-particle" style="--i:1"></span><span class="orbit-weather-particle" style="--i:2"></span><span class="orbit-weather-particle" style="--i:3"></span><span class="orbit-weather-particle" style="--i:4"></span><span class="orbit-weather-particle" style="--i:5"></span><span class="orbit-weather-particle" style="--i:6"></span><span class="orbit-weather-particle" style="--i:7"></span><span class="orbit-weather-particle" style="--i:8"></span><span class="orbit-weather-particle" style="--i:9"></span><span class="orbit-weather-particle" style="--i:10"></span><span class="orbit-weather-particle" style="--i:11"></span><span class="orbit-weather-particle" style="--i:12"></span><span class="orbit-weather-particle" style="--i:13"></span></div><div class="glass-modal-box">
  <div class="modal-header-row"><strong>Weather near you</strong><button type="button" class="btn-reset" onclick="closeOrbitWeatherConsent()" aria-label="Close weather settings">✕</button></div>
  <div class="orbit-weather-hero"><span id="orbit-weather-place">Your local forecast</span><strong id="orbit-weather-temperature">—°</strong><span id="orbit-weather-condition">Enable location to see current conditions</span></div><label class="orbit-weather-motion-label" for="orbit-weather-motion">Weather animation <select id="orbit-weather-motion" onchange="setOrbitWeatherMotion(this.value)"><option value="calm">Calm</option><option value="live">Live</option><option value="still">Still</option></select></label><p>Allow device location to show nearby weather below the Orbit logo. Orbit requests a fresh, high-accuracy location and shows the accuracy your device reports.</p>
@@ -2638,10 +2655,10 @@
  <button type="button" id="orbit-weather-disable" class="glass-btn-secondary hide" onclick="disableOrbitWeather()">Turn off local weather</button>
  <p class="orbit-weather-attribution">Weather by <a href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer">Open-Meteo</a> · Air quality: <a href="https://atmosphere.copernicus.eu/" target="_blank" rel="noopener noreferrer">CAMS</a> · Places by <a href="https://www.bigdatacloud.com/" target="_blank" rel="noopener noreferrer">BigDataCloud</a></p>
 </div></div>
-<script defer src="js/orbit-private-photos.js?v=app-polish-20261018-r2"></script>
-<script defer src="js/orbit-banner-weather.js?v=app-polish-20261018-r2"></script>
-<script defer src="js/liquid-glass.js?v=app-polish-20261018-r2"></script>
-    <script defer src="js/messaging-experience.js?v=app-polish-20261018-r2"></script>
-<script defer src="js/orbit-interface.js?v=app-polish-20261018-r2"></script>
+<script defer src="js/orbit-private-photos.js?v=message-comfort-20261019-r2"></script>
+<script defer src="js/orbit-banner-weather.js?v=message-comfort-20261019-r2"></script>
+<script defer src="js/liquid-glass.js?v=message-comfort-20261019-r2"></script>
+    <script defer src="js/messaging-experience.js?v=message-comfort-20261019-r2"></script>
+<script defer src="js/orbit-interface.js?v=message-comfort-20261019-r2"></script>
 </body>
 </html>
