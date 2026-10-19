@@ -115,6 +115,7 @@ async function openChatRoom(roomId, roomTitle, avatarUrl, isSelf = false, peerUs
             }
         }
     }
+    if (typeof orbitOpenMessageControls === 'function') orbitOpenMessageControls();
     if (typeof updateChatOptionsMenuState === 'function') updateChatOptionsMenuState();
     if (typeof updateVoiceCallButton === 'function') updateVoiceCallButton();
 
@@ -361,7 +362,7 @@ let chatHistoryRetryTimer = null;
 const olderPageCache = new Map();
 const ROOM_HISTORY_PAGE_SIZE = 25;
 function filterRoomHistory(messages, aliases, peerId = null, selfId = currentUser?.id) {
-    return (messages || []).filter(message => message && aliases.includes(message.room) &&
+    return (messages || []).filter(message => message && (typeof orbitIsMessageHidden !== 'function' || !orbitIsMessageHidden(message.id)) && aliases.includes(message.room) &&
         (!peerId || message.sender_id === selfId || message.sender_id === peerId));
 }
 async function queryRoomHistoryPage(client, aliases, cursor = null, signal = null) {
@@ -382,7 +383,7 @@ async function queryRoomHistoryPage(client, aliases, cursor = null, signal = nul
             return query.order('created_at', { ascending:false }).order('id', { ascending:false })
                 .limit(ROOM_HISTORY_PAGE_SIZE).abortSignal(controller.signal);
         };
-        let result = await run('id,room,sender_id,username,text,type,attachments,reactions,reply_to,read_by,pinned,created_at');
+        let result = await run('id,room,sender_id,username,text,type,attachments,reactions,reply_to,read_by,pinned,created_at,deleted_at,expires_at');
         // Missing optional columns warrant a schema fallback; a slow network does not.
         const firstErrorText = `${result.error?.code || ''} ${result.error?.message || ''}`;
         if (result.error && /42703|PGRST204|column .* (?:does not exist|not found)|could not find .*column/i.test(firstErrorText)) {

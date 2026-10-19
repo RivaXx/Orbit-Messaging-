@@ -150,6 +150,7 @@ function renderMessageFeed(msgs, shouldScrollBottom = true) {
 }
 
 function appendSingleMessageNode(msg) {
+    if (typeof orbitIsMessageHidden === 'function' && orbitIsMessageHidden(msg?.id)) return;
     if (!currentRoom || !resolveRoomAliases(currentRoom, activeChatPeerId).includes(msg?.room)) return;
     const feed = document.getElementById('chat-feed');
     if (!feed) return;
@@ -325,6 +326,7 @@ window.isMessageStarred = isMessageStarred;
 window.toggleStarMessage = toggleStarMessage;
 
 function createMessageDOMNode(msg, isConsecutive = false) {
+    if (typeof orbitNormalizeMessage === 'function') msg = orbitNormalizeMessage(msg);
     try {
         const isOwn = (!msg.sender_id && !msg.from_user) || (currentUser && msg.sender_id === currentUser.id);
         const row = document.createElement('div');
@@ -337,6 +339,7 @@ function createMessageDOMNode(msg, isConsecutive = false) {
         // optimistic node before sendMessage's async IIFE renames its id
         if (msg.client_temp_id) row.dataset.clientTempId = msg.client_temp_id;
 
+        if (typeof orbitBindMessageSelection === 'function') orbitBindMessageSelection(row, msg);
         // Attach right-click / context menu with coordinates
         row.oncontextmenu = (e) => {
             if (e && e.preventDefault) e.preventDefault();
@@ -388,9 +391,11 @@ function createMessageDOMNode(msg, isConsecutive = false) {
             else if (replyObj.type === 'video') snippet = '🎥 Video';
             else if (replyObj.type === 'file' || replyObj.type === 'document') snippet = '📄 Document';
             
+            if (replyObj.type === 'location') snippet = 'Location shared for 5 minutes';
+            if (typeof orbitDeletionLedger !== 'undefined' && orbitDeletionLedger.has(orbitMessageKey(replyObj.id))) snippet = 'This message was deleted';
             const targetId = replyObj.id ? escapeHtml(String(replyObj.id)) : '';
             replyHtml = `
-                <div class="quoted-reply-box" onclick="scrollToMessage('${targetId}')" title="Click to view original message">
+                <div class="quoted-reply-box" data-reply-id="${targetId}" onclick="scrollToMessage('${targetId}')" title="Click to view original message">
                     <div class="quoted-reply-sender">
                         <i class="fa-solid fa-reply" style="font-size:9px;"></i> ${escapeHtml(replyObj.username || 'User')}
                     </div>
@@ -410,7 +415,7 @@ function createMessageDOMNode(msg, isConsecutive = false) {
         }
         if (!Array.isArray(attList)) attList = [attList];
 
-        if (attList.length > 0) {
+        if (attList.length > 0 && msg.type !== 'location') {
             attList.forEach(rawAtt => {
                 if (!rawAtt) return;
                 let att = rawAtt;
@@ -654,8 +659,11 @@ function createMessageDOMNode(msg, isConsecutive = false) {
                 try {
                     let att = typeof msg.attachments === 'string' ? JSON.parse(msg.attachments) : msg.attachments;
                     if (Array.isArray(att)) att = att[0];
-                    if (typeof att === 'string') att = JSON.parse(att);
-                    if (att && att.lat && att.lng) {
+                    if (typeof att === 'string' && /^https?:/.test(att)) {
+                        const coords = new URL(att).searchParams.get('q')?.split(',');
+                        if (coords?.length === 2) { lat=Number(coords[0]); lng=Number(coords[1]); }
+                    } else if (typeof att === 'string') att = JSON.parse(att);
+                    if (att && att.lat != null && att.lng != null) {
                         lat = parseFloat(att.lat);
                         lng = parseFloat(att.lng);
                     }
@@ -668,14 +676,15 @@ function createMessageDOMNode(msg, isConsecutive = false) {
                 const osmEmbedUrl = `https://www.openstreetmap.org/export/embed.html?bbox=${lng-0.008}%2C${lat-0.005}%2C${lng+0.008}%2C${lat+0.005}&layer=mapnik&marker=${lat}%2C${lng}`;
                 extraCardHtml = `
                     <div class="location-card-bubble">
-                        <div style="font-size:12px; font-weight:800; color:#00E676; display:flex; align-items:center; gap:6px;">
-                            <i class="fa-solid fa-location-dot" style="font-size:14px;"></i> Live GPS Location
+                        <div class="location-expiry-label">Expires ${escapeHtml(new Date(msg.expires_at || Date.parse(msg.created_at)+300000).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}))}</div>
+                        <div style="font-size:12px; font-weight:800; color:var(--bubble-link); display:flex; align-items:center; gap:6px;">
+                            <i class="fa-solid fa-location-dot" style="font-size:14px;"></i> Current location · 5 minutes
                         </div>
                         <div class="location-preview-map">
-                            <iframe src="${osmEmbedUrl}" title="Live Location Map"></iframe>
+                            <iframe src="${osmEmbedUrl}" title="Current location map"></iframe>
                         </div>
                         <div style="display:flex; justify-content:space-between; align-items:center; font-size:11px; margin-top:4px; gap:8px;">
-                            <span style="color:var(--text-secondary); font-family:'Plus Jakarta Sans', monospace; font-weight:700;">${latCardinal}, ${lngCardinal}</span>
+                            <span style="color:var(--bubble-meta); font-family:'Plus Jakarta Sans', monospace; font-weight:700;">${latCardinal}, ${lngCardinal}</span>
                             <div style="display:flex; gap:6px;">
                                 <a href="https://www.google.com/maps?q=${lat},${lng}" target="_blank" rel="noopener" class="glass-btn-primary" style="padding:4px 9px; font-size:10.5px; text-decoration:none;">Google Maps</a>
                                 <a href="https://maps.apple.com/?ll=${lat},${lng}" target="_blank" rel="noopener" class="glass-btn-secondary" style="padding:4px 9px; font-size:10.5px; text-decoration:none;">Apple Maps</a>
@@ -806,7 +815,7 @@ function createMessageDOMNode(msg, isConsecutive = false) {
         const isMsgDeleted = msg.is_deleted || msg.text === '🚫 This message was deleted' || msg.text === '🚫 You deleted this message';
         if (isMsgDeleted) {
             const isOwnMsg = currentUser && msg.sender_id === currentUser.id;
-            const deletedNotice = isOwnMsg ? 'You deleted this message' : 'This message was deleted';
+            const deletedNotice = msg.location_expired ? 'Location expired' : isOwnMsg ? 'You deleted this message' : 'This message was deleted';
             extraCardHtml = '';
             mediaGridHtml = '';
             filesHtml = '';
@@ -991,51 +1000,14 @@ function contextShowInfo() {
 
 function contextDeleteForMe() {
     if (!contextActiveMessage) return;
-    const node = document.getElementById(`msg-${contextActiveMessage.id}`);
-    if (node) node.remove();
-    let msgs = messageCache.get(currentRoom) || [];
-    msgs = msgs.filter(m => m.id !== contextActiveMessage.id);
-    // Update all aliases in cache
-    const aliases = resolveRoomAliases(currentRoom);
-    aliases.forEach(alias => messageCache.set(alias, msgs));
+    orbitDeleteMessagesForMe([contextActiveMessage.id]);
     closeMsgContextModal();
-    showToast('Message deleted for you');
 }
-
 async function contextDeleteForEveryone(customMsgId) {
     const msgId = customMsgId || contextActiveMessage?.id;
     if (!msgId) return;
-
-    if (!customMsgId && !confirm('Delete this message for everyone?')) return;
-
-    // 1. Instant local DOM transformation & persistent cache update (WhatsApp style)
-    handleMessageDeleted(msgId, currentRoom);
-
-    // 2. Peer-to-peer real-time broadcast (<100ms instant update on recipient screen)
-    if (activeRealtimeChannel) {
-        try {
-            activeRealtimeChannel.send({
-                type: 'broadcast',
-                event: 'delete_message',
-                payload: { id: msgId, is_deleted: true, room: currentRoom }
-            });
-        } catch(e) {}
-    }
-
-    if (typeof closeMsgContextModal === 'function') closeMsgContextModal();
-    showToast('Message deleted for everyone ✓', 'success');
-
-    // 3. Background DB update: preserve message row with WhatsApp deleted placeholder
-    try {
-        const client = await ensureSupabase();
-        await client.from('messages').update({
-            text: '🚫 This message was deleted',
-            attachments: [],
-            type: 'text'
-        }).eq('id', msgId);
-    } catch(e) {
-        console.warn('[Orbit] Delete for everyone network error:', e);
-    }
+    closeMsgContextModal();
+    return orbitDeleteMessagesForEveryone([msgId], currentRoom);
 }
 
 function toggleChatOptionsMenu(e) {
@@ -1530,8 +1502,7 @@ function showQuickReactionPicker(rowNode, msg, coords) {
             label: 'Delete for Me',
             danger: true,
             action: () => {
-                rowNode.remove();
-                showToast('Deleted for you', 'info');
+                orbitDeleteMessagesForMe([msg.id]);
             }
         }
     ];
@@ -1539,7 +1510,8 @@ function showQuickReactionPicker(rowNode, msg, coords) {
     if (typeof orbitCanEditMessage === "function" && orbitCanEditMessage(msg)) {
         menuItems.unshift({icon:"fa-solid fa-pen", label:"Edit message", action:()=>orbitBeginEdit(msg)});
     }
-    if (isOwn) {
+    menuItems.unshift({icon:'fa-solid fa-check-double', label:'Select messages', action:()=>orbitStartMessageSelection(msg.id)});
+    if (isOwn && !msg.is_deleted && !msg.deleted_at) {
         menuItems.push({
             icon: 'fa-solid fa-ban',
             label: 'Delete for Everyone',
