@@ -220,7 +220,10 @@ function shareCurrentLocation() {
         return;
     }
 
+    const locationRoom = currentRoom;
+    const locationOwner = currentUser.id;
     const sendLocationPayload = async (lat, lng, accuracy, source = 'GPS') => {
+        if (currentRoom !== locationRoom || currentUser?.id !== locationOwner) { showToast('Chat changed. Share location again in this chat.','info'); return; }
         const sendRoomId = currentRoom; // Strictly currentRoom
 
         const locationMeta = {
@@ -237,7 +240,7 @@ function shareCurrentLocation() {
             room: sendRoomId,
             sender_id: currentUser.id,
             username: userProfile?.first_name ? `${userProfile.first_name}` : currentUser.email.split('@')[0],
-            text: `ðŸ“ Live Location (${source}): ${locationMeta.lat}, ${locationMeta.lng}`,
+            text: `geo:${locationMeta.lat},${locationMeta.lng}`,
             type: 'location',
             attachments: [mapUrl],
             reply_to: replyTargetMessage ? {
@@ -255,19 +258,19 @@ function shareCurrentLocation() {
             document.getElementById('reply-preview-bar')?.classList.add('hide');
         }
 
-        const optId = `opt_${Date.now()}`;
-        appendSingleMessageNode({ ...payload, id: optId });
-        scrollFeedToBottom(true);
-
         try {
             const client = await ensureSupabase();
-            const { data } = await client.from('messages').insert([payload]).select();
-            if (data && data[0]) {
-                const optNode = document.getElementById(`msg-${optId}`);
-                if (optNode) {
-                    optNode.id = `msg-${data[0].id}`;
-                    optNode.dataset.msgId = data[0].id;
-                }
+            if (currentUser?.id !== locationOwner) return;
+            const { data, error } = await client.from('messages').insert([payload]).select();
+            if (currentUser?.id !== locationOwner) return;
+            if (error || !data?.[0]) throw error || new Error('Location was not saved.');
+            showToast('Location shared for 5 minutes', 'success');
+            resolveRoomAliases(sendRoomId).forEach(alias => {
+                messageCache.set(alias, deduplicateAndSort([...(messageCache.get(alias)||[]), data[0]]));
+                if (typeof _scheduleChatCachePersist === 'function') _scheduleChatCachePersist(alias);
+            });
+            if (currentRoom === sendRoomId && !document.getElementById(`msg-${data[0].id}`)) {
+                appendSingleMessageNode(data[0]); scrollFeedToBottom(true);
             }
         } catch(e) {
             console.error('Location send error:', e);
@@ -282,7 +285,6 @@ function shareCurrentLocation() {
     showToast('Locating your position…', 'info');
     getOrbitLocationOnce().then(position => {
         sendLocationPayload(position.coords.latitude, position.coords.longitude, Math.round(position.coords.accuracy || 0), 'GPS');
-        showToast('Location shared', 'success');
     }).catch(error => {
         showToast(error.message || 'Location access is unavailable.', 'info');
     });
