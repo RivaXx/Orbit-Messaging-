@@ -25,7 +25,9 @@ async function _prewarmRecentMessages() {
     } catch (error) { console.warn('[Orbit History] Prewarm failed:', error); }
 }
 
-async function launchApp() {
+async function launchApp({introduction=false,forceIntroduction=false}={}) {
+    let repeatIntro=forceIntroduction;try{repeatIntro=repeatIntro||localStorage.getItem('orbit_explicit_signout')==='true';}catch(_){}
+    window.OrbitIntroduction?.afterSignIn(currentUser,{interactive:introduction,force:repeatIntro});
     try{localStorage.removeItem('orbit_explicit_signout');}catch(_){}
     if(typeof orbitRememberSessionActivity==='function')orbitRememberSessionActivity(true);
     if (typeof syncOrbitCleanupWatermark === 'function') syncOrbitCleanupWatermark().catch(() => {});
