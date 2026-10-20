@@ -299,20 +299,13 @@
         }
 
         /* ── Dynamic Calculator Font Sizing & Boldness ── */
-        .calc-font-xs .calc-btn { font-size: 18px !important; }
-        .calc-font-xs .calc-screen-val { font-size: 32px !important; }
-        .calc-font-sm .calc-btn { font-size: 21px !important; }
-        .calc-font-sm .calc-screen-val { font-size: 38px !important; }
-        .calc-font-md .calc-btn { font-size: 25px !important; }
-        .calc-font-md .calc-screen-val { font-size: 48px !important; }
-        .calc-font-lg .calc-btn { font-size: 29px !important; }
-        .calc-font-lg .calc-screen-val { font-size: 56px !important; }
-        .calc-font-xl .calc-btn { font-size: 33px !important; }
-        .calc-font-xl .calc-screen-val { font-size: 64px !important; }
-        .calc-font-normal .calc-btn { font-weight: 500 !important; }
-        .calc-font-normal .calc-screen-val { font-weight: 500 !important; }
-        .calc-font-bold .calc-btn { font-weight: 800 !important; }
-        .calc-font-bold .calc-screen-val { font-weight: 800 !important; }
+        .calc-font-xs { --calc-key-font:18px; --calc-key-ratio:0.26; --calc-value-font:32px; }
+        .calc-font-sm { --calc-key-font:21px; --calc-key-ratio:0.31; --calc-value-font:38px; }
+        .calc-font-md { --calc-key-font:25px; --calc-key-ratio:0.36; --calc-value-font:48px; }
+        .calc-font-lg { --calc-key-font:29px; --calc-key-ratio:0.41; --calc-value-font:56px; }
+        .calc-font-xl { --calc-key-font:33px; --calc-key-ratio:0.46; --calc-value-font:64px; }
+        .calc-font-normal { --calc-number-weight:500; }
+        .calc-font-bold { --calc-number-weight:800; }
 
         /* ── Fit Screen / Anti-Scroll Mode ── */
         .calc-container.calc-fit-screen {
@@ -805,9 +798,9 @@
 #tab-calculator.calc-fit-mode .calc-container > div:first-child { flex:0 0 auto; margin:0 !important; gap:5px !important; }
 #tab-calculator.calc-fit-mode .calc-screen { flex:0 0 auto; padding:7px 14px !important; border-radius:18px !important; }
 #tab-calculator.calc-fit-mode .calc-screen-expr { font-size:12px; min-height:16px; max-height:32px; overflow:hidden; }
-#tab-calculator.calc-fit-mode .calc-screen-val { font-size:clamp(28px,5vh,42px) !important; line-height:1.1; }
+#tab-calculator.calc-fit-mode .calc-screen-val { line-height:1.1; }
 #tab-calculator.calc-fit-mode .calc-keypad { flex:1 1 0; min-height:0; width:100%; gap:6px !important; grid-template-columns:repeat(4,var(--calc-key-size,48px)) !important; grid-template-rows:repeat(5,var(--calc-key-size,48px)); justify-content:center; align-content:center; }
-#tab-calculator.calc-fit-mode .calc-btn { width:var(--calc-key-size,48px) !important; height:var(--calc-key-size,48px) !important; min-height:0 !important; max-height:none !important; aspect-ratio:1 !important; border-radius:50% !important; padding:0; font-size:clamp(16px,3.5vh,28px) !important; }
+#tab-calculator.calc-fit-mode .calc-btn { width:var(--calc-key-size,48px) !important; height:var(--calc-key-size,48px) !important; min-height:0 !important; max-height:none !important; aspect-ratio:1 !important; border-radius:50% !important; padding:0; }
 #tab-calculator.calc-fit-mode .calc-sci-drawer:is(.active,.open) { flex:0 0 auto; grid-template-columns:repeat(8,minmax(0,1fr)); gap:3px; margin:0; padding:4px; }
 #tab-calculator.calc-fit-mode .calc-sci-btn { height:24px; padding:0; font-size:10px; }
 #tab-calculator.calc-fit-mode #calc-history-box { flex:0 1 80px; min-height:0; padding:7px !important; }
@@ -831,6 +824,28 @@
 .calc-settings-panel > div:last-child > div { display:flex; flex-wrap:wrap; gap:10px!important; }
 .calc-settings-panel button { min-height:36px; }
 #tab-calculator.calc-fit-mode .calc-screen { padding:18px!important; }
-#tab-calculator.calc-fit-mode .calc-screen-val { font-size:clamp(36px,7vh,64px)!important; }
 #tab-calculator.calc-fit-mode #calc-submode-converter,#tab-calculator.calc-fit-mode #calc-submode-date { overflow:auto; width:100%; min-height:0; }
-@media (max-height:500px) { #tab-calculator.calc-fit-mode .calc-screen { padding:6px 12px!important; } #tab-calculator.calc-fit-mode .calc-screen-val { font-size:30px!important; } }
+@media (max-height:500px) { #tab-calculator.calc-fit-mode .calc-screen { padding:6px 12px!important; } }
+
+/* One typography source for both layouts, including glass/light theme overrides. */
+body #tab-calculator #calc-theme-wrapper .calc-btn {
+    font-size:min(var(--calc-key-font,25px),calc(var(--calc-key-size,90px) * var(--calc-key-ratio,.36)))!important;
+    font-weight:var(--calc-number-weight,500)!important;
+}
+body #tab-calculator #calc-theme-wrapper .calc-screen-val {
+    font-size:calc(var(--calc-value-font,48px) * var(--calc-value-fit,1))!important;
+    font-weight:var(--calc-number-weight,500)!important;
+    min-width:0;
+}
+#calc-font-label { min-width:2ch; text-align:center; font-size:12px; color:var(--text-primary); }
+#calc-settings button:disabled { opacity:.35; cursor:default; }
+/* Keep the wallpaper separate from theme background shorthands. */
+body #tab-calculator.calc-has-wallpaper {
+    background-image:linear-gradient(rgba(6,7,11,.28),rgba(6,7,11,.42)),var(--calc-wallpaper)!important;
+    background-size:cover!important;
+    background-position:center!important;
+}
+body.light-mode #tab-calculator.calc-has-wallpaper {
+    background-image:linear-gradient(rgba(245,248,252,.42),rgba(245,248,252,.62)),var(--calc-wallpaper)!important;
+}
+body #tab-calculator.calc-has-wallpaper #calc-theme-wrapper { background:transparent!important; }

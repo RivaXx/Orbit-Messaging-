@@ -13,7 +13,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="theme-color" content="#08080A">
     <title>Orbit Messenger | Your Go-To Messaging System</title>
-    
+
     <!-- PWA Manifest & Icons -->
     <script>
         if (/^https?:$/.test(location.protocol)) {
@@ -23,32 +23,32 @@
         }
     </script>
     <link rel="icon" type="image/svg+xml" href="./orbit-icon.svg?v=brand-20261015">
-    
+
     <!-- Preconnect CDN sources for high performance -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="preconnect" href="https://dhtbiggamuwoqurguhib.supabase.co">
-    
+
     <!-- Apple SF Pro styled modern fonts + Victorian Vintage Brand Typeface -->
     <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700;900&family=Playfair+Display:ital,wght@0,600;0,700;0,800;1,600&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
     <!-- Font Awesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" media="print" onload="this.media='all'">
-    
+
     <!-- Standalone Client-Side Error Logger (Captures all uncaught errors & rejections) -->
-    <script defer src="js/logger.js?v=introduction-20261020-r2"></script>
-    
+    <script defer src="js/logger.js?v=calculator-appearance-20261020-r2"></script>
+
     <!-- Core Supabase Client -->
-    <script defer src="assets/vendor/supabase.min.js?v=introduction-20261020-r2"></script>
+    <script defer src="assets/vendor/supabase.min.js?v=calculator-appearance-20261020-r2"></script>
     <!-- Document, crop and resumable upload tools load only when needed. -->
 
-    <link rel="stylesheet" href="intro.css?v=introduction-20261020-r2">
-    <script defer src="js/orbit-introduction.js?v=introduction-20261020-r2"></script>
-    <link rel="stylesheet" href="style.css?v=introduction-20261020-r2">
-    <link rel="stylesheet" href="tools.css?v=introduction-20261020-r2">
-<link rel="stylesheet" href="chat-upgrades.css?v=introduction-20261020-r2">
-<link rel="stylesheet" href="photo-weather.css?v=introduction-20261020-r2">
-    <link rel="stylesheet" href="messaging-experience.css?v=introduction-20261020-r2">
-    <link rel="stylesheet" href="app-polish.css?v=introduction-20261020-r2">
+    <link rel="stylesheet" href="intro.css?v=calculator-appearance-20261020-r2">
+    <script defer src="js/orbit-introduction.js?v=calculator-appearance-20261020-r2"></script>
+    <link rel="stylesheet" href="style.css?v=calculator-appearance-20261020-r2">
+    <link rel="stylesheet" href="tools.css?v=calculator-appearance-20261020-r2">
+<link rel="stylesheet" href="chat-upgrades.css?v=calculator-appearance-20261020-r2">
+<link rel="stylesheet" href="photo-weather.css?v=calculator-appearance-20261020-r2">
+    <link rel="stylesheet" href="messaging-experience.css?v=calculator-appearance-20261020-r2">
+    <link rel="stylesheet" href="app-polish.css?v=calculator-appearance-20261020-r2">
 </head>
 <body>
 <script>try{document.body.classList.toggle('light-mode',localStorage.getItem('orbit_theme')==='light');}catch(_){}</script>
@@ -188,7 +188,7 @@
                 <div class="modal-title-text"><i class="fa-solid fa-shield-halved" style="color:var(--accent);"></i> Reset Password</div>
                 <button class="btn-reset" onclick="closeForgotPasswordModal()" style="font-size:18px; color:var(--text-muted);"><i class="fa-solid fa-xmark"></i></button>
             </div>
-            
+
             <p id="forgot-desc-text" style="font-size:12px; color:var(--text-secondary); line-height:1.5; margin-bottom:14px; text-align:left;">
                 Enter your Gmail / email address. We'll send a 6-digit verification code directly to your email to securely reset your password.
             </p>
@@ -208,7 +208,7 @@
                 </div>
 
                 <div style="font-size:11.5px; font-weight:700; color:var(--text-secondary); text-align:center; margin-bottom:4px;">ENTER 6-DIGIT VERIFICATION CODE</div>
-                
+
                 <!-- 6 Segmented Input Boxes -->
                 <div class="otp-inputs-row" id="otp-inputs-container">
                     <input type="text" class="otp-segment" maxlength="1" inputmode="numeric" pattern="[0-9]*" data-index="0" autocomplete="one-time-code">
@@ -271,7 +271,7 @@
                 <div class="modal-title-text"><i class="fa-solid fa-camera" style="color:var(--accent);"></i> Camera Viewfinder</div>
                 <button class="btn-reset" onclick="closeLiveCameraModal()" style="font-size:18px; color:var(--text-muted);"><i class="fa-solid fa-xmark"></i></button>
             </div>
-            
+
             <div style="position:relative; width:100%; border-radius:18px; overflow:hidden; background:#000; aspect-ratio:4/3; margin-bottom:14px; border:1px solid var(--glass-border); display:flex; align-items:center; justify-content:center;">
                 <video id="live-camera-video" autoplay playsinline muted style="width:100%; height:100%; object-fit:cover;"></video>
                 <canvas id="live-camera-canvas" style="display:none;"></canvas>
@@ -643,12 +643,13 @@
                         <!-- Font, Fit & Display Settings Controls -->
                         <button type="button" id="calc-preview-toggle" class="news-filter-chip" aria-pressed="true" onclick="toggleCalcPreview()">Live preview: On</button>
                         <div style="display:flex; align-items:center; gap:5px;">
-                            <button class="btn-reset touch-fix" onclick="adjustCalcFontSize(-1)" style="font-size:11px; font-weight:800; padding:3px 7px; background:rgba(255,255,255,0.08); border:1px solid var(--glass-border); border-radius:8px; color:var(--text-primary);" title="Decrease Font">A−</button>
-                            <button class="btn-reset touch-fix" onclick="adjustCalcFontSize(1)" style="font-size:12px; font-weight:800; padding:3px 7px; background:rgba(255,255,255,0.08); border:1px solid var(--glass-border); border-radius:8px; color:var(--text-primary);" title="Increase Font">A+</button>
+                            <button type="button" id="calc-font-smaller" aria-label="Decrease calculator text size" class="btn-reset touch-fix" onclick="adjustCalcFontSize(-1)" style="font-size:11px; font-weight:800; padding:3px 7px; background:rgba(255,255,255,0.08); border:1px solid var(--glass-border); border-radius:8px; color:var(--text-primary);" title="Decrease Font">A−</button>
+                            <output id="calc-font-label" aria-live="polite" aria-label="Calculator text size">M</output>
+                            <button type="button" id="calc-font-larger" aria-label="Increase calculator text size" class="btn-reset touch-fix" onclick="adjustCalcFontSize(1)" style="font-size:12px; font-weight:800; padding:3px 7px; background:rgba(255,255,255,0.08); border:1px solid var(--glass-border); border-radius:8px; color:var(--text-primary);" title="Increase Font">A+</button>
                             <button type="button" id="calc-wallpaper-btn" class="btn-reset touch-fix" onclick="chooseCalcWallpaper()" title="Choose calculator wallpaper">Wallpaper</button>
                             <button type="button" id="calc-wallpaper-clear" class="btn-reset touch-fix hide" onclick="clearCalcWallpaper()" title="Remove calculator wallpaper">Reset wallpaper</button>
                             <input id="calc-wallpaper-input" type="file" accept="image/*" hidden>
-                            <button id="calc-bold-btn" class="btn-reset touch-fix" onclick="toggleCalcFontBold()" style="font-size:11px; font-weight:900; padding:3px 8px; background:rgba(255,255,255,0.08); border:1px solid var(--glass-border); border-radius:8px; color:var(--text-primary);" title="Toggle Bold">B</button>
+                            <button type="button" aria-label="Bold calculator numbers" aria-pressed="false" id="calc-bold-btn" class="btn-reset touch-fix" onclick="toggleCalcFontBold()" style="font-size:11px; font-weight:900; padding:3px 8px; background:rgba(255,255,255,0.08); border:1px solid var(--glass-border); border-radius:8px; color:var(--text-primary);" title="Toggle Bold">B</button>
                             <button id="calc-fit-btn" class="btn-reset touch-fix active" onclick="toggleCalcFitScreen()" style="font-size:10.5px; font-weight:700; padding:3px 9px; background:rgba(255,215,0,0.15); border:1px solid rgba(255,215,0,0.4); border-radius:8px; color:var(--accent); display:flex; align-items:center; gap:4px;" title="Toggle Fullscreen Fit / Normal">
                                 <i class="fa-solid fa-expand"></i> <span id="calc-fit-btn-label">Fit View</span>
                             </button>
@@ -935,7 +936,7 @@
                         <svg viewBox="0 0 300 300" class="compass-svg">
                             <!-- Outer Ring -->
                             <circle cx="150" cy="150" r="142" stroke="rgba(255,255,255,0.15)" stroke-width="2" fill="none"/>
-                            
+
                             <!-- 360 Degree Tick Marks -->
                             <g id="compass-ticks-group"></g>
 
@@ -944,7 +945,7 @@
                             <text x="270" y="157" fill="#FFFFFF" font-size="18" font-weight="800" text-anchor="middle" font-family="-apple-system, sans-serif">E</text>
                             <text x="150" y="282" fill="#FFFFFF" font-size="18" font-weight="800" text-anchor="middle" font-family="-apple-system, sans-serif">S</text>
                             <text x="30" y="157" fill="#FFFFFF" font-size="18" font-weight="800" text-anchor="middle" font-family="-apple-system, sans-serif">W</text>
-                            
+
                             <!-- Secondary Labels -->
                             <text x="235" y="65" fill="#8E8E93" font-size="12" font-weight="700" text-anchor="middle">NE</text>
                             <text x="235" y="245" fill="#8E8E93" font-size="12" font-weight="700" text-anchor="middle">SE</text>
@@ -1304,7 +1305,7 @@
             <div id="inspector-username" style="font-size:13px; color:var(--accent); font-weight:600; margin-bottom:12px;">@username</div>
             <div id="inspector-about" style="background:rgba(0,0,0,0.25); padding:12px; border-radius:12px; font-size:13px; color:var(--text-secondary); margin-bottom:18px; line-height:1.4;">About Status</div>
             <div id="inspector-status-badge" style="font-size:11px; font-weight:700; color:var(--online); margin-bottom:20px;">🟢 Online</div>
-            
+
             <div style="display:flex; gap:8px;">
                 <button id="btn-inspector-chat" class="glass-btn-primary" style="flex:1; padding:12px; font-size:13px;" onclick="inspectorStartChat()">
                     <i class="fa-solid fa-comment"></i> Chat
@@ -1463,7 +1464,7 @@
                     </button>
                 </div>
             </div>
-            
+
             </section>
             <section class="settings-section-block" id="settings-glass">
             <!-- Liquid Blur Customization -->
@@ -2152,7 +2153,7 @@
             </div>
             <input type="text" id="group-name-input" class="glass-input" placeholder="Group Name (Required)">
             <input type="text" id="group-topic-input" class="glass-input" placeholder="Topic / Description (Optional)">
-            
+
             <!-- Friend Selection Section -->
             <div style="margin-top:10px;">
                 <div style="font-size:12px; font-weight:800; color:var(--text-secondary); margin-bottom:6px; display:flex; justify-content:space-between; align-items:center;">
@@ -2324,9 +2325,9 @@
                 <div class="modal-title-text"><i class="fa-regular fa-clock" style="color:var(--accent);"></i> Schedule Message</div>
                 <button class="btn-reset" onclick="closeScheduleModal()" style="font-size:18px; color:var(--text-muted);"><i class="fa-solid fa-xmark"></i></button>
             </div>
-            
+
             <div style="font-size:12px; color:var(--text-secondary); margin-bottom:12px;">Choose when to send. Scheduling works even with Orbit closed; delivery may take up to a minute.</div>
-            
+
             <textarea id="schedule-msg-text" class="glass-input" rows="2" style="margin-bottom:12px; resize:none;" placeholder="Your message..."></textarea>
 
             <!-- Quick Presets -->
@@ -2341,7 +2342,7 @@
             <!-- Custom Picker -->
             <div style="font-size:11px; font-weight:700; color:var(--text-secondary); margin-bottom:4px;">EXACT DATE & TIME</div>
             <input type="datetime-local" id="schedule-datetime-inp" class="glass-input" style="margin-bottom:16px;">
-            
+
             <button class="glass-btn-primary" onclick="confirmScheduleMessage()">
                 <i class="fa-regular fa-paper-plane" style="margin-right:6px;"></i> Confirm Schedule
             </button>
@@ -2355,7 +2356,7 @@
                 <div class="modal-title-text"><i class="fa-regular fa-clock" style="color:var(--accent);"></i> Scheduled Messages</div>
                 <button class="btn-reset" onclick="closeScheduledDrawer()" style="font-size:18px; color:var(--text-muted);"><i class="fa-solid fa-xmark"></i></button>
             </div>
-            
+
             <div id="scheduled-drawer-list" style="overflow-y:auto; flex:1; display:flex; flex-direction:column; gap:10px; padding-right:2px;">
                 <!-- Populated dynamically -->
             </div>
@@ -2601,32 +2602,32 @@
     <div id="simple-toast" class="simple-toast">Notification</div>
 </div>
 
-<script defer src="js/config.js?v=introduction-20261020-r2"></script>
-<script defer src="js/rooms.js?v=introduction-20261020-r2"></script>
-    <script defer src="js/chat-actions.js?v=introduction-20261020-r2"></script>
-    <script defer src="js/actions/media-lightbox.js?v=introduction-20261020-r2"></script>
-    <script defer src="js/actions/media-preview.js?v=introduction-20261020-r2"></script>
-    <script defer src="js/actions/file-viewer.js?v=introduction-20261020-r2"></script>
-    <script defer src="js/actions/voice-recorder.js?v=introduction-20261020-r2"></script>
-    <script defer src="js/actions/chat-extras.js?v=introduction-20261020-r2"></script>
-    <script defer src="js/messaging-notifications.js?v=introduction-20261020-r2"></script>
-    <script defer src="js/chat-gestures.js?v=introduction-20261020-r2"></script>
-    <script defer src="js/chat-select.js?v=introduction-20261020-r2"></script>
-    <script defer src="js/chat-share.js?v=introduction-20261020-r2"></script>
-    <script defer src="js/chat/message-controls.js?v=introduction-20261020-r2"></script>
-<script defer src="js/chat/chat-history.js?v=introduction-20261020-r2"></script>
-    <script defer src="js/chat/chat-feed.js?v=introduction-20261020-r2"></script>
-    <script defer src="js/chat/chat-dispatcher.js?v=introduction-20261020-r2"></script>
-    <script defer src="js/chat/chat-realtime.js?v=introduction-20261020-r2"></script>
-    <script defer src="js/chat.js?v=introduction-20261020-r2"></script>
-<script defer src="js/calculator.js?v=introduction-20261020-r2"></script>
-    <script defer src="js/tools.js?v=introduction-20261020-r2"></script>
-    <script defer src="js/celestial.js?v=introduction-20261020-r2"></script>
-    <script defer src="js/ui/ui-auth.js?v=introduction-20261020-r2"></script>
-    <script defer src="js/ui/ui-navigation.js?v=introduction-20261020-r2"></script>
-    <script defer src="js/ui/ui-modals.js?v=introduction-20261020-r2"></script>
-    <script defer src="js/ui/ui-notifications.js?v=introduction-20261020-r2"></script>
-<script defer src="js/ui.js?v=introduction-20261020-r2"></script>
+<script defer src="js/config.js?v=calculator-appearance-20261020-r2"></script>
+<script defer src="js/rooms.js?v=calculator-appearance-20261020-r2"></script>
+    <script defer src="js/chat-actions.js?v=calculator-appearance-20261020-r2"></script>
+    <script defer src="js/actions/media-lightbox.js?v=calculator-appearance-20261020-r2"></script>
+    <script defer src="js/actions/media-preview.js?v=calculator-appearance-20261020-r2"></script>
+    <script defer src="js/actions/file-viewer.js?v=calculator-appearance-20261020-r2"></script>
+    <script defer src="js/actions/voice-recorder.js?v=calculator-appearance-20261020-r2"></script>
+    <script defer src="js/actions/chat-extras.js?v=calculator-appearance-20261020-r2"></script>
+    <script defer src="js/messaging-notifications.js?v=calculator-appearance-20261020-r2"></script>
+    <script defer src="js/chat-gestures.js?v=calculator-appearance-20261020-r2"></script>
+    <script defer src="js/chat-select.js?v=calculator-appearance-20261020-r2"></script>
+    <script defer src="js/chat-share.js?v=calculator-appearance-20261020-r2"></script>
+    <script defer src="js/chat/message-controls.js?v=calculator-appearance-20261020-r2"></script>
+<script defer src="js/chat/chat-history.js?v=calculator-appearance-20261020-r2"></script>
+    <script defer src="js/chat/chat-feed.js?v=calculator-appearance-20261020-r2"></script>
+    <script defer src="js/chat/chat-dispatcher.js?v=calculator-appearance-20261020-r2"></script>
+    <script defer src="js/chat/chat-realtime.js?v=calculator-appearance-20261020-r2"></script>
+    <script defer src="js/chat.js?v=calculator-appearance-20261020-r2"></script>
+<script defer src="js/calculator.js?v=calculator-appearance-20261020-r2"></script>
+    <script defer src="js/tools.js?v=calculator-appearance-20261020-r2"></script>
+    <script defer src="js/celestial.js?v=calculator-appearance-20261020-r2"></script>
+    <script defer src="js/ui/ui-auth.js?v=calculator-appearance-20261020-r2"></script>
+    <script defer src="js/ui/ui-navigation.js?v=calculator-appearance-20261020-r2"></script>
+    <script defer src="js/ui/ui-modals.js?v=calculator-appearance-20261020-r2"></script>
+    <script defer src="js/ui/ui-notifications.js?v=calculator-appearance-20261020-r2"></script>
+<script defer src="js/ui.js?v=calculator-appearance-20261020-r2"></script>
 
     <!-- WhatsApp View Once Fullscreen Viewer Modal -->
     <div id="modal-view-once-viewer" class="glass-modal-overlay view-once-modal-overlay hide" aria-hidden="true" onclick="closeViewOnceViewer()">
@@ -2659,8 +2660,8 @@
  <div id="orbit-editor-filters" class="hide"><button type="button" onclick="applyOrbitMediaFilter('vivid')">Vivid</button><button type="button" onclick="applyOrbitMediaFilter('mono')">Mono</button><button type="button" onclick="applyOrbitMediaFilter('warm')">Warm</button><button type="button" onclick="applyOrbitMediaFilter('bright')">Bright</button></div>
  <div class="orbit-editor-stage"><canvas id="orbit-editor-canvas"></canvas></div>
 </div>
-<script defer src="js/orbit-chat-services.js?v=introduction-20261020-r2"></script>
-<script defer src="js/orbit-media-editor.js?v=introduction-20261020-r2"></script>
+<script defer src="js/orbit-chat-services.js?v=calculator-appearance-20261020-r2"></script>
+<script defer src="js/orbit-media-editor.js?v=calculator-appearance-20261020-r2"></script>
 <div id="modal-orbit-weather" class="glass-modal-overlay orbit-weather-page" data-weather="idle" data-motion="calm"><div class="orbit-weather-scene" aria-hidden="true"><div class="orbit-weather-orb"></div><div class="orbit-weather-cloud cloud-a"></div><div class="orbit-weather-cloud cloud-b"></div><span class="orbit-weather-particle" style="--i:0"></span><span class="orbit-weather-particle" style="--i:1"></span><span class="orbit-weather-particle" style="--i:2"></span><span class="orbit-weather-particle" style="--i:3"></span><span class="orbit-weather-particle" style="--i:4"></span><span class="orbit-weather-particle" style="--i:5"></span><span class="orbit-weather-particle" style="--i:6"></span><span class="orbit-weather-particle" style="--i:7"></span><span class="orbit-weather-particle" style="--i:8"></span><span class="orbit-weather-particle" style="--i:9"></span><span class="orbit-weather-particle" style="--i:10"></span><span class="orbit-weather-particle" style="--i:11"></span><span class="orbit-weather-particle" style="--i:12"></span><span class="orbit-weather-particle" style="--i:13"></span></div><div class="glass-modal-box">
  <div class="modal-header-row"><strong>Weather near you</strong><button type="button" class="btn-reset" onclick="closeOrbitWeatherConsent()" aria-label="Close weather settings">✕</button></div>
  <div class="orbit-weather-hero"><span id="orbit-weather-place">Your local forecast</span><strong id="orbit-weather-temperature">—°</strong><span id="orbit-weather-condition">Enable location to see current conditions</span></div><label class="orbit-weather-motion-label" for="orbit-weather-motion">Weather animation <select id="orbit-weather-motion" onchange="setOrbitWeatherMotion(this.value)"><option value="calm">Calm</option><option value="live">Live</option><option value="still">Still</option></select></label><p>Allow device location to show nearby weather below the Orbit logo. Orbit requests a fresh, high-accuracy location and shows the accuracy your device reports.</p>
@@ -2669,11 +2670,11 @@
  <button type="button" id="orbit-weather-disable" class="glass-btn-secondary hide" onclick="disableOrbitWeather()">Turn off local weather</button>
  <p class="orbit-weather-attribution">Weather by <a href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer">Open-Meteo</a> · Air quality: <a href="https://atmosphere.copernicus.eu/" target="_blank" rel="noopener noreferrer">CAMS</a> · Places by <a href="https://www.bigdatacloud.com/" target="_blank" rel="noopener noreferrer">BigDataCloud</a></p>
 </div></div>
-<script defer src="js/orbit-private-photos.js?v=introduction-20261020-r2"></script>
-<script defer src="js/orbit-banner-weather.js?v=introduction-20261020-r2"></script>
-<script defer src="js/liquid-glass.js?v=introduction-20261020-r2"></script>
-    <script defer src="js/messaging-experience.js?v=introduction-20261020-r2"></script>
-<script defer src="js/call-experience.js?v=introduction-20261020-r2"></script>
-<script defer src="js/orbit-interface.js?v=introduction-20261020-r2"></script>
+<script defer src="js/orbit-private-photos.js?v=calculator-appearance-20261020-r2"></script>
+<script defer src="js/orbit-banner-weather.js?v=calculator-appearance-20261020-r2"></script>
+<script defer src="js/liquid-glass.js?v=calculator-appearance-20261020-r2"></script>
+    <script defer src="js/messaging-experience.js?v=calculator-appearance-20261020-r2"></script>
+<script defer src="js/call-experience.js?v=calculator-appearance-20261020-r2"></script>
+<script defer src="js/orbit-interface.js?v=calculator-appearance-20261020-r2"></script>
 </body>
 </html>
