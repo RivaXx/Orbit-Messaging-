@@ -213,7 +213,7 @@ function orbitInitClockControls() {
 orbitInitClockControls();
 if(typeof initClockSuite==='function')initClockSuite();
 
-let orbitCallReconnectTimer=null,orbitCallNotificationTag=null;
+let orbitCallReconnectTimer=null,orbitCallNotificationTag=null,orbitFallbackCallNotification=null;
 function orbitPrepareCallPanel(incoming) {
     const panel=document.querySelector('.call-modal-box');if(!panel)return;
     if(!panel.querySelector('.orbit-call-eyebrow')){
@@ -241,15 +241,17 @@ function orbitPrepareCallPanel(incoming) {
 }
 function orbitCallPanelCleanup() {
     clearTimeout(orbitCallReconnectTimer);orbitCallReconnectTimer=null;
-    if(orbitCallNotificationTag)navigator.serviceWorker?.getRegistration().then(async registration=>{for(const alert of await registration?.getNotifications({tag:orbitCallNotificationTag})||[])alert.close();}).catch(()=>{});
+    orbitFallbackCallNotification?.close();orbitFallbackCallNotification=null;
+    const closingTag=orbitCallNotificationTag;
+    if(closingTag)navigator.serviceWorker?.getRegistration().then(async registration=>{for(const alert of await registration?.getNotifications({tag:closingTag})||[])alert.close();}).catch(()=>{});
     orbitCallNotificationTag=null;
 }
 async function orbitNotifyIncomingCall(row) {
     if(!('Notification' in window)||Notification.permission!=='granted'||!notificationPreference('orbit_device_notifications',true))return;
     const previews=notificationPreference('orbit_notification_previews',true);
     orbitCallNotificationTag=`orbit-call-${row.id}`;
-    const options={body:previews?'Incoming voice call':'Incoming Orbit call',tag:orbitCallNotificationTag,requireInteraction:true,renotify:true,icon:'./orbit-icon.svg',actions:[{action:'open',title:'Open call'},{action:'dismiss',title:'Dismiss alert'}],data:{url:location.origin,roomId:row.room,callId:row.id}};
-    try{const registration=await navigator.serviceWorker?.getRegistration();if(registration)await registration.showNotification(previews?row.caller_name:'Orbit',options);else{delete options.actions;new Notification(previews?row.caller_name:'Orbit',options);}}catch(_){}
+    const options={body:previews?'Incoming voice call':'Incoming Orbit call',tag:orbitCallNotificationTag,requireInteraction:true,renotify:false,silent:localStorage.getItem('orbit_call_ringtone')==='silent',timestamp:Date.parse(row.created_at),icon:'./orbit-icon.svg',actions:[{action:'open',title:'Open call'},{action:'dismiss',title:'Dismiss alert'}],data:{url:location.origin,roomId:row.room,callId:row.id}};
+    try{const registration=await navigator.serviceWorker?.getRegistration();if(_activeCallId!==row.id||orbitCallRow?.state!=='ringing')return;if(registration){await registration.showNotification(previews?row.caller_name:'Orbit',options);if(_activeCallId!==row.id||orbitCallRow?.state!=='ringing'){for(const alert of await registration.getNotifications({tag:options.tag}))alert.close();}}else{delete options.actions;orbitFallbackCallNotification=new Notification(previews?row.caller_name:'Orbit',options);orbitFallbackCallNotification.onclick=()=>{if(_activeCallId===row.id)restoreOrbitCall();orbitFallbackCallNotification?.close();};}}catch(_){}
 }
 
 // Keep an edit from carrying into a different chat or account.
