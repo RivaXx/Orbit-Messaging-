@@ -6,15 +6,18 @@ async function initServiceWorker() {
         try {
             // Only the worker's activate handler knows the current cache name.
             // Deleting caches here used to erase the current offline shell.
-            const reg = await navigator.serviceWorker.register('./sw.js?v=app-polish-20261018-r2', { scope: './' });
+            const reg = await navigator.serviceWorker.register('./sw.js?v=advanced-calls-20261020-r1', { scope: './' });
             reg.update().catch(() => {});
             navigator.serviceWorker.addEventListener('message', event => {
                 if (event.data?.type === 'ORBIT_PUSH_VISIBLE_QUERY') {
-                    const active = isOrbitChatVisible(event.data.roomId);
-                    event.ports[0]?.postMessage({active});
+                    const active = event.data.isCall ? !!(_activeCallId===event.data.callId&&!document.hidden&&document.hasFocus()) : isOrbitChatVisible(event.data.roomId);
+                    const silent=!notificationPreference('orbit_notification_sound',true)||!!_activeCallId;
+                    const previews=notificationPreference('orbit_notification_previews',true);
+                    event.ports[0]?.postMessage({active,silent,previews});
                 }
                 if (event.data && event.data.type === 'NOTIFICATION_NAVIGATE') {
-                    handleDeepLinkNavigation(event.data.roomId, event.data.msgId, event.data.timestamp);
+                    if(event.data.callId)orbitOpenCallNotification(event.data.callId);
+                    else handleDeepLinkNavigation(event.data.roomId, event.data.msgId, event.data.timestamp);
                 }
             });
         } catch(e) {}
@@ -26,6 +29,8 @@ function handleUrlDeepLinkParams() {
     const openRoom = params.get('openRoom');
     const focusMsg = params.get('focusMsg');
     const msgTime = params.get('msgTime');
+    const callId=params.get('callId');
+    if(callId){orbitOpenCallNotification(callId);return;}
     if (openRoom) {
         setTimeout(() => handleDeepLinkNavigation(openRoom, focusMsg, msgTime), 1000);
     }
