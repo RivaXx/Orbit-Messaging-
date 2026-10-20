@@ -1022,6 +1022,7 @@ function toggleCallMute() {
             button.setAttribute('aria-pressed',String(!track.enabled));
             button.setAttribute('aria-label',track.enabled?'Mute microphone':'Unmute microphone');
             button.title=track.enabled?'Mute microphone':'Unmute microphone';
+            const caption=button.querySelector('.orbit-call-button-caption');if(caption)caption.textContent=track.enabled?'Microphone':'Muted';
             const icon = button.querySelector('i');
             if (icon) icon.className = track.enabled ? 'fa-solid fa-microphone' : 'fa-solid fa-microphone-slash';
         }
@@ -1059,7 +1060,7 @@ window.endVoiceCall = endVoiceCall;
 
 // NOTIFICATIONS & DYNAMIC ISLAND
 // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-let orbitNotificationAudioContext = null;
+let orbitNotificationAudioContext = null, orbitLastNotificationChime = 0;
 function notificationPreference(key, fallback = true) {
     try {
         const value = localStorage.getItem(key);
@@ -1132,10 +1133,11 @@ function setNotificationSoundPreference(enabled) {
 }
 
 function playNotificationChime() {
-    if (!notificationPreference('orbit_notification_sound', true) || document.hidden) return;
+    if (!notificationPreference('orbit_notification_sound', true) || document.hidden || _activeCallId || _activeCallRole) return;
     try {
         const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-        if (!AudioContextClass) return;
+        if (!AudioContextClass || Date.now()-orbitLastNotificationChime<1800) return;
+        orbitLastNotificationChime=Date.now();
         orbitNotificationAudioContext ||= new AudioContextClass();
         const audioCtx = orbitNotificationAudioContext;
         if (audioCtx.state === 'suspended') audioCtx.resume().catch(() => {});
@@ -1193,6 +1195,7 @@ async function showNativeOrbitNotification(title, body, roomId, msgId) {
         badge: new URL('./orbit-icon.svg', location.href).href,
         tag: msgId ? `orbit-message-${msgId}` : `orbit-room-${roomId || 'chat'}`,
         renotify: false,
+        silent: !notificationPreference('orbit_notification_sound',true) || !!_activeCallId || !document.hidden,
         timestamp: Date.now(),
         actions: [
             { action: 'open', title: 'Open chat' },
@@ -1250,7 +1253,7 @@ function updateTabUnreadBadges() {
     }
 }
 
-let dynamicIslandTarget = null;
+let dynamicIslandTarget = null, dynamicIslandHideTimer = null;
 function showDynamicIslandNotification(msg) {
     const island = document.getElementById('dynamic-island-banner');
     const sender = document.getElementById('island-sender-name');
@@ -1264,12 +1267,14 @@ function showDynamicIslandNotification(msg) {
         avatarUrl: null
     };
 
-    if (sender) sender.innerText = msg.username || 'New Message';
-    if (preview) preview.innerText = msg.text || (msg.attachments?.length ? 'ðŸ“· Photo' : 'Message');
-    if (av) av.innerText = (msg.username || 'U')[0].toUpperCase();
+    const previewAllowed=notificationPreference('orbit_notification_previews',true);
+    if (sender) sender.innerText = previewAllowed?(msg.username || 'New Message'):'Orbit Messenger';
+    if (preview) preview.innerText = previewAllowed?(msg.text || (msg.attachments?.length ? 'Attachment' : 'Message')):'You have a new message';
+    if (av) av.innerText = previewAllowed?(msg.username || 'U')[0].toUpperCase():'O';
 
     island.classList.add('active');
-    setTimeout(() => island.classList.remove('active'), 4500);
+    clearTimeout(dynamicIslandHideTimer);
+    dynamicIslandHideTimer=setTimeout(() => island.classList.remove('active'), 4500);
 }
 
 function onDynamicIslandClick() {
@@ -1285,7 +1290,7 @@ function triggerMessageNotification(msg) {
     if (isUserBlocked(msg?.sender_id)) return;
     if (msg?.type==='call') return; // The call inbox handles ringing and system alerts.
     if (!msg || msg.sender_id === currentUser?.id) return;
-    const notificationKey = `${msg.room || ''}:${msg.id || msg.created_at || ''}`;
+    const notificationKey = `${currentUser?.id || ''}:${msg.room || ''}:${msg.id || msg.created_at || ''}`;
     if (notifiedMessageKeys.has(notificationKey)) return;
     notifiedMessageKeys.add(notificationKey);
     if (notifiedMessageKeys.size > 300) notifiedMessageKeys.delete(notifiedMessageKeys.values().next().value);
@@ -1294,13 +1299,13 @@ function triggerMessageNotification(msg) {
     const muted = window.OrbitChatSelect?.getMutedRooms() || [];
     if (resolveRoomAliases(msg.room).some(room => muted.includes(room))) return;
     if (!document.hidden) playNotificationChime();
-    showDynamicIslandNotification(msg);
+    if (!document.hidden) showDynamicIslandNotification(msg);
     unreadRoomsSet.add(msg.room);
     updateTabUnreadBadges();
     {
         const sender = msg.username || 'New message';
         const body = msg.text || (msg.attachments?.length ? 'Sent an attachment' : 'You have a new message');
-        showNativeOrbitNotification(sender, body, msg.room, msg.id);
+        if (document.hidden || !document.hasFocus()) showNativeOrbitNotification(sender, body, msg.room, msg.id);
     }
 }
 
