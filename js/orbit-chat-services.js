@@ -175,6 +175,7 @@ function orbitCallRing(stop=false) {
     beep();orbitRingTimer=setInterval(beep,_activeCallRole==='caller'?3000:2200);
 }
 function _showVoiceCallModal({incoming=false}={}) {
+    window.OrbitIntroduction?.finish();
     const row=orbitCallRow;
     orbitPrepareCallPanel(incoming);
     orbitAdvancedPrepareCall();

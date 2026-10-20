@@ -1,0 +1,13 @@
+#orbit-introduction {position:fixed;inset:0;z-index:250000;background:#020204;color:#fff3e2;overflow:hidden;isolation:isolate;opacity:1;transition:opacity .45s ease;touch-action:manipulation;}
+#orbit-introduction.is-finishing {opacity:0;pointer-events:none;}
+#orbit-introduction canvas {position:absolute;inset:0;width:100%;height:100%;display:block;}
+#orbit-introduction [data-intro-bloom] {filter:blur(14px) saturate(1.25);mix-blend-mode:screen;opacity:.7;pointer-events:none;}
+#orbit-introduction .intro-wordmark {position:absolute;left:0;right:0;bottom:calc(9% + env(safe-area-inset-bottom));margin:0;text-align:center;pointer-events:none;font:200 clamp(40px,12vw,92px)/1.2 'Helvetica Neue',Helvetica,Arial,sans-serif;letter-spacing:.32em;padding-left:.32em;color:#fff3e2;text-shadow:0 0 30px #ff6e5066;}
+#orbit-introduction .intro-letter {display:inline-block;opacity:0;filter:blur(10px);transform:translateY(12px) scale(1.15);}
+#orbit-introduction.go .intro-letter {animation:orbit-intro-letter 1.4s ease forwards;animation-delay:calc(8.5s + var(--i) * .1s);}
+#orbit-introduction .intro-static-logo {position:absolute;width:min(52vw,260px);height:auto;left:50%;top:43%;transform:translate(-50%,-50%);display:none;}
+#orbit-introduction.is-static .intro-static-logo {display:block;}
+#orbit-introduction.is-static canvas {display:none;}
+#orbit-introduction.is-static .intro-letter {animation:none;opacity:1;filter:none;transform:none;}
+@keyframes orbit-intro-letter {to{opacity:1;filter:blur(0);transform:none;}}
+@media(prefers-reduced-motion:reduce) {#orbit-introduction {transition:none;}#orbit-introduction .intro-letter {animation:none;opacity:1;filter:none;transform:none;}}

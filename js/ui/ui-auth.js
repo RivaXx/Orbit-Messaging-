@@ -6,7 +6,7 @@ async function initServiceWorker() {
         try {
             // Only the worker's activate handler knows the current cache name.
             // Deleting caches here used to erase the current offline shell.
-            const reg = await navigator.serviceWorker.register('./sw.js?v=advanced-calls-20261020-r1', { scope: './' });
+            const reg = await navigator.serviceWorker.register('./sw.js?v=introduction-20261020-r2', { scope: './' });
             reg.update().catch(() => {});
             navigator.serviceWorker.addEventListener('message', event => {
                 if (event.data?.type === 'ORBIT_PUSH_VISIBLE_QUERY') {
@@ -152,8 +152,9 @@ async function orbitCompleteGoogleSignIn(){
         const {data,error}=await client.auth.exchangeCodeForSession(code);
         if(error)throw error;
         if(!data?.session?.user)throw new Error('Google did not create a session. Please try again.');
+        const repeatIntro=localStorage.getItem('orbit_explicit_signout')==='true';
         currentUser=data.session.user;localStorage.removeItem('orbit_explicit_signout');orbitRememberSessionActivity(true);
-        await launchApp();
+        await launchApp({introduction:true,forceIntroduction:repeatIntro});
     }catch(error){const node=document.getElementById('auth-err');if(node){node.textContent=error.message;node.style.display='block';}}
     finally{
         localStorage.removeItem('orbit_google_pending');
@@ -196,6 +197,7 @@ async function handleLogin() {
 
     if (_authRequestInFlight) return;
     _authRequestInFlight = true;
+    window.OrbitIntroduction?.primeAudio();
     if (btn) {
         btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin" style="margin-right:6px;"></i> LOGGING IN...';
         btn.disabled = true;
@@ -222,7 +224,7 @@ async function handleLogin() {
         currentUser = data.user;
         orbitRememberSessionActivity(true);
         showToast('Welcome back to Orbit!', 'success');
-        await launchApp();
+        await launchApp({introduction:true});
     } catch(e) {
         if (err) {
             err.innerText = e.message || 'Login failed. Please try again.';
@@ -230,6 +232,7 @@ async function handleLogin() {
         }
     } finally {
         _authRequestInFlight = false;
+        window.OrbitIntroduction?.releaseIfIdle();
         if (btn) {
             btn.innerHTML = '<i class="fa-solid fa-arrow-right-to-bracket" style="margin-right:6px;"></i> LOG IN TO ORBIT';
             btn.disabled = false;
@@ -279,6 +282,7 @@ async function handleSignUp() {
 
     if (_authRequestInFlight) return;
     _authRequestInFlight = true;
+    window.OrbitIntroduction?.primeAudio();
     if (btn) {
         btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin" style="margin-right:6px;"></i> CREATING ACCOUNT...';
         btn.disabled = true;
@@ -325,7 +329,7 @@ async function handleSignUp() {
         // Email confirmation may leave the new account without an active session.
         if (data.session) {
             showToast(`Welcome to Orbit, ${name}!`, 'success');
-            await launchApp();
+            await launchApp({introduction:true});
         } else {
             showToast('Account created! Please check your email to verify, or log in.', 'success');
             switchAuthTab('login');
@@ -339,6 +343,7 @@ async function handleSignUp() {
         }
     } finally {
         _authRequestInFlight = false;
+        window.OrbitIntroduction?.releaseIfIdle();
         if (btn) {
             btn.innerHTML = '<i class="fa-solid fa-user-plus" style="margin-right:6px;"></i> CREATE FREE ACCOUNT';
             btn.disabled = false;
@@ -634,7 +639,7 @@ async function handleVerifyForgotOtpAndReset() {
         
         if (updateRes.data && updateRes.data.user) {
             currentUser = updateRes.data.user;
-            await launchApp();
+            await launchApp({introduction:true});
         } else {
             switchAuthTab('login');
             const loginEmail = document.getElementById('auth-login-email');
@@ -657,6 +662,7 @@ async function handleVerifyForgotOtpAndReset() {
 
 async function signOut() {
     if (confirm('Sign out of Orbit?')) {
+        window.OrbitIntroduction?.finish();
         const signedOutId=currentUser?.id;
         if (typeof disableOrbitBackgroundPush === 'function') {
             const disconnected = await disableOrbitBackgroundPush();
