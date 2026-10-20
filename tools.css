@@ -849,3 +849,6 @@ body.light-mode #tab-calculator.calc-has-wallpaper {
     background-image:linear-gradient(rgba(245,248,252,.42),rgba(245,248,252,.62)),var(--calc-wallpaper)!important;
 }
 body #tab-calculator.calc-has-wallpaper #calc-theme-wrapper { background:transparent!important; }
+
+/* A focused navigation button must not scroll the full-screen calculator sideways. */
+#app-viewport:has(#tab-calculator.calc-fit-mode:not(.hide)) { overflow:clip; }
