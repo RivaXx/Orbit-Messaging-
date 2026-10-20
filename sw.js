@@ -1,5 +1,5 @@
 // Orbit Messenger — messaging delivery and storage policy repair
-const CACHE_NAME = 'orbit-calculator-profile-20261019-r1';
+const CACHE_NAME = 'orbit-advanced-calls-20261020-r1';
 const PRECACHE_URLS = [
     "./",
     "./index.html",
@@ -7,47 +7,48 @@ const PRECACHE_URLS = [
     "./orbit-icon.svg",
     "./orbit-icon.svg?v=brand-20261015",
     "./assets/vendor/tus.min.js",
-    "./js/logger.js?v=calculator-profile-20261019-r1",
-    "./assets/vendor/supabase.min.js?v=calculator-profile-20261019-r1",
-    "./style.css?v=calculator-profile-20261019-r1",
-    "./tools.css?v=calculator-profile-20261019-r1",
-    "./chat-upgrades.css?v=calculator-profile-20261019-r1",
-    "./photo-weather.css?v=calculator-profile-20261019-r1",
-    "./messaging-experience.css?v=calculator-profile-20261019-r1",
-    "./app-polish.css?v=calculator-profile-20261019-r1",
-    "./js/config.js?v=calculator-profile-20261019-r1",
-    "./js/rooms.js?v=calculator-profile-20261019-r1",
-    "./js/chat-actions.js?v=calculator-profile-20261019-r1",
-    "./js/actions/media-lightbox.js?v=calculator-profile-20261019-r1",
-    "./js/actions/media-preview.js?v=calculator-profile-20261019-r1",
-    "./js/actions/file-viewer.js?v=calculator-profile-20261019-r1",
-    "./js/actions/voice-recorder.js?v=calculator-profile-20261019-r1",
-    "./js/actions/chat-extras.js?v=calculator-profile-20261019-r1",
-    "./js/messaging-notifications.js?v=calculator-profile-20261019-r1",
-    "./js/chat-gestures.js?v=calculator-profile-20261019-r1",
-    "./js/chat-select.js?v=calculator-profile-20261019-r1",
-    "./js/chat-share.js?v=calculator-profile-20261019-r1",
-    "./js/chat/message-controls.js?v=calculator-profile-20261019-r1",
-    "./js/chat/chat-history.js?v=calculator-profile-20261019-r1",
-    "./js/chat/chat-feed.js?v=calculator-profile-20261019-r1",
-    "./js/chat/chat-dispatcher.js?v=calculator-profile-20261019-r1",
-    "./js/chat/chat-realtime.js?v=calculator-profile-20261019-r1",
-    "./js/chat.js?v=calculator-profile-20261019-r1",
-    "./js/calculator.js?v=calculator-profile-20261019-r1",
-    "./js/tools.js?v=calculator-profile-20261019-r1",
-    "./js/celestial.js?v=calculator-profile-20261019-r1",
-    "./js/ui/ui-auth.js?v=calculator-profile-20261019-r1",
-    "./js/ui/ui-navigation.js?v=calculator-profile-20261019-r1",
-    "./js/ui/ui-modals.js?v=calculator-profile-20261019-r1",
-    "./js/ui/ui-notifications.js?v=calculator-profile-20261019-r1",
-    "./js/ui.js?v=calculator-profile-20261019-r1",
-    "./js/orbit-chat-services.js?v=calculator-profile-20261019-r1",
-    "./js/orbit-media-editor.js?v=calculator-profile-20261019-r1",
-    "./js/orbit-private-photos.js?v=calculator-profile-20261019-r1",
-    "./js/orbit-banner-weather.js?v=calculator-profile-20261019-r1",
-    "./js/liquid-glass.js?v=calculator-profile-20261019-r1",
-    "./js/messaging-experience.js?v=calculator-profile-20261019-r1",
-    "./js/orbit-interface.js?v=calculator-profile-20261019-r1"
+    "./js/logger.js?v=advanced-calls-20261020-r1",
+    "./assets/vendor/supabase.min.js?v=advanced-calls-20261020-r1",
+    "./style.css?v=advanced-calls-20261020-r1",
+    "./tools.css?v=advanced-calls-20261020-r1",
+    "./chat-upgrades.css?v=advanced-calls-20261020-r1",
+    "./photo-weather.css?v=advanced-calls-20261020-r1",
+    "./messaging-experience.css?v=advanced-calls-20261020-r1",
+    "./app-polish.css?v=advanced-calls-20261020-r1",
+    "./js/config.js?v=advanced-calls-20261020-r1",
+    "./js/rooms.js?v=advanced-calls-20261020-r1",
+    "./js/chat-actions.js?v=advanced-calls-20261020-r1",
+    "./js/actions/media-lightbox.js?v=advanced-calls-20261020-r1",
+    "./js/actions/media-preview.js?v=advanced-calls-20261020-r1",
+    "./js/actions/file-viewer.js?v=advanced-calls-20261020-r1",
+    "./js/actions/voice-recorder.js?v=advanced-calls-20261020-r1",
+    "./js/actions/chat-extras.js?v=advanced-calls-20261020-r1",
+    "./js/messaging-notifications.js?v=advanced-calls-20261020-r1",
+    "./js/chat-gestures.js?v=advanced-calls-20261020-r1",
+    "./js/chat-select.js?v=advanced-calls-20261020-r1",
+    "./js/chat-share.js?v=advanced-calls-20261020-r1",
+    "./js/chat/message-controls.js?v=advanced-calls-20261020-r1",
+    "./js/chat/chat-history.js?v=advanced-calls-20261020-r1",
+    "./js/chat/chat-feed.js?v=advanced-calls-20261020-r1",
+    "./js/chat/chat-dispatcher.js?v=advanced-calls-20261020-r1",
+    "./js/chat/chat-realtime.js?v=advanced-calls-20261020-r1",
+    "./js/chat.js?v=advanced-calls-20261020-r1",
+    "./js/calculator.js?v=advanced-calls-20261020-r1",
+    "./js/tools.js?v=advanced-calls-20261020-r1",
+    "./js/celestial.js?v=advanced-calls-20261020-r1",
+    "./js/ui/ui-auth.js?v=advanced-calls-20261020-r1",
+    "./js/ui/ui-navigation.js?v=advanced-calls-20261020-r1",
+    "./js/ui/ui-modals.js?v=advanced-calls-20261020-r1",
+    "./js/ui/ui-notifications.js?v=advanced-calls-20261020-r1",
+    "./js/ui.js?v=advanced-calls-20261020-r1",
+    "./js/orbit-chat-services.js?v=advanced-calls-20261020-r1",
+    "./js/orbit-media-editor.js?v=advanced-calls-20261020-r1",
+    "./js/orbit-private-photos.js?v=advanced-calls-20261020-r1",
+    "./js/orbit-banner-weather.js?v=advanced-calls-20261020-r1",
+    "./js/liquid-glass.js?v=advanced-calls-20261020-r1",
+    "./js/messaging-experience.js?v=advanced-calls-20261020-r1",
+    "./js/call-experience.js?v=advanced-calls-20261020-r1",
+    "./js/orbit-interface.js?v=advanced-calls-20261020-r1"
 ];
 
 self.addEventListener('install', event => {
@@ -97,78 +98,42 @@ self.addEventListener('fetch', event => {
     })());
 });
 
-// Handle incoming Web Push
+// Call alerts expire quickly; message and call tags are shared with foreground alerts.
 self.addEventListener('push', event => {
-    let data = {};
-    try {
-        data = event.data ? event.data.json() : {};
-    } catch (_) {
-        data = { title: 'Orbit Messenger', body: event.data ? event.data.text() : 'New notification' };
-    }
-
-    const title = data.title || 'Orbit Messenger';
-    const options = {
-        body: data.body || 'You have a new message',
-        icon: data.icon || './orbit-icon.svg',
-        badge: './orbit-icon.svg',
-        tag: data.tag || `orbit-${Date.now()}`,
-        renotify: false,
-        vibrate: [200, 100, 200],
-        silent: false,
-        data: {
-            url: self.registration.scope,
-            roomId: data.roomId || null,
-            msgId: data.msgId || null,
-            timestamp: data.timestamp || Date.now()
-        },
-        actions: [
-            { action: 'open', title: 'Open Chat' },
-            { action: 'dismiss', title: 'Dismiss' }
-        ]
-    };
-
-    event.waitUntil((async () => {
-        const clients = await self.clients.matchAll({type:'window',includeUncontrolled:true});
-        const states = await Promise.all(clients.map(client => new Promise(resolve => {
-            const channel = new MessageChannel();
-            const timer = setTimeout(() => {channel.port1.close(); resolve(false);}, 500);
-            channel.port1.onmessage = reply => {clearTimeout(timer);channel.port1.close();resolve(reply.data?.active === true);};
-            client.postMessage({type:'ORBIT_PUSH_VISIBLE_QUERY',roomId:data.roomId},[channel.port2]);
-        })));
-        if (!states.some(Boolean)) await self.registration.showNotification(title, options);
-    })());
+ let data={};try{data=event.data?event.data.json():{};}catch(_){data={body:'New Orbit notification'};}
+ const isCall=data.isCall===true,callId=isCall?(data.callId||data.msgId):null;
+ if(isCall&&(!callId||!Number.isFinite(Number(data.timestamp))||Date.now()-Number(data.timestamp)>45000))return;
+ const tag=isCall?'orbit-call-'+callId:(data.tag||'orbit-message-'+(data.msgId||Date.now()));
+ event.waitUntil((async()=>{
+  const windows=await self.clients.matchAll({type:'window',includeUncontrolled:true});
+  const states=await Promise.all(windows.map(client=>new Promise(resolve=>{
+   const channel=new MessageChannel();const timer=setTimeout(()=>{channel.port1.close();resolve({});},500);
+   channel.port1.onmessage=reply=>{clearTimeout(timer);channel.port1.close();resolve(reply.data||{});};
+   client.postMessage({type:'ORBIT_PUSH_VISIBLE_QUERY',roomId:data.roomId,isCall,callId},[channel.port2]);
+  })));
+  if(states.some(state=>state.active===true))return;
+  if((await self.registration.getNotifications({tag})).length)return;
+  const previews=!states.some(state=>state.previews===false),silent=states.some(state=>state.silent===true);
+  await self.registration.showNotification(previews?(data.title||'Orbit Messenger'):'Orbit Messenger',{
+   body:isCall?'Incoming voice call · Open Orbit to answer':previews?(data.body||'You have a new message'):'You have a new message',
+   icon:'./orbit-icon.svg',badge:'./orbit-icon.svg',tag,renotify:false,requireInteraction:isCall,
+   silent,vibrate:silent?[]:isCall?[300,150,300,150,300]:[150,80,150],timestamp:Number(data.timestamp)||Date.now(),
+   data:{url:self.registration.scope,roomId:data.roomId||null,msgId:isCall?null:(data.msgId||null),callId,timestamp:data.timestamp||Date.now()},
+   actions:[{action:'open',title:isCall?'View call':'Open chat'},{action:'dismiss',title:'Dismiss alert'}]
+  });
+ })());
 });
-
-// Handle notification click -> Open app, open exact room, and focus the specific message with ms timestamp
-self.addEventListener('notificationclick', event => {
-    event.notification.close();
-    if (event.action === 'dismiss') return;
-
-    const notifData = event.notification.data || {};
-    const baseTarget = notifData.url || self.registration.scope;
-    const targetUrl = new URL(baseTarget, self.location.origin);
-    if (notifData.roomId) targetUrl.searchParams.set('openRoom', notifData.roomId);
-    if (notifData.msgId) targetUrl.searchParams.set('focusMsg', notifData.msgId);
-    if (notifData.timestamp) targetUrl.searchParams.set('msgTime', notifData.timestamp);
-
-    event.waitUntil(
-        self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clientList => {
-            for (const client of clientList) {
-                if (new URL(client.url).origin === self.location.origin) {
-                    if ('focus' in client) {
-                        client.postMessage({
-                            type: 'NOTIFICATION_NAVIGATE',
-                            roomId: notifData.roomId,
-                            msgId: notifData.msgId,
-                            timestamp: notifData.timestamp
-                        });
-                        return client.focus();
-                    }
-                }
-            }
-            if (self.clients.openWindow) {
-                return self.clients.openWindow(targetUrl.href);
-            }
-        })
-    );
+self.addEventListener('notificationclick',event=>{
+ event.notification.close();if(event.action==='dismiss')return;
+ const data=event.notification.data||{},target=new URL(self.registration.scope);
+ if(data.roomId)target.searchParams.set('openRoom',data.roomId);
+ if(data.callId)target.searchParams.set('callId',data.callId);
+ else if(data.msgId)target.searchParams.set('focusMsg',data.msgId);
+ if(data.timestamp)target.searchParams.set('msgTime',data.timestamp);
+ event.waitUntil((async()=>{
+  const windows=await self.clients.matchAll({type:'window',includeUncontrolled:true});
+  const client=windows.find(client=>new URL(client.url).origin===self.location.origin&&client.focused)||windows.find(client=>new URL(client.url).origin===self.location.origin);
+  if(client){client.postMessage({type:'NOTIFICATION_NAVIGATE',roomId:data.roomId,msgId:data.msgId,callId:data.callId,timestamp:data.timestamp});return client.focus();}
+  if(self.clients.openWindow)return self.clients.openWindow(target.href);
+ })());
 });
