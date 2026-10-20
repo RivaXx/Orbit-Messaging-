@@ -28,7 +28,7 @@ let calcHistory = (() => {
     return [];
 })();
 
-let calcFontScale = parseInt(localStorage.getItem('orbit_calc_fontscale') || '0', 10);
+let calcFontScale = Math.max(-2, Math.min(2, parseInt(localStorage.getItem('orbit_calc_fontscale') || '0', 10) || 0));
 let calcIsBold = localStorage.getItem('orbit_calc_bold') === 'true';
 let calcIsFitScreen = localStorage.getItem('orbit_calc_fitscreen') !== 'false';
 
@@ -64,20 +64,28 @@ function applyCalcFontSettings() {
     const boldBtn = document.getElementById('calc-bold-btn');
     if (!wrapper) return;
     wrapper.classList.remove('calc-font-xs', 'calc-font-sm', 'calc-font-md', 'calc-font-lg', 'calc-font-xl', 'calc-font-normal', 'calc-font-bold');
-    
+
     if (calcFontScale === -2) wrapper.classList.add('calc-font-xs');
     else if (calcFontScale === -1) wrapper.classList.add('calc-font-sm');
     else if (calcFontScale === 1) wrapper.classList.add('calc-font-lg');
     else if (calcFontScale === 2) wrapper.classList.add('calc-font-xl');
     else wrapper.classList.add('calc-font-md');
-    
+
     if (calcIsBold) {
         wrapper.classList.add('calc-font-bold');
     } else {
         wrapper.classList.add('calc-font-normal');
     }
 
+    const sizes = ['XS', 'S', 'M', 'L', 'XL'];
+    const label = document.getElementById('calc-font-label');
+    if (label) label.textContent = sizes[calcFontScale + 2];
+    const smaller = document.getElementById('calc-font-smaller');
+    const larger = document.getElementById('calc-font-larger');
+    if (smaller) smaller.disabled = calcFontScale === -2;
+    if (larger) larger.disabled = calcFontScale === 2;
     if (boldBtn) {
+        boldBtn.setAttribute('aria-pressed', String(calcIsBold));
         boldBtn.style.color = calcIsBold ? 'var(--accent)' : 'var(--text-primary)';
         boldBtn.style.background = calcIsBold ? 'rgba(255,215,0,0.25)' : 'rgba(255,255,255,0.08)';
         boldBtn.style.borderColor = calcIsBold ? 'var(--accent)' : 'rgba(255,255,255,0.15)';
@@ -152,11 +160,9 @@ function updateCalcDisplay() {
     if (exprEl) exprEl.innerText = calcExpression;
     if (valEl) {
         valEl.innerText = calcCurrentVal;
-        const len = calcCurrentVal.length;
-        if (len > 12) valEl.style.fontSize = '30px';
-        else if (len > 9) valEl.style.fontSize = '38px';
-        else if (len > 7) valEl.style.fontSize = '46px';
-        else valEl.style.fontSize = '56px';
+        // Let the chosen size apply; shrink only values that would overflow.
+        valEl.style.fontSize = '';
+        valEl.style.setProperty?.('--calc-value-fit', String(Math.min(1, 7 / Math.max(7, calcCurrentVal.length))));
     }
 }
 
@@ -473,42 +479,72 @@ function initCalcAppearance() {
     try { applyCalcWallpaper(localStorage.getItem('orbit_calc_wallpaper') || ''); } catch (_) {}
     scheduleCalcLayout();
 }
-function chooseCalcWallpaper() { document.getElementById('calc-wallpaper-input')?.click(); }
+function chooseCalcWallpaper() {
+    const input = document.getElementById('calc-wallpaper-input');
+    if (!input) return;
+    // Bind at the point of use too, including when settings open before init.
+    if (!input.dataset.bound) {
+        input.dataset.bound = 'true';
+        input.addEventListener('change', saveCalcWallpaper);
+    }
+    input.click();
+}
 function applyCalcWallpaper(data) {
     const tab = document.getElementById('tab-calculator');
     if (!tab) return;
     const valid = /^data:image\/(png|jpeg|webp);base64,[a-z0-9+/=]+$/i.test(data);
-    tab.style.backgroundImage = valid ? `linear-gradient(rgba(6,7,11,.64),rgba(6,7,11,.78)),url("${data}")` : '';
+    tab.style.setProperty('--calc-wallpaper', valid ? `url("${data}")` : 'none');
     tab.classList.toggle('calc-has-wallpaper', valid);
     document.getElementById('calc-wallpaper-clear')?.classList.toggle('hide', !valid);
 }
+let calcWallpaperRevision = 0;
 async function saveCalcWallpaper(event) {
     const file = event.target.files?.[0];
     event.target.value = '';
     if (!file) return;
+    const revision = ++calcWallpaperRevision;
     let objectUrl = null;
     try {
-        if (!file.type.startsWith('image/')) throw new Error('Choose an image file.');
+        if (!(file.type.startsWith('image/') || (!file.type && /\.(png|jpe?g|webp|gif|avif|bmp)$/i.test(file.name)))) throw new Error('Choose an image file.');
         if (file.size > 20 * 1024 * 1024) throw new Error('Choose an image smaller than 20 MB.');
         objectUrl = URL.createObjectURL(file);
         const image = new Image();
-        image.src = objectUrl;
-        await image.decode();
+        await new Promise((resolve, reject) => {
+            image.onload = resolve;
+            image.onerror = () => reject(new Error('This image could not be opened. Try a JPG, PNG or WebP photo.'));
+            image.src = objectUrl;
+        });
         const scale = Math.min(1, 1200 / Math.max(image.width, image.height));
         const canvas = document.createElement('canvas');
         canvas.width = Math.max(1, Math.round(image.width * scale));
         canvas.height = Math.max(1, Math.round(image.height * scale));
-        canvas.getContext('2d').drawImage(image, 0, 0, canvas.width, canvas.height);
-        const data = canvas.toDataURL('image/jpeg', .8);
-        localStorage.setItem('orbit_calc_wallpaper', data);
+        const context = canvas.getContext('2d');
+        if (!context) throw new Error('Image processing is unavailable on this browser.');
+        context.drawImage(image, 0, 0, canvas.width, canvas.height);
+        // Cap local storage usage; mobile photos can otherwise exceed its quota.
+        let data = canvas.toDataURL('image/jpeg', .8);
+        if (data.length > 700000) data = canvas.toDataURL('image/jpeg', .55);
+        if (data.length > 700000) {
+            const smaller = document.createElement('canvas');
+            smaller.width = Math.max(1, Math.round(canvas.width * .65));
+            smaller.height = Math.max(1, Math.round(canvas.height * .65));
+            smaller.getContext('2d').drawImage(canvas, 0, 0, smaller.width, smaller.height);
+            data = smaller.toDataURL('image/jpeg', .55);
+        }
+        if (!data.startsWith('data:image/jpeg;base64,')) throw new Error('This browser could not convert the image.');
+        if (revision !== calcWallpaperRevision) return;
+        try { localStorage.setItem('orbit_calc_wallpaper', data); }
+        catch (_) { throw new Error('Device storage is full. Free some space or choose a smaller photo.'); }
         applyCalcWallpaper(data);
         showToast('Calculator wallpaper saved.', 'success');
     } catch (error) {
+        if (revision !== calcWallpaperRevision) return;
         console.warn('[Orbit Calculator] Wallpaper could not be saved:', error);
         showToast(error.message || 'Could not save the wallpaper. Try a smaller image.', 'error');
     } finally { if (objectUrl) URL.revokeObjectURL(objectUrl); }
 }
 function clearCalcWallpaper() {
+    ++calcWallpaperRevision;
     try { localStorage.removeItem('orbit_calc_wallpaper'); } catch (_) {}
     applyCalcWallpaper('');
 }
