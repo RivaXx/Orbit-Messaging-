@@ -129,3 +129,15 @@ html.orbit-restoring #screen-auth{visibility:hidden}
 html.orbit-restoring #orbit-session-loading{display:grid}
 #orbit-session-loading strong{font-size:28px;letter-spacing:2px}
 @media(max-width:400px){body #global-list .orbit-directory-card{grid-template-columns:42px minmax(0,1fr) auto;gap:9px;padding:12px}.orbit-directory-avatar{width:42px!important;height:42px!important;min-width:42px}.orbit-person-action{padding:7px 8px;font-size:10px}.orbit-section-heading{gap:10px}.orbit-section-heading h2{font-size:22px}.orbit-section-heading p{font-size:11px}}
+
+/* Connection copy cannot consume the account chip's reserved space. */
+.dash-header .dash-brand { flex:1 1 0; min-width:0; }
+.dash-header .dash-title-wrap { min-width:0; }
+.dash-header .orbit-banner-connection { width:100%; min-width:0; }
+#orbit-banner-connection #orbit-connectivity { box-sizing:border-box; width:100%; max-width:160px; min-width:0; overflow:hidden; white-space:nowrap; }
+#orbit-banner-connection #orbit-connectivity .orbit-connection-label { min-width:0; overflow:hidden; text-overflow:ellipsis; }
+.dash-header .header-actions { flex:0 0 auto; max-width:52%; }
+.dash-header .user-chip-wrap { min-width:0; }
+.dash-header .user-chip-name { display:flex; min-width:4ch; }
+.dash-header .user-chip-label { display:block; }
+@media(max-width:360px) { .dash-header .dash-brand { gap:6px; } .dash-header .dash-logo-wrap { width:38px; height:38px; flex:none; } .dash-header .user-chip { padding:5px; gap:4px; } .dash-header .user-chip-name { max-width:68px; font-size:11px; } }

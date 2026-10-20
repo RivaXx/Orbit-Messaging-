@@ -29,7 +29,7 @@ test('network events update immediately and keep offline state visible',()=>{
 test('reachability probe bypasses cached pages and detects a network without internet access',async()=>{
  const {c,nodes}=context();let options;
  c.fetch=async(url,init)=>{options=init;return {ok:true};};await c.orbitProbeConnectivity();assert.equal(nodes.get('orbit-connectivity').textContent,'Online');assert.equal(options.method,'HEAD');assert.equal(options.cache,'no-store');
- c.fetch=async()=>{throw Error('Disconnected');};await c.orbitProbeConnectivity();assert.match(nodes.get('orbit-connectivity').textContent,/Connection interrupted/);
+ c.fetch=async()=>{throw Error('Disconnected');};await c.orbitProbeConnectivity();assert.match(nodes.get('orbit-connectivity').textContent,/Retrying/);
 });
 test('presence uses peer presence and respects reciprocal privacy',()=>{
  const {c,store}=context();c.globalUsersMap.set('peer',{last_seen:'presence-time',is_online:false});

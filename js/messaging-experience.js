@@ -135,7 +135,7 @@ async function orbitProbeConnectivity() {
         if(epoch!==orbitConnectivityEpoch||!navigator.onLine)return;
         badge.className='is-online';badge.textContent='Online';badge.title='Orbit is reachable over the internet';
         clearTimeout(orbitUpdateConnectivity.timer);orbitUpdateConnectivity.timer=setTimeout(()=>badge.classList.add('is-quiet'),3500);
-    }catch(_){if(epoch===orbitConnectivityEpoch&&navigator.onLine){badge.className='is-offline';badge.textContent='Connection interrupted · retrying';badge.title='Orbit could not be reached. Queued messages will retry.';}}
+    }catch(_){if(epoch===orbitConnectivityEpoch&&navigator.onLine){badge.className='is-offline';badge.textContent='Retrying…';badge.title='Orbit could not be reached. Queued messages will retry.';}}
     finally{clearTimeout(timeout);if(orbitConnectivityRequest===controller)orbitConnectivityRequest=null;}
 }
 function orbitUpdateConnectivity() {

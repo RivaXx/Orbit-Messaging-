@@ -107,7 +107,7 @@ function applyCalcFitSettings() {
             btn.style.borderColor = 'rgba(255,215,0,0.4)';
             btn.style.color = 'var(--accent)';
         }
-        if (label) label.innerText = 'Fit View';
+        if (label) label.innerText = 'Full screen';
     } else {
         wrapper.classList.remove('calc-fit-screen');
         if (btn) {
@@ -116,7 +116,7 @@ function applyCalcFitSettings() {
             btn.style.borderColor = 'var(--glass-border)';
             btn.style.color = 'var(--text-secondary)';
         }
-        if (label) label.innerText = 'Normal';
+        if (label) label.innerText = 'Use full screen';
     }
 }
 
@@ -379,6 +379,11 @@ document.addEventListener('keydown', (e) => {
     if (['INPUT', 'TEXTAREA'].includes(document.activeElement?.tagName)) return;
 
     const key = e.key;
+    const settings = document.getElementById('calc-settings');
+    if (settings?.open) {
+        if (key === 'Escape') { settings.open = false; settings.querySelector('summary')?.focus(); e.preventDefault(); }
+        return;
+    }
     if (/^[0-9]$/.test(key)) {
         e.preventDefault();
         calcInput(key);
