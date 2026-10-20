@@ -1,6 +1,6 @@
 // Durable chat services. Database RPCs enforce membership and blocks.
 let orbitServicesOwner = null, orbitCallsChannel = null, orbitIceChannel = null, orbitCallEpoch = 0;
-let orbitCallRow = null, orbitCallClosing = false, orbitLocalIce = [], orbitSeenIce = new Set();
+let orbitCallRow = null, orbitCallClosing = false, orbitAnswerInProgress = false, orbitLocalIce = [], orbitSeenIce = new Set();
 let orbitRingTimer = null, orbitRingAudio = null, orbitScheduleTarget = null, orbitScheduleRequest = null;
 let orbitSchedules = [], orbitScheduleSaving = false;
 const orbitTerminalCalls = new Set(['ended','declined','missed','failed']);
@@ -35,7 +35,9 @@ async function initOrbitChatServices() {
     orbitCallsChannel = client.channel(`orbit-call-inbox-${owner}`)
         .on('postgres_changes',{event:'*',schema:'public',table:'orbit_calls'},event=>receiveOrbitCall(event.new))
         .subscribe(status=>{if(status==='SUBSCRIBED') recoverOrbitIncomingCall();});
+    orbitRetryCallEnds();
     await recoverOrbitIncomingCall();
+    if(typeof orbitPendingCallLink!=='undefined'&&orbitPendingCallLink)orbitOpenCallNotification(orbitPendingCallLink);
 }
 async function stopOrbitChatServices() {
     if (_activeCallId || _activeCallRole || peerConnection || localAudioStream) await endVoiceCall(true);
@@ -48,6 +50,8 @@ async function stopOrbitChatServices() {
 async function recoverOrbitIncomingCall() {
     if (!currentUser) return;
     const owner=currentUser.id, client=await ensureSupabase();
+    const activeId=_activeCallId;
+    if(activeId){const {data:active}=await client.from('orbit_calls').select('*').eq('id',activeId).single();if(currentUser?.id===owner&&_activeCallId===activeId&&active)await receiveOrbitCall(active);return;}
     const {data,error}=await client.from('orbit_calls').select('*').eq('callee_id',owner).eq('state','ringing').gt('created_at',new Date(Date.now()-45000).toISOString()).order('created_at',{ascending:false}).limit(1);
     if (!error && currentUser?.id===owner && data?.[0]) receiveOrbitCall(data[0]);
 }
@@ -173,6 +177,7 @@ function orbitCallRing(stop=false) {
 function _showVoiceCallModal({incoming=false}={}) {
     const row=orbitCallRow;
     orbitPrepareCallPanel(incoming);
+    orbitAdvancedPrepareCall();
     document.getElementById('call-peer-name').textContent=row?(_activeCallRole==='caller'?row.callee_name:row.caller_name):document.getElementById('chat-target-name')?.textContent||'Orbit user';
     document.getElementById('call-btn-answer').classList.toggle('hide',!incoming);
     document.getElementById('call-btn-mute').disabled=incoming;
@@ -209,15 +214,16 @@ async function _sendVoiceCallSignal(type,extra={}) {
 function _createVoicePeerConnection() {
     const pc=new RTCPeerConnection({iceServers:[{urls:'stun:stun.l.google.com:19302'}]});peerConnection=pc;
     pc.onicecandidate=event=>{if(event.candidate){const candidate=event.candidate.toJSON();if(_activeCallId)_sendVoiceCallSignal('candidate',{candidate});else orbitLocalIce.push(candidate);}};
-    pc.ontrack=event=>{const audio=document.getElementById('remote-call-audio');audio.srcObject=event.streams[0]||new MediaStream([event.track]);audio.play().catch(()=>showToast('Tap the call panel to enable call audio.'));};
+    pc.ontrack=event=>{const audio=document.getElementById('remote-call-audio');audio.srcObject=event.streams[0]||new MediaStream([event.track]);orbitResumeCallAudio();};
     pc.onconnectionstatechange=async()=>{
         if(peerConnection!==pc)return;
         if(pc.connectionState==='connected'){
-            orbitCallRing(true);orbitCallPanelCleanup();document.getElementById('call-avatar-wrap')?.classList.add('is-connected');clearTimeout(callNoAnswerTimer);_setVoiceCallStatus('Connected · voice call');startCallTimer();
+            orbitCallRing(true);orbitCallPanelCleanup();document.getElementById('call-avatar-wrap')?.classList.add('is-connected');clearTimeout(callNoAnswerTimer);_setVoiceCallStatus('Connected · voice call');startCallTimer();orbitAdvancedCallConnected(pc);
             document.getElementById('call-btn-mute').disabled=false;
             try{await orbitRpc('orbit_update_call',{call_key:_activeCallId,next_state:'connected'});}catch(error){console.warn(error.message);}
             await refreshOrbitAudioDevices();
         }else if(pc.connectionState==='failed'){showToast('Could not connect this call. Try another network.','error');await endVoiceCall(true,'failed');}
+        else if(pc.connectionState==='connecting'){_setVoiceCallStatus('Connecting…');clearTimeout(orbitCallReconnectTimer);orbitCallReconnectTimer=setTimeout(()=>{if(peerConnection===pc&&pc.connectionState!=='connected')endVoiceCall(true,'failed');},30000);}
         else if(pc.connectionState==='disconnected'){_setVoiceCallStatus('Reconnecting…');clearTimeout(orbitCallReconnectTimer);orbitCallReconnectTimer=setTimeout(()=>{if(peerConnection===pc&&pc.connectionState!=='connected')endVoiceCall(true,'failed');},20000);}
     };
     return pc;
@@ -231,13 +237,13 @@ async function startVoiceCall() {
     _activeCallRole='caller';_activeCallRoom=room;_activeCallPeerId=peer;orbitCallRow=null;orbitLocalIce=[];
     _showVoiceCallModal();_setVoiceCallStatus('Requesting microphone…');
     try {
-        const stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true}});
+        const stream=await navigator.mediaDevices.getUserMedia({audio:orbitCallAudioConstraints()});
         if(currentUser?.id!==owner||_activeCallRoom!==room||epoch!==orbitCallEpoch){stream.getTracks().forEach(t=>t.stop());return;}
         localAudioStream=stream;
         const pc=_createVoicePeerConnection();localAudioStream.getTracks().forEach(track=>pc.addTrack(track,localAudioStream));
         await pc.setLocalDescription(await pc.createOffer());
         const row=await orbitRpc('orbit_start_call',{chat_room:room,peer_id:peer,description:pc.localDescription.toJSON()});
-        if(currentUser?.id!==owner||_activeCallRoom!==room||epoch!==orbitCallEpoch){await orbitRpc('orbit_update_call',{call_key:row.id,next_state:'ended'});return;}
+        if(currentUser?.id!==owner||_activeCallRoom!==room||epoch!==orbitCallEpoch){orbitReportCallEnd(row.id,'ended',owner);return;}
         orbitCallRow=row;_activeCallId=row.id;await orbitWatchIce(row);
         for(const candidate of orbitLocalIce.splice(0))await _sendVoiceCallSignal('candidate',{candidate});
         _showVoiceCallModal();_setVoiceCallStatus('Ringing…');orbitCallRing();
@@ -248,7 +254,7 @@ async function startVoiceCall() {
 async function receiveOrbitCall(row) {
     if(!row?.id||!currentUser||![row.caller_id,row.callee_id].includes(currentUser.id))return;
     if(row.id!==_activeCallId){
-        if(row.callee_id!==currentUser.id||row.state!=='ringing'||Date.parse(row.created_at)<Date.now()-45000||_activeCallId||peerConnection||isUserBlocked(row.caller_id))return;
+        if(row.callee_id!==currentUser.id||row.state!=='ringing'||(!Number.isFinite(Date.parse(row.created_at))||Date.parse(row.created_at)<Date.now()-45000)||_activeCallId||peerConnection||isUserBlocked(row.caller_id))return;
         orbitCallRow=row;_activeCallId=row.id;_activeCallPeerId=row.caller_id;_activeCallRoom=row.room;_activeCallRole='callee';_pendingCallOffer=row.offer;_pendingCallCandidates=[];
         await orbitWatchIce(row);
         if(_activeCallId!==row.id||orbitCallRow?.state!=='ringing')return;
@@ -258,14 +264,16 @@ async function receiveOrbitCall(row) {
         return;
     }
     orbitCallRow=row;
+    if(_activeCallRole==='callee'&&!peerConnection&&!orbitAnswerInProgress&&['connecting','connected'].includes(row.state)){showToast('Call answered on another device.','info');await endVoiceCall(false);return;}
     if(orbitTerminalCalls.has(row.state)){if(!orbitCallClosing){if(row.state==='missed'&&row.callee_id===currentUser.id&&document.hidden)showNativeOrbitNotification(row.caller_name,'Missed voice call',row.room,row.id);showToast(row.state==='declined'?'Call declined.':row.state==='missed'?'Missed voice call.':'Call ended.');await endVoiceCall(false);}return;}
     if(row.answer&&_activeCallRole==='caller'&&peerConnection&&!peerConnection.remoteDescription){try{orbitCallRing(true);await peerConnection.setRemoteDescription(row.answer);await _applyPendingCallCandidates();_setVoiceCallStatus('Connecting…');}catch(error){showToast(error.message,'error');}}
 }
 async function answerVoiceCall() {
-    if(_activeCallRole!=='callee'||!_pendingCallOffer||!_activeCallId||peerConnection)return;
+    if(_activeCallRole!=='callee'||!_pendingCallOffer||!_activeCallId||peerConnection||orbitAnswerInProgress)return;
+    orbitAnswerInProgress=true;
     const id=_activeCallId,owner=currentUser.id,epoch=++orbitCallEpoch;orbitCallRing(true);orbitCallPanelCleanup();document.getElementById('call-btn-answer').classList.add('hide');_setVoiceCallStatus('Requesting microphone…');
     try {
-        const stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true}});
+        const stream=await navigator.mediaDevices.getUserMedia({audio:orbitCallAudioConstraints()});
         if(_activeCallId!==id||currentUser?.id!==owner||epoch!==orbitCallEpoch){stream.getTracks().forEach(t=>t.stop());return;}
         localAudioStream=stream;
         const pc=_createVoicePeerConnection();localAudioStream.getTracks().forEach(t=>pc.addTrack(t,localAudioStream));
@@ -276,6 +284,7 @@ async function answerVoiceCall() {
         if(orbitTerminalCalls.has(orbitCallRow?.state)){showToast('This call has expired.');await endVoiceCall(false);return;}
         _pendingCallOffer=null;clearTimeout(callNoAnswerTimer);_setVoiceCallStatus('Connecting…');
     }catch(error){if(epoch===orbitCallEpoch){showToast(error.message,'error');await endVoiceCall(true,'failed');}}
+    finally{if(_activeCallId===id&&epoch===orbitCallEpoch)orbitAnswerInProgress=false;}
 }
 async function handleWebRTCSignal(){/* Legacy public broadcast signals are no longer accepted. */}
 async function endVoiceCall(notifyPeer=true,outcome=null) {
@@ -283,40 +292,45 @@ async function endVoiceCall(notifyPeer=true,outcome=null) {
     orbitCallEpoch++;
     const id=_activeCallId,row=orbitCallRow,role=_activeCallRole;
     try {
-        if(notifyPeer&&id)await orbitRpc('orbit_update_call',{call_key:id,next_state:outcome||(row?.state==='ringing'&&role==='callee'?'declined':'ended')});
+        if(notifyPeer&&id)orbitReportCallEnd(id,outcome||(row?.state==='ringing'&&role==='callee'?'declined':'ended'),row?(role==='caller'?row.caller_id:row.callee_id):currentUser?.id);
     }catch(error){console.warn('[Orbit Call] End:',error.message);}
     finally {
-        orbitCallRing(true);orbitCallPanelCleanup();clearTimeout(callNoAnswerTimer);clearInterval(callDurationTimer);callDurationTimer=null;callNoAnswerTimer=null;callStartTime=0;
+        orbitAdvancedCallCleanup();orbitCallRing(true);orbitCallPanelCleanup();clearTimeout(callNoAnswerTimer);clearInterval(callDurationTimer);callDurationTimer=null;callNoAnswerTimer=null;callStartTime=0;
         if(peerConnection){peerConnection.onconnectionstatechange=null;peerConnection.onicecandidate=null;peerConnection.close();peerConnection=null;}
         localAudioStream?.getTracks().forEach(track=>track.stop());localAudioStream=null;
         const audio=document.getElementById('remote-call-audio');audio.pause();audio.srcObject=null;
         document.getElementById('modal-voice-call').classList.remove('active');document.getElementById('orbit-call-mini').classList.add('hide');
         document.getElementById('call-btn-mute').classList.remove('active');document.querySelector('#call-btn-mute i').className='fa-solid fa-microphone';
         if(orbitIceChannel){getSupabase()?.removeChannel(orbitIceChannel).catch(()=>{});orbitIceChannel=null;}
-        _activeCallId=null;_activeCallPeerId=null;_activeCallRoom=null;_activeCallRole=null;orbitCallRow=null;_pendingCallOffer=null;_pendingCallCandidates=[];orbitLocalIce=[];orbitCallClosing=false;
+        _activeCallId=null;_activeCallPeerId=null;_activeCallRoom=null;_activeCallRole=null;orbitCallRow=null;orbitAnswerInProgress=false;_pendingCallOffer=null;_pendingCallCandidates=[];orbitLocalIce=[];orbitCallClosing=false;
     }
 }
 async function refreshOrbitAudioDevices() {
     const output=document.getElementById('orbit-call-output'),input=document.getElementById('orbit-call-input');
     try {
-        const devices=await navigator.mediaDevices.enumerateDevices();
+        const connection=peerConnection;const devices=await navigator.mediaDevices.enumerateDevices();if(peerConnection!==connection)return;
         for(const [select,kind]of [[input,'audioinput'],[output,'audiooutput']]){
             select.innerHTML='<option value="default">Device default</option>'+devices.filter(d=>d.kind===kind&&d.deviceId!=='default').map((d,i)=>`<option value="${escapeHtml(d.deviceId)}">${escapeHtml(d.label||`Audio device ${i+1}`)}</option>`).join('');
         }
+        input.value=localAudioStream?.getAudioTracks()[0]?.getSettings?.().deviceId||'default';
+        output.value=document.getElementById('remote-call-audio').sinkId||'default';
         output.disabled=typeof document.getElementById('remote-call-audio').setSinkId!=='function';
         document.getElementById('orbit-output-note').textContent=output.disabled?'Use your device audio controls to switch speaker or headphones.':'';
     }catch(_){output.disabled=true;}
 }
 async function changeOrbitCallDevice(kind,id) {
+    const deviceEpoch=kind==='input'?++orbitCallDeviceEpoch:orbitCallDeviceEpoch;
+    const input=document.getElementById('orbit-call-input');if(kind==='input'&&input)input.disabled=true;
     try {
         if(kind==='output'){await document.getElementById('remote-call-audio').setSinkId(id);return;}
         if(!peerConnection)return;
         const originalConnection=peerConnection;
-        const stream=await navigator.mediaDevices.getUserMedia({audio:{deviceId:id==='default'?undefined:{exact:id},echoCancellation:true,noiseSuppression:true}});
-        if(peerConnection!==originalConnection){stream.getTracks().forEach(t=>t.stop());return;}
+        const stream=await navigator.mediaDevices.getUserMedia({audio:orbitCallAudioConstraints(id)});
+        if(peerConnection!==originalConnection||deviceEpoch!==orbitCallDeviceEpoch){stream.getTracks().forEach(t=>t.stop());return;}
         const track=stream.getAudioTracks()[0],sender=peerConnection.getSenders().find(s=>s.track?.kind==='audio');
-        if(!sender){track.stop();return;}track.enabled=localAudioStream?.getAudioTracks()[0]?.enabled!==false;await sender.replaceTrack(track);localAudioStream?.getTracks().forEach(t=>t.stop());localAudioStream=stream;
+        if(!sender){track.stop();return;}track.enabled=localAudioStream?.getAudioTracks()[0]?.enabled!==false;try{await sender.replaceTrack(track);}catch(error){stream.getTracks().forEach(t=>t.stop());throw error;}if(peerConnection!==originalConnection||deviceEpoch!==orbitCallDeviceEpoch){stream.getTracks().forEach(t=>t.stop());return;}localAudioStream?.getTracks().forEach(t=>t.stop());localAudioStream=stream;
     }catch(error){showToast(`Could not switch audio device: ${error.message}`,'error');}
+    finally{if(kind==='input'&&input&&deviceEpoch===orbitCallDeviceEpoch)input.disabled=false;}
 }
 
 function formatOrbitMessageText(raw) {
