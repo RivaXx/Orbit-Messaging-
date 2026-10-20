@@ -176,3 +176,22 @@ body #modal-voice-call .call-modal-box { background:rgba(var(--readable-surface-
 
 #modal-voice-call .call-avatar-pulse { color:var(--text-primary)!important; }
 #modal-voice-call .call-avatar-pulse i { color:inherit!important; }
+
+/* Microphone state must stay legible on light call surfaces. */
+body.light-mode #modal-voice-call #call-btn-mute:not(.active) { background:#dce6f2!important; color:#14253b!important; }
+body #modal-voice-call #call-btn-mute.active { background:var(--accent)!important; color:var(--accent-on,#111)!important; }
+body #modal-voice-call #call-btn-mute i { color:inherit!important; }
+body.light-mode #modal-voice-call #call-btn-mute:disabled { opacity:.65; }
+
+/* Reuse Orbit's glass controls and refraction, with a readable call surface. */
+body.orbit-glass-enabled #modal-voice-call .call-modal-box {
+ background:linear-gradient(135deg,rgba(255,255,255,.16),transparent 32%,rgba(110,168,255,.06)),rgba(var(--readable-surface-rgb),max(.78,var(--liquid-tint-alpha)))!important;
+ backdrop-filter:var(--liquid-backdrop)!important; -webkit-backdrop-filter:var(--liquid-backdrop)!important;
+ border:1px solid rgba(255,255,255,calc(var(--liquid-highlight-alpha) * .55 + .12));
+ box-shadow:inset 0 1px 1px rgba(255,255,255,var(--liquid-highlight-alpha)),inset 0 -1px 1px rgba(255,255,255,.12),0 24px 70px #0004;
+ isolation:isolate;
+}
+body.light-mode.orbit-glass-enabled #modal-voice-call .call-modal-box { background:linear-gradient(135deg,#ffffff65,transparent 38%,#d9e9ff25),rgba(var(--readable-surface-rgb),max(.84,var(--liquid-tint-alpha)))!important; border-color:#ffffffb3; box-shadow:inset 0 1px 1px #fff, inset 0 -1px 1px #ffffff70,0 24px 60px #14253b30; }
+body.orbit-glass-enabled #modal-voice-call .call-modal-box::before { content:''; position:absolute; inset:0; border-radius:inherit; pointer-events:none; z-index:-1; background:radial-gradient(ellipse at 4% 0%,rgba(255,255,255,calc(var(--liquid-highlight-alpha) * .2)),transparent 54%); }
+body:not(.orbit-glass-enabled) #modal-voice-call .call-modal-box { backdrop-filter:none!important; -webkit-backdrop-filter:none!important; }
+@media(prefers-reduced-transparency:reduce) { body.orbit-glass-enabled #modal-voice-call .call-modal-box { background:rgb(var(--readable-surface-rgb))!important; backdrop-filter:none!important; -webkit-backdrop-filter:none!important; } }
