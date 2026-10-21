@@ -1014,25 +1014,15 @@ document.addEventListener('click', () => document.getElementById('user-dropdown'
 
 
 
-function openNewNoteModal() { document.getElementById('modal-note').classList.add('active'); }
-function closeNoteModal() { document.getElementById('modal-note').classList.remove('active'); }
-async function savePersonalNote() {
-    const title = document.getElementById('note-title-inp').value.trim();
-    const content = document.getElementById('note-body-inp').value.trim();
-    if (!title || !content) return;
-    try {
-        await sb.from('secure_notes').insert([{ user_id: currentUser.id, title, content }]);
-        closeNoteModal();
-        loadPersonalNotes();
-        showToast('Note saved ✓', 'success');
-    } catch(e) {}
-}
-
+function openNewNoteModal(){OrbitNotes.open();}
+function closeNoteModal(){OrbitNotes.close();}
+async function savePersonalNote(){await OrbitNotes.save();}
 
 function initTheme() {
     if (localStorage.getItem('orbit_theme') === 'light') {
         document.body.classList.add('light-mode');
-        document.getElementById('theme-toggle').innerHTML = '<i class="fa-solid fa-sun" style="color:var(--accent);"></i>';
+        const themeToggle=document.getElementById('theme-toggle');
+        if(themeToggle)themeToggle.innerHTML = '<i class="fa-solid fa-sun" style="color:var(--accent);"></i>';
     }
     const customWall = localStorage.getItem('orbit_custom_wallpaper');
     if (customWall) {
