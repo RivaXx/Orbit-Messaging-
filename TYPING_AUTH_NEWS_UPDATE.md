@@ -1,0 +1,11 @@
+# Typing, authentication redirects, and news
+
+Chat now shows a three-dot typing indicator. Private realtime topics use full deterministic DM IDs or the group room ID, so users opening different legacy room aliases still meet on the same topic. Typing signals contain no draft text. Continuous typing refreshes at most once per 1.2 seconds; empty drafts, send, blur, backgrounding, offline, room changes and sign-out stop the signal. Lost stop signals expire after 4.5 seconds. Group names come from loaded profiles. Animation respects reduced motion and both themes.
+
+Google OAuth and password recovery return to the app root. The production Supabase Site URL was corrected from the previous website to https://orbit-messaging.vercel.app/ and exact root, Google and recovery callbacks were allowlisted. Google is enabled. The password form accepts verified recovery links before attempting cached session restore, removes callback credentials from the address bar, checks the recovery account before changing its password, clears password fields and handles expired links. The old generic-email OTP fallback was removed.
+
+Password reset email delivery remains restricted by Supabase's built-in email service. The owner confirmed there is no SMTP provider. Custom SMTP must be connected for production delivery to arbitrary users. No real password was changed or recovery email sent during verification.
+
+News summaries decode escaped feed HTML before displaying plain text, including old cached stories. The reader wraps long URLs within its bounds. Fixed publisher feeds (BBC and The Guardian; Hindustan Times and The Hindu for India) provide article-specific images. Image-rich publisher articles are preferred when available; missing or failed images retain an honest fallback. No unrelated stock images or per-article scraping are used. Feeds remain dated, deduplicated and sorted newest-first, up to 60 stories.
+
+Validation: Node regression suite; private typing membership/stranger/block/anonymous checks in a rolled-back production transaction; local light-mode animated typing, mobile reader wrapping, and loaded publisher thumbnails. Google account completion and a real recovery email/password change require the owner's interaction; they were not performed by the agent.
