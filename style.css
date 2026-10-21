@@ -6517,3 +6517,15 @@ body .news-filter-chip:not(.active) { color:var(--text-secondary); background-co
 
 /* Navigation focus must never scroll the outer app frame. Feeds keep their own scrolling. */
 @supports (overflow:clip) { #app-viewport { overflow:clip; } }
+
+/* Typing animation uses transforms only, with contrast in both themes. */
+.typing-indicator-pill {color:var(--text-primary);gap:8px;font-size:12px;font-weight:500;max-width:100%;}
+.typing-dots {gap:3px;padding:4px 2px;}
+.typing-dot {width:5px;height:5px;background:currentColor;}
+.typing-label {overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+@media (prefers-reduced-motion:reduce){.typing-indicator-pill,.typing-dot{animation:none;}.typing-dot{opacity:.8;}}
+
+/* Reader text must wrap even when older cached feeds contain long URLs. */
+#modal-news-reader .glass-modal-box {min-width:0;max-width:min(480px,calc(100vw - 24px));box-sizing:border-box;overflow-x:hidden;}
+#news-reader-title,#news-reader-meta,#news-reader-body {min-width:0;max-width:100%;overflow-wrap:anywhere;word-break:normal;}
+#modal-news-reader .glass-btn-primary {max-width:100%;box-sizing:border-box;white-space:normal;}

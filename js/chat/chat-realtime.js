@@ -2,10 +2,12 @@
 // Deterministic channel subscriptions, global message listener, live status ticks,
 // reactions broadcast, typing indicators, remote pin/delete updates.
 
-let typingBroadcastTimer = null;
 let lastTypingBroadcastTime = 0;
-let activeTypingUsersMap = new Map();
-let typingIndicatorTimeout = null;
+let orbitTypingChannel=null;
+let orbitTypingRoom=null;
+let orbitTypingOwner=null;
+let orbitTypingTopic=null;
+let orbitTypingEpoch=0;
 let typingDebounceTimer = null;
 let typingInactivityTimer = null;
 let isTypingActive = false;
@@ -92,6 +94,7 @@ async function setupRealtimeChatSubscription(roomId, viewEpoch = _chatViewEpoch)
         if (setupEpoch !== _realtimeSetupEpoch || viewEpoch !== _chatViewEpoch || currentRoom !== roomId) return;
         const aliases = resolveRoomAliases(roomId, typeof activeChatPeerId !== 'undefined' ? activeChatPeerId : null);
         setupFastMessageChannel(client, roomId, aliases, setupEpoch, viewEpoch);
+        setupOrbitTypingChannel(client,roomId,viewEpoch);
 
         // Deterministic channel name (NO random Date.now()) so both users join the exact same broadcast room!
         const channelName = `chat_stream_${roomId}`;
@@ -135,7 +138,6 @@ async function setupRealtimeChatSubscription(roomId, viewEpoch = _chatViewEpoch)
             .on('broadcast', { event: 'unpin_message' }, () => {
                 handleRemoteUnpin(roomId);
             })
-            .on('broadcast', { event: 'typing' }, payload => handleRemoteTyping(payload.payload))
             .on('broadcast', { event: 'webrtc_signal' }, payload => handleWebRTCSignal(payload.payload));
 
         // If there are alt aliases, subscribe to them too
@@ -295,6 +297,7 @@ function handleRealtimeInsert(payload, primaryRoomId, aliases) {
     const newMsg = payload.new;
     if (!newMsg) return;
     if (!aliases.includes(newMsg.room)) return;
+    if(aliases.includes(currentRoom))handleRemoteTyping({room:orbitTypingTopic,userId:newMsg.sender_id,state:'stop'});
     clearTimeout(_fastPreviewTimers.get(newMsg.id));
     _fastPreviewTimers.delete(newMsg.id);
     if (currentUser && newMsg.sender_id === currentUser.id && typeof confirmMessageDeliveredFromRealtime === 'function') {
@@ -434,115 +437,94 @@ function handleRealtimeUpdate(payload, primaryRoomId, aliases) {
 }
 
 
-function broadcastTypingStatus() {
-    if (!activeRealtimeChannel || !currentRoom || !currentUser || isSelfChat) return;
-
-    if (typingInactivityTimer) clearTimeout(typingInactivityTimer);
-
-    if (!typingDebounceTimer && !isTypingActive) {
-        typingDebounceTimer = setTimeout(() => {
-            typingDebounceTimer = null;
-            sendTypingSignal('start');
-        }, 300);
-    }
-
-    typingInactivityTimer = setTimeout(() => {
-        stopTypingBroadcast();
-    }, 2500);
-}
-
-function stopTypingBroadcast() {
-    if (typingDebounceTimer) {
-        clearTimeout(typingDebounceTimer);
-        typingDebounceTimer = null;
-    }
-    if (typingInactivityTimer) {
-        clearTimeout(typingInactivityTimer);
-        typingInactivityTimer = null;
-    }
-    if (isTypingActive) {
-        sendTypingSignal('stop');
-    }
-}
-
-function sendTypingSignal(state = 'start') {
-    if (!activeRealtimeChannel || !currentRoom || !currentUser) return;
-    try {
-        isTypingActive = (state === 'start');
-        activeRealtimeChannel.send({
-            type: 'broadcast',
-            event: 'typing',
-            payload: {
-                room: currentRoom,
-                userId: currentUser.id,
-                username: userProfile?.display_name || userProfile?.first_name || currentUser.email.split('@')[0],
-                state: state
-            }
+// Typing uses a participant-authorized private channel. No draft text is sent.
+async function setupOrbitTypingChannel(client,roomId,viewEpoch){
+    disposeOrbitTyping();
+    if(isSelfChat||!currentUser?.id)return;
+    const epoch=orbitTypingEpoch,owner=currentUser.id;
+    const topic=!isGroupChat&&activeChatPeerId?getDeterministicDMId(owner,activeChatPeerId):roomId;
+    try{
+        await client.realtime.setAuth();
+        if(epoch!==orbitTypingEpoch||currentRoom!==roomId||_chatViewEpoch!==viewEpoch||currentUser?.id!==owner)return;
+        const channel=client.channel('orbit_typing_'+topic,{config:{private:true,broadcast:{self:false}}});
+        orbitTypingChannel=channel;orbitTypingRoom=roomId;orbitTypingOwner=owner;orbitTypingTopic=topic;
+        channel.on('broadcast',{event:'typing'},event=>{
+            if(orbitTypingChannel===channel&&currentRoom===roomId&&currentUser?.id===owner)handleRemoteTyping(event.payload);
+        }).subscribe(state=>{
+            if(orbitTypingChannel!==channel)return;
+            if(state==='SUBSCRIBED'&&document.getElementById('msg-input')?.value.trim())broadcastTypingStatus();
+            if(['CLOSED','CHANNEL_ERROR','TIMED_OUT'].includes(state)){isTypingActive=false;clearRemoteTyping();}
         });
-    } catch(e) {}
+    }catch(_){/* Chat delivery remains available if typing cannot connect. */}
 }
-
-function handleRemoteTyping(payload) {
-    if (!payload || !currentRoom || payload.room !== currentRoom) return;
-    if (payload.userId === currentUser?.id) return;
-
-    if (payload.state === 'stop') {
-        const existing = activeTypingUsers.get(payload.userId);
-        if (existing?.timer) clearTimeout(existing.timer);
-        activeTypingUsers.delete(payload.userId);
-    } else {
-        const existing = activeTypingUsers.get(payload.userId);
-        if (existing?.timer) clearTimeout(existing.timer);
-        const timer = setTimeout(() => {
-            activeTypingUsers.delete(payload.userId);
-            renderTypingStatusDOM();
-        }, 3000);
-        activeTypingUsers.set(payload.userId, {
-            username: payload.username || 'Someone',
-            timer: timer
-        });
+function clearRemoteTyping(){
+    activeTypingUsers.forEach(value=>clearTimeout(value.timer));activeTypingUsers.clear();renderTypingStatusDOM();
+}
+function disposeOrbitTyping(){
+    stopTypingBroadcast();++orbitTypingEpoch;
+    clearRemoteTyping();
+    const channel=orbitTypingChannel;
+    orbitTypingChannel=null;orbitTypingRoom=null;orbitTypingOwner=null;orbitTypingTopic=null;
+    if(channel){try{getSupabase()?.removeChannel(channel)?.catch(()=>{});}catch(_){}}
+}
+function broadcastTypingStatus(){
+    const input=document.getElementById('msg-input');
+    if(!input?.value.trim()||document.hidden||!navigator.onLine){stopTypingBroadcast();return;}
+    if(!orbitTypingChannel||orbitTypingChannel.state!=='joined'||currentRoom!==orbitTypingRoom||currentUser?.id!==orbitTypingOwner||isSelfChat)return;
+    clearTimeout(typingInactivityTimer);
+    // Refresh during continuous typing; receiver expiry must not flicker off.
+    if(!isTypingActive||Date.now()-lastTypingBroadcastTime>=1200)sendTypingSignal('start');
+    typingInactivityTimer=setTimeout(stopTypingBroadcast,2200);
+}
+function stopTypingBroadcast(){
+    clearTimeout(typingDebounceTimer);typingDebounceTimer=null;
+    clearTimeout(typingInactivityTimer);typingInactivityTimer=null;
+    if(isTypingActive)sendTypingSignal('stop');
+    isTypingActive=false;lastTypingBroadcastTime=0;
+}
+function sendTypingSignal(state='start'){
+    if(!orbitTypingChannel||orbitTypingChannel.state!=='joined'||!orbitTypingOwner)return;
+    isTypingActive=state==='start';lastTypingBroadcastTime=Date.now();
+    try{orbitTypingChannel.send({type:'broadcast',event:'typing',payload:{room:orbitTypingTopic,userId:orbitTypingOwner,state}}).catch(()=>{});}catch(_){}
+}
+function handleRemoteTyping(payload){
+    if(!payload||!currentUser||!currentRoom||payload.room!==orbitTypingTopic||typeof payload.userId!=='string'||payload.userId===currentUser.id||isSelfChat)return;
+    if(typeof isUserBlocked==='function'&&isUserBlocked(payload.userId))return;
+    if(!isGroupChat&&payload.userId!==activeChatPeerId)return;
+    const group=isGroupChat?allRoomsMap.get(currentRoom):null;
+    if(isGroupChat&&(!group||!(group.participants||[]).includes(payload.userId)&&group.created_by!==payload.userId))return;
+    if(!['start','stop'].includes(payload.state))return;
+    const old=activeTypingUsers.get(payload.userId);if(old)clearTimeout(old.timer);
+    if(payload.state==='stop')activeTypingUsers.delete(payload.userId);
+    else{
+        const user=globalUsersMap.get(payload.userId);
+        const username=user?.display_name||user?.username||user?.first_name||'Someone';
+        const timer=setTimeout(()=>{activeTypingUsers.delete(payload.userId);renderTypingStatusDOM();},4500);
+        activeTypingUsers.set(payload.userId,{username,timer});
     }
     renderTypingStatusDOM();
 }
-
-function renderTypingStatusDOM() {
-    const statusEl = document.getElementById('chat-target-status');
-    if (!statusEl) return;
-
-    if (activeTypingUsers.size === 0) {
-        if (currentRoom) {
-            statusEl.innerHTML = isSelfChat
-                ? '<i class="fa-solid fa-cloud" style="font-size:10px;"></i> Personal Cloud'
-                : '<i class="fa-solid fa-shield-halved" style="font-size:10px; color:var(--online);"></i> E2EE Active';
+function renderTypingStatusDOM(){
+    const statusEl=document.getElementById('chat-target-status');if(!statusEl)return;
+    if(!activeTypingUsers.size){
+        if(statusEl.dataset.typing==='true'){
+            statusEl.innerHTML=statusEl.dataset.restingStatus||'';
+            delete statusEl.dataset.typing;delete statusEl.dataset.restingStatus;
         }
         return;
     }
-
-    const typingArr = Array.from(activeTypingUsers.values());
-    let label = '';
-    if (isGroupChat) {
-        if (typingArr.length === 1) {
-            label = `${escapeHtml(typingArr[0].username)} is typing...`;
-        } else if (typingArr.length === 2) {
-            label = `${escapeHtml(typingArr[0].username)} & ${escapeHtml(typingArr[1].username)} are typing...`;
-        } else {
-            label = `${escapeHtml(typingArr[0].username)} & ${typingArr.length - 1} others are typing...`;
-        }
-    } else {
-        label = 'Typing...';
-    }
-
-    statusEl.innerHTML = `
-        <span class="typing-indicator-pill">
-            <span class="typing-dots">
-                <span class="typing-dot"></span>
-                <span class="typing-dot"></span>
-                <span class="typing-dot"></span>
-            </span>
-            ${label}
-        </span>
-    `;
+    if(statusEl.dataset.typing!=='true')statusEl.dataset.restingStatus=statusEl.innerHTML;
+    statusEl.dataset.typing='true';
+    const names=Array.from(activeTypingUsers.values());
+    const label=isGroupChat?(names.length===1?escapeHtml(names[0].username)+' is typing':escapeHtml(names[0].username)+' and '+(names.length-1)+' more are typing'):'Typing';
+    const labelNode=statusEl.querySelector('.typing-label');
+    if(labelNode){if(labelNode.innerHTML!==label)labelNode.innerHTML=label;return;}
+    statusEl.innerHTML='<span class="typing-indicator-pill" role="status" aria-live="polite"><span class="typing-dots" aria-hidden="true"><span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span></span><span class="typing-label">'+label+'</span></span>';
 }
+document.addEventListener('visibilitychange',()=>{if(document.hidden){stopTypingBroadcast();clearRemoteTyping();}});
+window.addEventListener('pagehide',stopTypingBroadcast);
+window.addEventListener('offline',()=>{stopTypingBroadcast();clearRemoteTyping();});
+document.getElementById('msg-input')?.addEventListener('blur',stopTypingBroadcast);
 
 // ══════════════════════════════════════════════════════════════════════════
 // 5. SCHEDULE MESSAGE IN CHATS (Long-Press Send Button)

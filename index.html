@@ -35,21 +35,21 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" media="print" onload="this.media='all'">
 
     <!-- Standalone Client-Side Error Logger (Captures all uncaught errors & rejections) -->
-    <script defer src="js/logger.js?v=delivery-notes-20261021-r3"></script>
+    <script defer src="js/logger.js?v=typing-auth-news-20261021-r1"></script>
 
     <!-- Core Supabase Client -->
-    <script defer src="assets/vendor/supabase.min.js?v=delivery-notes-20261021-r3"></script>
+    <script defer src="assets/vendor/supabase.min.js?v=typing-auth-news-20261021-r1"></script>
     <!-- Document, crop and resumable upload tools load only when needed. -->
 
-    <link rel="stylesheet" href="intro.css?v=delivery-notes-20261021-r3">
-    <script defer src="js/orbit-introduction.js?v=delivery-notes-20261021-r3"></script>
-    <link rel="stylesheet" href="style.css?v=delivery-notes-20261021-r3">
-    <link rel="stylesheet" href="tools.css?v=delivery-notes-20261021-r3">
-<link rel="stylesheet" href="chat-upgrades.css?v=delivery-notes-20261021-r3">
-<link rel="stylesheet" href="photo-weather.css?v=delivery-notes-20261021-r3">
-    <link rel="stylesheet" href="messaging-experience.css?v=delivery-notes-20261021-r3">
-    <link rel="stylesheet" href="app-polish.css?v=delivery-notes-20261021-r3">
-<link rel="stylesheet" href="notes.css?v=delivery-notes-20261021-r3">
+    <link rel="stylesheet" href="intro.css?v=typing-auth-news-20261021-r1">
+    <script defer src="js/orbit-introduction.js?v=typing-auth-news-20261021-r1"></script>
+    <link rel="stylesheet" href="style.css?v=typing-auth-news-20261021-r1">
+    <link rel="stylesheet" href="tools.css?v=typing-auth-news-20261021-r1">
+<link rel="stylesheet" href="chat-upgrades.css?v=typing-auth-news-20261021-r1">
+<link rel="stylesheet" href="photo-weather.css?v=typing-auth-news-20261021-r1">
+    <link rel="stylesheet" href="messaging-experience.css?v=typing-auth-news-20261021-r1">
+    <link rel="stylesheet" href="app-polish.css?v=typing-auth-news-20261021-r1">
+<link rel="stylesheet" href="notes.css?v=typing-auth-news-20261021-r1">
 </head>
 <body>
 <script>try{document.body.classList.toggle('light-mode',localStorage.getItem('orbit_theme')==='light');}catch(_){}</script>
@@ -191,41 +191,22 @@
             </div>
 
             <p id="forgot-desc-text" style="font-size:12px; color:var(--text-secondary); line-height:1.5; margin-bottom:14px; text-align:left;">
-                Enter your Gmail / email address. We'll send a 6-digit verification code directly to your email to securely reset your password.
+                Enter your registered email. We'll send a secure link that opens this Orbit website.
             </p>
 
-            <!-- Step 1: Request OTP -->
+            <!-- Step 1: Request a recovery link -->
             <div id="forgot-step-1">
                 <input type="email" id="forgot-email-input" class="glass-input" placeholder="Registered Email (e.g. user@gmail.com)" style="margin-bottom:12px;">
                 <button type="button" id="btn-send-otp" onclick="handleSendForgotOtp()" class="glass-btn-primary">
-                    <i class="fa-regular fa-paper-plane" style="margin-right:6px;"></i> SEND 6-DIGIT OTP
+                    <i class="fa-regular fa-paper-plane" style="margin-right:6px;"></i> SEND RESET LINK
                 </button>
             </div>
 
-            <!-- Step 2: 6-Digit Segmented OTP Verification & New Password -->
+            <!-- Step 2: Available only after verifying the recovery link -->
             <div id="forgot-step-2" class="hide" style="margin-top:6px;">
-                <div style="background:rgba(0, 229, 255, 0.1); border:1px solid rgba(0, 229, 255, 0.3); border-radius:10px; padding:10px; margin-bottom:12px; font-size:11.5px; color:#00E5FF; text-align:left;">
-                    <i class="fa-solid fa-circle-check"></i> Code sent to <span id="forgot-sent-target" style="font-weight:700;"></span>. Check inbox & spam folder!
-                </div>
-
-                <div style="font-size:11.5px; font-weight:700; color:var(--text-secondary); text-align:center; margin-bottom:4px;">ENTER 6-DIGIT VERIFICATION CODE</div>
-
-                <!-- 6 Segmented Input Boxes -->
-                <div class="otp-inputs-row" id="otp-inputs-container">
-                    <input type="text" class="otp-segment" maxlength="1" inputmode="numeric" pattern="[0-9]*" data-index="0" autocomplete="one-time-code">
-                    <input type="text" class="otp-segment" maxlength="1" inputmode="numeric" pattern="[0-9]*" data-index="1">
-                    <input type="text" class="otp-segment" maxlength="1" inputmode="numeric" pattern="[0-9]*" data-index="2">
-                    <input type="text" class="otp-segment" maxlength="1" inputmode="numeric" pattern="[0-9]*" data-index="3">
-                    <input type="text" class="otp-segment" maxlength="1" inputmode="numeric" pattern="[0-9]*" data-index="4">
-                    <input type="text" class="otp-segment" maxlength="1" inputmode="numeric" pattern="[0-9]*" data-index="5">
-                </div>
-
-                <!-- Hidden combined OTP receiver for legacy/fallback -->
-                <input type="hidden" id="forgot-otp-input">
-
                 <!-- New Password Field -->
                 <div style="position:relative; width:100%; margin-top:14px; margin-bottom:8px;">
-                    <input type="password" id="forgot-new-pass-input" class="glass-input" placeholder="New Password (min 8 chars)" style="margin-bottom:0; padding-right:44px;" oninput="checkPasswordStrength(this.value)">
+                    <input type="password" id="forgot-new-pass-input" autocomplete="new-password" class="glass-input" placeholder="New Password (min 8 chars)" style="margin-bottom:0; padding-right:44px;" oninput="checkPasswordStrength(this.value)">
                     <button type="button" onclick="orbitToggleForgotPass('forgot-new-pass-input', 'forgot-eye-icon')" style="position:absolute; right:12px; top:15px; background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:16px;">
                         <i id="forgot-eye-icon" class="fa-solid fa-eye"></i>
                     </button>
@@ -244,21 +225,17 @@
 
                 <!-- Confirm Password Field -->
                 <div style="position:relative; width:100%; margin-bottom:14px;">
-                    <input type="password" id="forgot-confirm-pass-input" class="glass-input" placeholder="Confirm New Password" style="margin-bottom:0; padding-right:44px;">
+                    <input type="password" id="forgot-confirm-pass-input" autocomplete="new-password" class="glass-input" placeholder="Confirm New Password" style="margin-bottom:0; padding-right:44px;">
                     <button type="button" onclick="orbitToggleForgotPass('forgot-confirm-pass-input', 'forgot-confirm-eye')" style="position:absolute; right:12px; top:15px; background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:16px;">
                         <i id="forgot-confirm-eye" class="fa-solid fa-eye"></i>
                     </button>
                 </div>
 
                 <button type="button" id="btn-verify-otp" onclick="handleVerifyForgotOtpAndReset()" class="glass-btn-primary" style="margin-bottom:10px;">
-                    <i class="fa-solid fa-shield-check" style="margin-right:6px;"></i> VERIFY & UPDATE PASSWORD
+                    <i class="fa-solid fa-shield-check" style="margin-right:6px;"></i> UPDATE PASSWORD
                 </button>
 
-                <div style="display:flex; justify-content:center; align-items:center; gap:8px;">
-                    <button type="button" id="btn-resend-otp" onclick="handleSendForgotOtp()" class="glass-btn-secondary" style="font-size:11.5px; padding:8px 14px; width:auto;">
-                        <i class="fa-solid fa-rotate-right" style="margin-right:4px;"></i> <span id="resend-timer-text">Resend Code</span>
-                    </button>
-                </div>
+
             </div>
 
             <p id="forgot-err" style="color:#FF453A; font-size:12px; margin-top:12px; display:none;"></p>
@@ -2603,32 +2580,32 @@
     <div id="simple-toast" class="simple-toast">Notification</div>
 </div>
 
-<script defer src="js/config.js?v=delivery-notes-20261021-r3"></script>
-<script defer src="js/rooms.js?v=delivery-notes-20261021-r3"></script>
-    <script defer src="js/chat-actions.js?v=delivery-notes-20261021-r3"></script>
-    <script defer src="js/actions/media-lightbox.js?v=delivery-notes-20261021-r3"></script>
-    <script defer src="js/actions/media-preview.js?v=delivery-notes-20261021-r3"></script>
-    <script defer src="js/actions/file-viewer.js?v=delivery-notes-20261021-r3"></script>
-    <script defer src="js/actions/voice-recorder.js?v=delivery-notes-20261021-r3"></script>
-    <script defer src="js/actions/chat-extras.js?v=delivery-notes-20261021-r3"></script>
-    <script defer src="js/messaging-notifications.js?v=delivery-notes-20261021-r3"></script>
-    <script defer src="js/chat-gestures.js?v=delivery-notes-20261021-r3"></script>
-    <script defer src="js/chat-select.js?v=delivery-notes-20261021-r3"></script>
-    <script defer src="js/chat-share.js?v=delivery-notes-20261021-r3"></script>
-    <script defer src="js/chat/message-controls.js?v=delivery-notes-20261021-r3"></script>
-<script defer src="js/chat/chat-history.js?v=delivery-notes-20261021-r3"></script>
-    <script defer src="js/chat/chat-feed.js?v=delivery-notes-20261021-r3"></script>
-    <script defer src="js/chat/chat-dispatcher.js?v=delivery-notes-20261021-r3"></script>
-    <script defer src="js/chat/chat-realtime.js?v=delivery-notes-20261021-r3"></script>
-    <script defer src="js/chat.js?v=delivery-notes-20261021-r3"></script>
-<script defer src="js/calculator.js?v=delivery-notes-20261021-r3"></script>
-    <script defer src="js/tools.js?v=delivery-notes-20261021-r3"></script>
-    <script defer src="js/celestial.js?v=delivery-notes-20261021-r3"></script>
-    <script defer src="js/ui/ui-auth.js?v=delivery-notes-20261021-r3"></script>
-    <script defer src="js/ui/ui-navigation.js?v=delivery-notes-20261021-r3"></script>
-    <script defer src="js/ui/ui-modals.js?v=delivery-notes-20261021-r3"></script>
-    <script defer src="js/ui/ui-notifications.js?v=delivery-notes-20261021-r3"></script>
-<script defer src="js/ui.js?v=delivery-notes-20261021-r3"></script>
+<script defer src="js/config.js?v=typing-auth-news-20261021-r1"></script>
+<script defer src="js/rooms.js?v=typing-auth-news-20261021-r1"></script>
+    <script defer src="js/chat-actions.js?v=typing-auth-news-20261021-r1"></script>
+    <script defer src="js/actions/media-lightbox.js?v=typing-auth-news-20261021-r1"></script>
+    <script defer src="js/actions/media-preview.js?v=typing-auth-news-20261021-r1"></script>
+    <script defer src="js/actions/file-viewer.js?v=typing-auth-news-20261021-r1"></script>
+    <script defer src="js/actions/voice-recorder.js?v=typing-auth-news-20261021-r1"></script>
+    <script defer src="js/actions/chat-extras.js?v=typing-auth-news-20261021-r1"></script>
+    <script defer src="js/messaging-notifications.js?v=typing-auth-news-20261021-r1"></script>
+    <script defer src="js/chat-gestures.js?v=typing-auth-news-20261021-r1"></script>
+    <script defer src="js/chat-select.js?v=typing-auth-news-20261021-r1"></script>
+    <script defer src="js/chat-share.js?v=typing-auth-news-20261021-r1"></script>
+    <script defer src="js/chat/message-controls.js?v=typing-auth-news-20261021-r1"></script>
+<script defer src="js/chat/chat-history.js?v=typing-auth-news-20261021-r1"></script>
+    <script defer src="js/chat/chat-feed.js?v=typing-auth-news-20261021-r1"></script>
+    <script defer src="js/chat/chat-dispatcher.js?v=typing-auth-news-20261021-r1"></script>
+    <script defer src="js/chat/chat-realtime.js?v=typing-auth-news-20261021-r1"></script>
+    <script defer src="js/chat.js?v=typing-auth-news-20261021-r1"></script>
+<script defer src="js/calculator.js?v=typing-auth-news-20261021-r1"></script>
+    <script defer src="js/tools.js?v=typing-auth-news-20261021-r1"></script>
+    <script defer src="js/celestial.js?v=typing-auth-news-20261021-r1"></script>
+    <script defer src="js/ui/ui-auth.js?v=typing-auth-news-20261021-r1"></script>
+    <script defer src="js/ui/ui-navigation.js?v=typing-auth-news-20261021-r1"></script>
+    <script defer src="js/ui/ui-modals.js?v=typing-auth-news-20261021-r1"></script>
+    <script defer src="js/ui/ui-notifications.js?v=typing-auth-news-20261021-r1"></script>
+<script defer src="js/ui.js?v=typing-auth-news-20261021-r1"></script>
 
     <!-- WhatsApp View Once Fullscreen Viewer Modal -->
     <div id="modal-view-once-viewer" class="glass-modal-overlay view-once-modal-overlay hide" aria-hidden="true" onclick="closeViewOnceViewer()">
@@ -2661,8 +2638,8 @@
  <div id="orbit-editor-filters" class="hide"><button type="button" onclick="applyOrbitMediaFilter('vivid')">Vivid</button><button type="button" onclick="applyOrbitMediaFilter('mono')">Mono</button><button type="button" onclick="applyOrbitMediaFilter('warm')">Warm</button><button type="button" onclick="applyOrbitMediaFilter('bright')">Bright</button></div>
  <div class="orbit-editor-stage"><canvas id="orbit-editor-canvas"></canvas></div>
 </div>
-<script defer src="js/orbit-chat-services.js?v=delivery-notes-20261021-r3"></script>
-<script defer src="js/orbit-media-editor.js?v=delivery-notes-20261021-r3"></script>
+<script defer src="js/orbit-chat-services.js?v=typing-auth-news-20261021-r1"></script>
+<script defer src="js/orbit-media-editor.js?v=typing-auth-news-20261021-r1"></script>
 <div id="modal-orbit-weather" class="glass-modal-overlay orbit-weather-page" data-weather="idle" data-motion="calm"><div class="orbit-weather-scene" aria-hidden="true"><div class="orbit-weather-orb"></div><div class="orbit-weather-cloud cloud-a"></div><div class="orbit-weather-cloud cloud-b"></div><span class="orbit-weather-particle" style="--i:0"></span><span class="orbit-weather-particle" style="--i:1"></span><span class="orbit-weather-particle" style="--i:2"></span><span class="orbit-weather-particle" style="--i:3"></span><span class="orbit-weather-particle" style="--i:4"></span><span class="orbit-weather-particle" style="--i:5"></span><span class="orbit-weather-particle" style="--i:6"></span><span class="orbit-weather-particle" style="--i:7"></span><span class="orbit-weather-particle" style="--i:8"></span><span class="orbit-weather-particle" style="--i:9"></span><span class="orbit-weather-particle" style="--i:10"></span><span class="orbit-weather-particle" style="--i:11"></span><span class="orbit-weather-particle" style="--i:12"></span><span class="orbit-weather-particle" style="--i:13"></span></div><div class="glass-modal-box">
  <div class="modal-header-row"><strong>Weather near you</strong><button type="button" class="btn-reset" onclick="closeOrbitWeatherConsent()" aria-label="Close weather settings">✕</button></div>
  <div class="orbit-weather-hero"><span id="orbit-weather-place">Your local forecast</span><strong id="orbit-weather-temperature">—°</strong><span id="orbit-weather-condition">Enable location to see current conditions</span></div><label class="orbit-weather-motion-label" for="orbit-weather-motion">Weather animation <select id="orbit-weather-motion" onchange="setOrbitWeatherMotion(this.value)"><option value="calm">Calm</option><option value="live">Live</option><option value="still">Still</option></select></label><p>Allow device location to show nearby weather below the Orbit logo. Orbit requests a fresh, high-accuracy location and shows the accuracy your device reports.</p>
@@ -2671,12 +2648,12 @@
  <button type="button" id="orbit-weather-disable" class="glass-btn-secondary hide" onclick="disableOrbitWeather()">Turn off local weather</button>
  <p class="orbit-weather-attribution">Weather by <a href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer">Open-Meteo</a> · Air quality: <a href="https://atmosphere.copernicus.eu/" target="_blank" rel="noopener noreferrer">CAMS</a> · Places by <a href="https://www.bigdatacloud.com/" target="_blank" rel="noopener noreferrer">BigDataCloud</a></p>
 </div></div>
-<script defer src="js/orbit-private-photos.js?v=delivery-notes-20261021-r3"></script>
-<script defer src="js/orbit-banner-weather.js?v=delivery-notes-20261021-r3"></script>
-<script defer src="js/liquid-glass.js?v=delivery-notes-20261021-r3"></script>
-    <script defer src="js/messaging-experience.js?v=delivery-notes-20261021-r3"></script>
-<script defer src="js/call-experience.js?v=delivery-notes-20261021-r3"></script>
-<script defer src="js/orbit-interface.js?v=delivery-notes-20261021-r3"></script>
-<script defer src="js/orbit-notes.js?v=delivery-notes-20261021-r3"></script>
+<script defer src="js/orbit-private-photos.js?v=typing-auth-news-20261021-r1"></script>
+<script defer src="js/orbit-banner-weather.js?v=typing-auth-news-20261021-r1"></script>
+<script defer src="js/liquid-glass.js?v=typing-auth-news-20261021-r1"></script>
+    <script defer src="js/messaging-experience.js?v=typing-auth-news-20261021-r1"></script>
+<script defer src="js/call-experience.js?v=typing-auth-news-20261021-r1"></script>
+<script defer src="js/orbit-interface.js?v=typing-auth-news-20261021-r1"></script>
+<script defer src="js/orbit-notes.js?v=typing-auth-news-20261021-r1"></script>
 </body>
 </html>

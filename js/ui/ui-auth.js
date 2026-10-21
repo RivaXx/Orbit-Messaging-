@@ -1,5 +1,5 @@
 // ORBIT UI - AUTHENTICATION & SESSION MANAGEMENT (js/ui/ui-auth.js)
-// Service worker, deep links, login, signup, forgot password OTP, session verification, logout.
+// Service worker, deep links, login, signup, password recovery links, session verification, logout.
 
 let orbitWorkerMessagesBound=false;
 async function initServiceWorker() {
@@ -22,7 +22,7 @@ async function initServiceWorker() {
         });
     }
     try{
-        const registration=await navigator.serviceWorker.register('./sw.js?v=delivery-notes-20261021-r3',{scope:'./'});
+        const registration=await navigator.serviceWorker.register('./sw.js?v=typing-auth-news-20261021-r1',{scope:'./'});
         registration.update().catch(()=>{});
     }catch(_){}
 }
@@ -79,6 +79,7 @@ async function checkExistingSession() {
     document.documentElement.classList.add('orbit-restoring');
     try {
         const project = new URL(SB_URL).hostname.split('.')[0];
+        if(await orbitCompletePasswordRecovery())return;
         if(await orbitCompleteGoogleSignIn())return;
         if(localStorage.getItem('orbit_explicit_signout')==='true')return;
         let cached=null;try{cached=JSON.parse(localStorage.getItem(`sb-${project}-auth-token`)||'null');}catch(_){}
@@ -113,6 +114,51 @@ async function checkExistingSession() {
     }
 }
 
+// Use the app root, never a preview/editor path or a previous website.
+function orbitAuthReturnUrl(kind){
+    const url=new URL('/',location.origin || new URL(location.href).origin);
+    url.searchParams.set(kind==='google'?'orbit_oauth':'orbit_auth',kind);
+    return url.href;
+}
+let orbitRecoveryUserId=null;
+let orbitRecoveryBusy=false;
+function orbitShowRecoveryForm(){
+    openForgotPasswordModal();
+    document.getElementById('forgot-step-1')?.classList.add('hide');
+    document.getElementById('forgot-step-2')?.classList.remove('hide');
+    const desc=document.getElementById('forgot-desc-text');
+    if(desc)desc.textContent='Your reset link is verified. Choose a new password for your Orbit account.';
+    document.getElementById('forgot-new-pass-input')?.focus();
+}
+async function orbitCompletePasswordRecovery(){
+    if(typeof location==='undefined')return false;
+    const url=new URL(location.href),fragment=new URLSearchParams(url.hash.slice(1));
+    const recovery=url.searchParams.get('orbit_auth')==='recovery'||fragment.get('type')==='recovery'||url.searchParams.get('type')==='recovery';
+    if(!recovery)return false;
+    const code=url.searchParams.get('code'),tokenHash=url.searchParams.get('token_hash');
+    const access=fragment.get('access_token'),refresh=fragment.get('refresh_token');
+    const failed=url.searchParams.has('error')||fragment.has('error');
+    ['orbit_auth','code','token_hash','type','error','error_code','error_description'].forEach(key=>url.searchParams.delete(key));
+    // Remove credentials before loading the SDK or displaying any UI.
+    window.history.replaceState({},document.title,url.pathname+url.search);
+    orbitRecoveryUserId=null;
+    try{
+        if(failed)throw new Error('This reset link has expired or was already used. Request a new link below.');
+        const client=await ensureSupabase();let result;
+        if(code)result=await client.auth.exchangeCodeForSession(code);
+        else if(tokenHash)result=await client.auth.verifyOtp({token_hash:tokenHash,type:'recovery'});
+        else if(access&&refresh)result=await client.auth.setSession({access_token:access,refresh_token:refresh});
+        else throw new Error('This reset link is incomplete. Request a new link below.');
+        if(result.error||!result.data?.session?.user)throw new Error('Could not verify this reset link. Open it in the browser where you requested it, or request a new link.');
+        orbitRecoveryUserId=result.data.session.user.id;
+        orbitShowRecoveryForm();
+    }catch(error){
+        openForgotPasswordModal();
+        const node=document.getElementById('forgot-err');if(node){node.textContent=error.message;node.style.display='block';}
+    }
+    return true;
+}
+
 async function handleGoogleSignIn(){
     if(_authRequestInFlight)return;
     const button=document.getElementById('auth-google-btn'),errorNode=document.getElementById('auth-err');
@@ -130,7 +176,7 @@ async function handleGoogleSignIn(){
             if(!settings.external?.google)throw new Error('Google sign-in beta is not enabled for Orbit yet. Please use email and password.');
         }finally{clearTimeout(timer);}
         localStorage.setItem('orbit_google_pending',String(Date.now()));
-        const redirect=new URL(location.pathname,location.origin);redirect.searchParams.set('orbit_oauth','google');
+        const redirect=new URL(orbitAuthReturnUrl('google'));
         const {data,error}=await client.auth.signInWithOAuth({provider:'google',options:{redirectTo:redirect.href,skipBrowserRedirect:true,queryParams:{prompt:'select_account'}}});
         if(error)throw error;
         const authorize=new URL(data?.url);
@@ -189,7 +235,7 @@ async function handleLogin() {
     const pass = document.getElementById('auth-login-pass')?.value;
     const btn = document.getElementById('auth-login-btn');
     const err = document.getElementById('auth-err');
-    
+
     if (err) err.style.display = 'none';
     if (!email || !pass) {
         if (err) {
@@ -210,7 +256,7 @@ async function handleLogin() {
     try {
         const client = await ensureSupabase();
         const { data, error } = await client.auth.signInWithPassword({ email, password: pass });
-        
+
         if (error) {
             let msg = error.message || 'Login failed.';
             if (msg.toLowerCase().includes('invalid login credentials')) {
@@ -252,7 +298,7 @@ async function handleSignUp() {
     const confirmPass = document.getElementById('auth-signup-confirm')?.value;
     const btn = document.getElementById('auth-signup-btn');
     const err = document.getElementById('auth-err');
-    
+
     if (err) err.style.display = 'none';
 
     if (!name) {
@@ -318,7 +364,7 @@ async function handleSignUp() {
         }
 
         currentUser = data.user;
-            
+
         // Auto-create initial profile row
         try {
             await client.from('user_profiles').upsert({
@@ -355,8 +401,11 @@ async function handleSignUp() {
     }
 }
 
-// 3. FORGOT PASSWORD & OTP ENGINE
+// 3. PASSWORD RECOVERY
 function openForgotPasswordModal() {
+    document.getElementById('forgot-new-pass-input').value='';
+    document.getElementById('forgot-confirm-pass-input').value='';
+    const desc=document.getElementById('forgot-desc-text');if(desc)desc.textContent='Enter your registered email. We will send a secure link that opens this Orbit website. Open it in the same browser where you request it.';
     const modal = document.getElementById('modal-forgot-password');
     const step1 = document.getElementById('forgot-step-1');
     const step2 = document.getElementById('forgot-step-2');
@@ -371,7 +420,11 @@ function openForgotPasswordModal() {
     if (modal) modal.classList.add('active');
 }
 
-function closeForgotPasswordModal() {
+async function closeForgotPasswordModal() {
+    if(orbitRecoveryBusy)return;
+    if(orbitRecoveryUserId){orbitRecoveryUserId=null;try{const client=await ensureSupabase();await client.auth.signOut({scope:'local'});}catch(_){}}
+    document.getElementById('forgot-new-pass-input').value='';
+    document.getElementById('forgot-confirm-pass-input').value='';
     const modal = document.getElementById('modal-forgot-password');
     if (modal) modal.classList.remove('active');
 }
@@ -382,82 +435,6 @@ function orbitToggleForgotPass(inputId = 'forgot-new-pass-input', iconId = 'forg
     if (!p || !i) return;
     p.type = p.type === 'password' ? 'text' : 'password';
     i.className = p.type === 'password' ? 'fa-solid fa-eye-slash' : 'fa-solid fa-eye';
-}
-
-// ── Segmented 6-Digit OTP Setup & Handlers ──
-let otpResendCooldownInterval = null;
-let otpResendSecondsLeft = 0;
-
-function initOtpSegmentInputs() {
-    const container = document.getElementById('otp-inputs-container');
-    if (!container) return;
-    const inputs = container.querySelectorAll('.otp-segment');
-
-    inputs.forEach((input, index) => {
-        // Handle direct input & auto-advance
-        input.addEventListener('input', (e) => {
-            const val = e.target.value.replace(/[^0-9]/g, '');
-            e.target.value = val ? val[0] : '';
-            if (val && index < inputs.length - 1) {
-                inputs[index + 1].focus();
-                inputs[index + 1].select();
-            }
-            updateHiddenOtpValue();
-        });
-
-        // Handle backspace retreat
-        input.addEventListener('keydown', (e) => {
-            if (e.key === 'Backspace' && !e.target.value && index > 0) {
-                inputs[index - 1].focus();
-                inputs[index - 1].select();
-            }
-        });
-
-        // Handle full 6-digit clipboard paste
-        input.addEventListener('paste', (e) => {
-            e.preventDefault();
-            const pasteData = (e.clipboardData || window.clipboardData).getData('text').trim().replace(/[^0-9]/g, '');
-            if (!pasteData) return;
-            inputs.forEach((inp, idx) => {
-                inp.value = pasteData[idx] || '';
-            });
-            const nextFocusIdx = Math.min(pasteData.length, inputs.length - 1);
-            inputs[nextFocusIdx].focus();
-            updateHiddenOtpValue();
-        });
-    });
-}
-
-function updateHiddenOtpValue() {
-    const inputs = document.querySelectorAll('.otp-segment');
-    const combined = Array.from(inputs).map(inp => inp.value).join('');
-    const hidden = document.getElementById('forgot-otp-input');
-    if (hidden) hidden.value = combined;
-}
-
-function clearOtpSegmentInputs() {
-    document.querySelectorAll('.otp-segment').forEach(inp => inp.value = '');
-    const hidden = document.getElementById('forgot-otp-input');
-    if (hidden) hidden.value = '';
-}
-
-function startOtpResendTimer() {
-    if (otpResendCooldownInterval) clearInterval(otpResendCooldownInterval);
-    otpResendSecondsLeft = 60;
-    const btn = document.getElementById('btn-resend-otp');
-    const label = document.getElementById('resend-timer-text');
-    if (btn) btn.disabled = true;
-
-    otpResendCooldownInterval = setInterval(() => {
-        otpResendSecondsLeft--;
-        if (label) label.innerText = `Resend Code (${otpResendSecondsLeft}s)`;
-        if (otpResendSecondsLeft <= 0) {
-            clearInterval(otpResendCooldownInterval);
-            otpResendCooldownInterval = null;
-            if (btn) btn.disabled = false;
-            if (label) label.innerText = 'Resend Code';
-        }
-    }, 1000);
 }
 
 function checkPasswordStrength(pass) {
@@ -497,67 +474,29 @@ function checkPasswordStrength(pass) {
     }
 }
 
-async function handleSendForgotOtp() {
-    const email = document.getElementById('forgot-email-input')?.value.trim();
-    const btn = document.getElementById('btn-send-otp');
-    const err = document.getElementById('forgot-err');
-    const step1 = document.getElementById('forgot-step-1');
-    const step2 = document.getElementById('forgot-step-2');
-    const targetSpan = document.getElementById('forgot-sent-target');
-
-    if (err) err.style.display = 'none';
-    if (!email || !email.includes('@')) {
-        if (err) {
-            err.innerText = 'Please enter a valid email address.';
-            err.style.display = 'block';
-        }
-        return;
-    }
-
-    if (btn) {
-        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> SENDING 6-DIGIT OTP...';
-        btn.disabled = true;
-    }
-
-    try {
-        const client = await ensureSupabase();
-        
-        // Trigger 6-digit OTP to user email
-        const { error } = await client.auth.resetPasswordForEmail(email);
-        if (error) throw error;
-
-        if (targetSpan) targetSpan.innerText = email;
-        if (step1) step1.classList.add('hide');
-        if (step2) step2.classList.remove('hide');
-        
-        clearOtpSegmentInputs();
-        initOtpSegmentInputs();
-        startOtpResendTimer();
-
-        // Auto focus first OTP input box
-        setTimeout(() => {
-            const first = document.querySelector('.otp-segment');
-            if (first) first.focus();
-        }, 150);
-
-        showToast('6-Digit verification code sent to your email!', 'success');
-    } catch(e) {
-        if (err) {
-            err.innerText = e.message || 'Could not send verification code. Please check email.';
-            err.style.display = 'block';
-        }
-    } finally {
-        if (btn) {
-            btn.innerHTML = '<i class="fa-regular fa-paper-plane" style="margin-right:6px;"></i> SEND 6-DIGIT OTP';
-            btn.disabled = false;
-        }
-    }
+let orbitRecoverySentAt=0;
+async function handleSendForgotOtp(){
+    const email=document.getElementById('forgot-email-input')?.value.trim();
+    const btn=document.getElementById('btn-send-otp'),err=document.getElementById('forgot-err');
+    if(err)err.style.display='none';
+    if(!email||!/^\S+@\S+\.\S+$/.test(email)){if(err){err.textContent='Enter a valid email address.';err.style.display='block';}return;}
+    if(orbitRecoveryBusy)return;
+    if(Date.now()-orbitRecoverySentAt<60000){if(err){err.textContent='Please wait a minute before requesting another link.';err.style.display='block';}return;}
+    orbitRecoveryBusy=true;if(btn){btn.disabled=true;btn.textContent='Sending reset link…';}
+    try{
+        const client=await ensureSupabase();
+        const {error}=await client.auth.resetPasswordForEmail(email,{redirectTo:orbitAuthReturnUrl('recovery')});
+        if(error)throw error;
+        orbitRecoverySentAt=Date.now();
+        const desc=document.getElementById('forgot-desc-text');
+        if(desc)desc.textContent='If this email has an Orbit account, a reset link is on its way. Check your inbox and spam folder. Open the newest link in this browser.';
+        showToast('Check your email for the Orbit reset link.','success');
+    }catch(error){if(err){err.textContent=error.message||'Could not send the reset link. Please retry.';err.style.display='block';}}
+    finally{orbitRecoveryBusy=false;if(btn){btn.disabled=false;btn.textContent='Send reset link';}}
 }
 
 async function handleVerifyForgotOtpAndReset() {
     const email = document.getElementById('forgot-email-input')?.value.trim();
-    const inputs = document.querySelectorAll('.otp-segment');
-    const otp = Array.from(inputs).map(inp => inp.value.trim()).join('');
     const newPass = document.getElementById('forgot-new-pass-input')?.value || '';
     const confirmPass = document.getElementById('forgot-confirm-pass-input')?.value || '';
     const btn = document.getElementById('btn-verify-otp');
@@ -565,16 +504,8 @@ async function handleVerifyForgotOtpAndReset() {
 
     if (err) err.style.display = 'none';
 
-    // 1. Validate 6-Digit OTP completeness
-    if (!otp || otp.length < 6) {
-        if (err) {
-            err.innerText = 'Please enter all 6 digits of the verification code.';
-            err.style.display = 'block';
-        }
-        const firstEmpty = Array.from(inputs).find(inp => !inp.value.trim());
-        if (firstEmpty) firstEmpty.focus();
-        return;
-    }
+    if(orbitRecoveryBusy)return;
+    if(!orbitRecoveryUserId){if(err){err.textContent='Open the reset link from your email before choosing a new password.';err.style.display='block';}return;}
 
     // 2. Validate Password: minimum 8 chars
     if (newPass.length < 8) {
@@ -608,6 +539,7 @@ async function handleVerifyForgotOtpAndReset() {
         return;
     }
 
+    orbitRecoveryBusy=true;
     if (btn) {
         btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> UPDATING PASSWORD...';
         btn.disabled = true;
@@ -615,50 +547,37 @@ async function handleVerifyForgotOtpAndReset() {
 
     try {
         const client = await ensureSupabase();
-        
-        // 1. Verify 6-digit OTP with Supabase Recovery
-        let { data, error } = await client.auth.verifyOtp({
-            email,
-            token: otp,
-            type: 'recovery'
-        });
 
-        if (error) {
-            // Fallback for email OTP type
-            const retryRes = await client.auth.verifyOtp({
-                email,
-                token: otp,
-                type: 'email'
-            });
-            if (retryRes.error) throw retryRes.error;
-            data = retryRes.data;
-        }
-
+        const {data:sessionData,error:sessionError}=await client.auth.getSession();
+        if(sessionError||sessionData?.session?.user?.id!==orbitRecoveryUserId)throw new Error('Your recovery session has changed. Request a new reset link.');
         // 2. Set the new verified password
         const updateRes = await client.auth.updateUser({ password: newPass });
         if (updateRes.error) throw updateRes.error;
 
-        closeForgotPasswordModal();
+        orbitRecoveryUserId=null;orbitRecoveryBusy=false;
+        await closeForgotPasswordModal();
+        localStorage.removeItem('orbit_explicit_signout');
         showToast('Password updated successfully! Welcome back.', 'success');
-        
+
         if (updateRes.data && updateRes.data.user) {
-            currentUser = updateRes.data.user;
+            currentUser = updateRes.data.user;orbitRememberSessionActivity(true);
             await launchApp({introduction:true});
         } else {
             switchAuthTab('login');
             const loginEmail = document.getElementById('auth-login-email');
             const loginPass = document.getElementById('auth-login-pass');
             if (loginEmail) loginEmail.value = email;
-            if (loginPass) loginPass.value = newPass;
+            if (loginPass) loginPass.value = '';
         }
     } catch(e) {
         if (err) {
-            err.innerText = e.message || 'OTP verification failed. Please check the code and try again.';
+            err.innerText = e.message || 'Could not update your password. Please retry.';
             err.style.display = 'block';
         }
     } finally {
+        orbitRecoveryBusy=false;
         if (btn) {
-            btn.innerHTML = '<i class="fa-solid fa-shield-check" style="margin-right:6px;"></i> VERIFY & UPDATE PASSWORD';
+            btn.innerHTML = 'UPDATE PASSWORD';
             btn.disabled = false;
         }
     }
@@ -674,6 +593,7 @@ async function signOut() {
         }
         if(typeof OrbitNotes!=='undefined')OrbitNotes.stop();
         stopOrbitWeather();closeViewOnceViewer();
+        if(typeof disposeOrbitTyping==='function')disposeOrbitTyping();
         await stopOrbitChatServices();
         try {
             await updatePresenceStatus(false);
@@ -718,7 +638,6 @@ window.handleSignUp = handleSignUp;
 window.openForgotPasswordModal = openForgotPasswordModal;
 window.closeForgotPasswordModal = closeForgotPasswordModal;
 window.orbitToggleForgotPass = orbitToggleForgotPass;
-window.initOtpSegmentInputs = initOtpSegmentInputs;
 window.handleSendForgotOtp = handleSendForgotOtp;
 window.handleVerifyForgotOtpAndReset = handleVerifyForgotOtpAndReset;
 window.signOut = signOut;
