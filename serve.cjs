@@ -18,6 +18,12 @@ const server = http.createServer(async (req, res) => {
     }
     try {
         const url = new URL(req.url, 'http://127.0.0.1:4173');
+        if (url.pathname === '/api/news') {
+            req.query=Object.fromEntries(url.searchParams);
+            res.status=code=>{res.statusCode=code;return res;};
+            res.json=value=>{res.setHeader('Content-Type','application/json');res.end(JSON.stringify(value));};
+            return await require('./api/news.js')(req,res);
+        }
         if (url.pathname === '/__orbit_health') {
             res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
             return res.end(req.method === 'HEAD' ? '' : JSON.stringify({ app: 'orbit-local', version: 1 }));

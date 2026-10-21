@@ -6514,3 +6514,6 @@ body.orbit-glass-enabled :is(.glass-modal-box,.glass-dropdown,.chat-options-drop
 }
 body.light-mode #notif-toast-title { color:var(--text-primary)!important; }
 body .news-filter-chip:not(.active) { color:var(--text-secondary); background-color:rgba(var(--readable-surface-rgb),.86); }
+
+/* Navigation focus must never scroll the outer app frame. Feeds keep their own scrolling. */
+@supports (overflow:clip) { #app-viewport { overflow:clip; } }

@@ -1,0 +1,24 @@
+/* Notes share the app's light/dark text tokens and keep long text contained. */
+.notes-toolbar { display:grid; gap:12px; margin:8px 6px 18px; }
+.notes-search { display:flex; align-items:center; gap:10px; padding:12px 15px; border:1px solid var(--glass-border); border-radius:16px; background:var(--glass-bg); color:var(--text-secondary); }
+.notes-search input { width:100%; min-width:0; background:none; border:0; color:var(--text-primary); font:inherit; outline:none; }
+.notes-filters { display:flex; gap:7px; overflow-x:auto; }
+.notes-filters button,.note-editor button:not(.glass-btn-primary),.orbit-note-card footer button { padding:8px 11px; border-radius:12px; border:1px solid var(--glass-border); background:var(--glass-bg); color:var(--text-primary); cursor:pointer; }
+.notes-filters [aria-pressed=true] { background:var(--accent); color:var(--accent-text,#111); }
+#notes-sync-status { margin:0; font-size:12px; color:var(--text-secondary); }
+.orbit-note-card { --note-tint:130,145,164; --note-surface:#151c27; --note-ink:#f4f7fc; --note-muted:#bdc9da; border:1px solid rgba(var(--note-tint),.45); border-radius:20px; padding:17px; background:linear-gradient(140deg,rgba(var(--note-tint),.15),rgba(var(--note-tint),.06)),var(--note-surface); color:var(--text-primary); min-width:0; }
+.orbit-note-card[data-color=blue] { --note-tint:75,139,232; }.orbit-note-card[data-color=green] { --note-tint:52,168,110; }.orbit-note-card[data-color=rose] { --note-tint:220,107,145; }.orbit-note-card[data-color=amber] { --note-tint:216,164,60; }
+.note-open { display:grid; gap:9px; background:none; padding:0; width:100%; border:0; color:inherit; text-align:left; cursor:pointer; }
+.note-card-title { font-size:17px; font-weight:700; overflow-wrap:anywhere; }.note-excerpt { font-size:13px; line-height:1.55; white-space:pre-wrap; overflow-wrap:anywhere; display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden;color:var(--text-secondary); }
+.note-tags { display:flex; flex-wrap:wrap; gap:7px; margin:10px 0; font-size:11px; color:var(--text-secondary); }
+.note-tags span { background:rgba(var(--note-tint),.15); border-radius:7px; padding:3px 6px; }
+.orbit-note-card footer { display:flex; align-items:center; justify-content:space-between; gap:8px; border-top:1px solid var(--glass-border); margin-top:12px; padding-top:10px; }.orbit-note-card footer div{display:flex;gap:5px;flex-wrap:wrap;}.orbit-note-card footer button{font-size:11px;padding:6px 8px;}.orbit-note-card small{color:var(--text-secondary);font-size:11px;}
+.note-progress { margin-top:10px; font-size:11px; color:var(--text-secondary); }.note-checklist { display:grid; gap:9px; margin-top:10px; }.note-checklist label { display:flex; gap:8px; align-items:start; font-size:13px; overflow-wrap:anywhere; }.note-checklist input:checked+span { text-decoration:line-through;opacity:.6; }.note-checklist input{accent-color:var(--accent);}
+.notes-empty{text-align:center;padding:40px 18px;color:var(--text-secondary);}.notes-empty>i{font-size:36px;opacity:.6;}.notes-empty h3{color:var(--text-primary);font-size:18px;}.notes-empty p{font-size:13px;line-height:1.5;}
+body #modal-note .note-editor { max-height:90dvh; overflow:auto; color:var(--text-primary); }.note-editor-options{display:grid;gap:14px;margin:12px 0;}.note-editor-options label{display:grid;gap:7px;font-size:12px;color:var(--text-secondary);}.note-editor-options .glass-input{margin:0;color:var(--text-primary);}.note-editor-options small,#note-draft-status{font-size:11px;color:var(--text-secondary);line-height:1.5;}.note-editor-row,.note-format-tools{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;}.note-editor-row>label{flex:1;}.note-editor-row .note-check{display:flex;flex-direction:row;align-items:center;}.note-editor textarea{min-height:180px;resize:vertical;line-height:1.6;}.note-editor input[type=datetime-local]{color-scheme:dark;}.light-mode .note-editor input[type=datetime-local]{color-scheme:light;}#note-word-count{font-size:11px;color:var(--text-secondary);}
+
+/* Surface and text are paired so app-level glass colours cannot invert only one half. */
+body.light-mode #tab-notes .orbit-note-card { --note-surface:#ffffff; --note-ink:#172337; --note-muted:#4b5b71; }
+body #tab-notes .orbit-note-card,body #tab-notes .orbit-note-card .note-open,body #tab-notes .orbit-note-card .note-card-title,body #tab-notes .orbit-note-card footer button,body #tab-notes .note-checklist label { color:var(--note-ink)!important; }
+body #tab-notes .orbit-note-card .note-excerpt,body #tab-notes .orbit-note-card .note-tags,body #tab-notes .orbit-note-card .note-progress,body #tab-notes .orbit-note-card small { color:var(--note-muted)!important; }
+body #tab-notes .orbit-note-card footer button { background:rgba(var(--note-tint),.12)!important; border-color:rgba(var(--note-tint),.4); }

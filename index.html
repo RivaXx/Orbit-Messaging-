@@ -35,20 +35,21 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" media="print" onload="this.media='all'">
 
     <!-- Standalone Client-Side Error Logger (Captures all uncaught errors & rejections) -->
-    <script defer src="js/logger.js?v=calculator-appearance-20261020-r2"></script>
+    <script defer src="js/logger.js?v=delivery-notes-20261021-r3"></script>
 
     <!-- Core Supabase Client -->
-    <script defer src="assets/vendor/supabase.min.js?v=calculator-appearance-20261020-r2"></script>
+    <script defer src="assets/vendor/supabase.min.js?v=delivery-notes-20261021-r3"></script>
     <!-- Document, crop and resumable upload tools load only when needed. -->
 
-    <link rel="stylesheet" href="intro.css?v=calculator-appearance-20261020-r2">
-    <script defer src="js/orbit-introduction.js?v=calculator-appearance-20261020-r2"></script>
-    <link rel="stylesheet" href="style.css?v=calculator-appearance-20261020-r2">
-    <link rel="stylesheet" href="tools.css?v=calculator-appearance-20261020-r2">
-<link rel="stylesheet" href="chat-upgrades.css?v=calculator-appearance-20261020-r2">
-<link rel="stylesheet" href="photo-weather.css?v=calculator-appearance-20261020-r2">
-    <link rel="stylesheet" href="messaging-experience.css?v=calculator-appearance-20261020-r2">
-    <link rel="stylesheet" href="app-polish.css?v=calculator-appearance-20261020-r2">
+    <link rel="stylesheet" href="intro.css?v=delivery-notes-20261021-r3">
+    <script defer src="js/orbit-introduction.js?v=delivery-notes-20261021-r3"></script>
+    <link rel="stylesheet" href="style.css?v=delivery-notes-20261021-r3">
+    <link rel="stylesheet" href="tools.css?v=delivery-notes-20261021-r3">
+<link rel="stylesheet" href="chat-upgrades.css?v=delivery-notes-20261021-r3">
+<link rel="stylesheet" href="photo-weather.css?v=delivery-notes-20261021-r3">
+    <link rel="stylesheet" href="messaging-experience.css?v=delivery-notes-20261021-r3">
+    <link rel="stylesheet" href="app-polish.css?v=delivery-notes-20261021-r3">
+<link rel="stylesheet" href="notes.css?v=delivery-notes-20261021-r3">
 </head>
 <body>
 <script>try{document.body.classList.toggle('light-mode',localStorage.getItem('orbit_theme')==='light');}catch(_){}</script>
@@ -496,8 +497,8 @@
                 <button class="btn-refresh-pill touch-fix" onclick="refreshNewsFeed()"><i id="news-refresh-icon" class="fa-solid fa-rotate-right"></i> Refresh</button>
             </div>
             <nav class="news-filter-bar" aria-label="News categories" tabindex="0">
-                <button class="news-filter-chip active touch-fix" onclick="filterNewsCategory('global', this)">🌍 Global Top 10</button>
-                <button class="news-filter-chip touch-fix" onclick="filterNewsCategory('india', this)">🇮🇳 India Top 10</button>
+                <button class="news-filter-chip active touch-fix" onclick="filterNewsCategory('global', this)">🌍 Global</button>
+                <button class="news-filter-chip touch-fix" onclick="filterNewsCategory('india', this)">🇮🇳 India</button>
                 <button class="news-filter-chip touch-fix" onclick="filterNewsCategory('tech', this)">🚀 Tech & AI</button>
                 <button class="news-filter-chip touch-fix" onclick="filterNewsCategory('finance', this)">📈 Finance</button>
                 <button class="news-filter-chip touch-fix" onclick="filterNewsCategory('entertainment', this)">🎬 Entertainment</button>
@@ -2174,7 +2175,7 @@
         <div class="glass-modal-box">
             <div class="modal-header-row">
                 <div class="modal-title-text">Personal Note</div>
-                <button class="btn-reset" onclick="closeNoteModal()" style="font-size:18px; color:var(--text-muted);"><i class="fa-solid fa-xmark"></i></button>
+                <button type="button" aria-label="Close note" class="btn-reset" onclick="closeNoteModal()" style="font-size:18px; color:var(--text-muted);"><i class="fa-solid fa-xmark"></i></button>
             </div>
             <input type="text" id="note-title-inp" class="glass-input" placeholder="Title">
             <textarea id="note-body-inp" class="glass-input" rows="6" placeholder="Write here..."></textarea>
@@ -2602,32 +2603,32 @@
     <div id="simple-toast" class="simple-toast">Notification</div>
 </div>
 
-<script defer src="js/config.js?v=calculator-appearance-20261020-r2"></script>
-<script defer src="js/rooms.js?v=calculator-appearance-20261020-r2"></script>
-    <script defer src="js/chat-actions.js?v=calculator-appearance-20261020-r2"></script>
-    <script defer src="js/actions/media-lightbox.js?v=calculator-appearance-20261020-r2"></script>
-    <script defer src="js/actions/media-preview.js?v=calculator-appearance-20261020-r2"></script>
-    <script defer src="js/actions/file-viewer.js?v=calculator-appearance-20261020-r2"></script>
-    <script defer src="js/actions/voice-recorder.js?v=calculator-appearance-20261020-r2"></script>
-    <script defer src="js/actions/chat-extras.js?v=calculator-appearance-20261020-r2"></script>
-    <script defer src="js/messaging-notifications.js?v=calculator-appearance-20261020-r2"></script>
-    <script defer src="js/chat-gestures.js?v=calculator-appearance-20261020-r2"></script>
-    <script defer src="js/chat-select.js?v=calculator-appearance-20261020-r2"></script>
-    <script defer src="js/chat-share.js?v=calculator-appearance-20261020-r2"></script>
-    <script defer src="js/chat/message-controls.js?v=calculator-appearance-20261020-r2"></script>
-<script defer src="js/chat/chat-history.js?v=calculator-appearance-20261020-r2"></script>
-    <script defer src="js/chat/chat-feed.js?v=calculator-appearance-20261020-r2"></script>
-    <script defer src="js/chat/chat-dispatcher.js?v=calculator-appearance-20261020-r2"></script>
-    <script defer src="js/chat/chat-realtime.js?v=calculator-appearance-20261020-r2"></script>
-    <script defer src="js/chat.js?v=calculator-appearance-20261020-r2"></script>
-<script defer src="js/calculator.js?v=calculator-appearance-20261020-r2"></script>
-    <script defer src="js/tools.js?v=calculator-appearance-20261020-r2"></script>
-    <script defer src="js/celestial.js?v=calculator-appearance-20261020-r2"></script>
-    <script defer src="js/ui/ui-auth.js?v=calculator-appearance-20261020-r2"></script>
-    <script defer src="js/ui/ui-navigation.js?v=calculator-appearance-20261020-r2"></script>
-    <script defer src="js/ui/ui-modals.js?v=calculator-appearance-20261020-r2"></script>
-    <script defer src="js/ui/ui-notifications.js?v=calculator-appearance-20261020-r2"></script>
-<script defer src="js/ui.js?v=calculator-appearance-20261020-r2"></script>
+<script defer src="js/config.js?v=delivery-notes-20261021-r3"></script>
+<script defer src="js/rooms.js?v=delivery-notes-20261021-r3"></script>
+    <script defer src="js/chat-actions.js?v=delivery-notes-20261021-r3"></script>
+    <script defer src="js/actions/media-lightbox.js?v=delivery-notes-20261021-r3"></script>
+    <script defer src="js/actions/media-preview.js?v=delivery-notes-20261021-r3"></script>
+    <script defer src="js/actions/file-viewer.js?v=delivery-notes-20261021-r3"></script>
+    <script defer src="js/actions/voice-recorder.js?v=delivery-notes-20261021-r3"></script>
+    <script defer src="js/actions/chat-extras.js?v=delivery-notes-20261021-r3"></script>
+    <script defer src="js/messaging-notifications.js?v=delivery-notes-20261021-r3"></script>
+    <script defer src="js/chat-gestures.js?v=delivery-notes-20261021-r3"></script>
+    <script defer src="js/chat-select.js?v=delivery-notes-20261021-r3"></script>
+    <script defer src="js/chat-share.js?v=delivery-notes-20261021-r3"></script>
+    <script defer src="js/chat/message-controls.js?v=delivery-notes-20261021-r3"></script>
+<script defer src="js/chat/chat-history.js?v=delivery-notes-20261021-r3"></script>
+    <script defer src="js/chat/chat-feed.js?v=delivery-notes-20261021-r3"></script>
+    <script defer src="js/chat/chat-dispatcher.js?v=delivery-notes-20261021-r3"></script>
+    <script defer src="js/chat/chat-realtime.js?v=delivery-notes-20261021-r3"></script>
+    <script defer src="js/chat.js?v=delivery-notes-20261021-r3"></script>
+<script defer src="js/calculator.js?v=delivery-notes-20261021-r3"></script>
+    <script defer src="js/tools.js?v=delivery-notes-20261021-r3"></script>
+    <script defer src="js/celestial.js?v=delivery-notes-20261021-r3"></script>
+    <script defer src="js/ui/ui-auth.js?v=delivery-notes-20261021-r3"></script>
+    <script defer src="js/ui/ui-navigation.js?v=delivery-notes-20261021-r3"></script>
+    <script defer src="js/ui/ui-modals.js?v=delivery-notes-20261021-r3"></script>
+    <script defer src="js/ui/ui-notifications.js?v=delivery-notes-20261021-r3"></script>
+<script defer src="js/ui.js?v=delivery-notes-20261021-r3"></script>
 
     <!-- WhatsApp View Once Fullscreen Viewer Modal -->
     <div id="modal-view-once-viewer" class="glass-modal-overlay view-once-modal-overlay hide" aria-hidden="true" onclick="closeViewOnceViewer()">
@@ -2660,8 +2661,8 @@
  <div id="orbit-editor-filters" class="hide"><button type="button" onclick="applyOrbitMediaFilter('vivid')">Vivid</button><button type="button" onclick="applyOrbitMediaFilter('mono')">Mono</button><button type="button" onclick="applyOrbitMediaFilter('warm')">Warm</button><button type="button" onclick="applyOrbitMediaFilter('bright')">Bright</button></div>
  <div class="orbit-editor-stage"><canvas id="orbit-editor-canvas"></canvas></div>
 </div>
-<script defer src="js/orbit-chat-services.js?v=calculator-appearance-20261020-r2"></script>
-<script defer src="js/orbit-media-editor.js?v=calculator-appearance-20261020-r2"></script>
+<script defer src="js/orbit-chat-services.js?v=delivery-notes-20261021-r3"></script>
+<script defer src="js/orbit-media-editor.js?v=delivery-notes-20261021-r3"></script>
 <div id="modal-orbit-weather" class="glass-modal-overlay orbit-weather-page" data-weather="idle" data-motion="calm"><div class="orbit-weather-scene" aria-hidden="true"><div class="orbit-weather-orb"></div><div class="orbit-weather-cloud cloud-a"></div><div class="orbit-weather-cloud cloud-b"></div><span class="orbit-weather-particle" style="--i:0"></span><span class="orbit-weather-particle" style="--i:1"></span><span class="orbit-weather-particle" style="--i:2"></span><span class="orbit-weather-particle" style="--i:3"></span><span class="orbit-weather-particle" style="--i:4"></span><span class="orbit-weather-particle" style="--i:5"></span><span class="orbit-weather-particle" style="--i:6"></span><span class="orbit-weather-particle" style="--i:7"></span><span class="orbit-weather-particle" style="--i:8"></span><span class="orbit-weather-particle" style="--i:9"></span><span class="orbit-weather-particle" style="--i:10"></span><span class="orbit-weather-particle" style="--i:11"></span><span class="orbit-weather-particle" style="--i:12"></span><span class="orbit-weather-particle" style="--i:13"></span></div><div class="glass-modal-box">
  <div class="modal-header-row"><strong>Weather near you</strong><button type="button" class="btn-reset" onclick="closeOrbitWeatherConsent()" aria-label="Close weather settings">✕</button></div>
  <div class="orbit-weather-hero"><span id="orbit-weather-place">Your local forecast</span><strong id="orbit-weather-temperature">—°</strong><span id="orbit-weather-condition">Enable location to see current conditions</span></div><label class="orbit-weather-motion-label" for="orbit-weather-motion">Weather animation <select id="orbit-weather-motion" onchange="setOrbitWeatherMotion(this.value)"><option value="calm">Calm</option><option value="live">Live</option><option value="still">Still</option></select></label><p>Allow device location to show nearby weather below the Orbit logo. Orbit requests a fresh, high-accuracy location and shows the accuracy your device reports.</p>
@@ -2670,11 +2671,12 @@
  <button type="button" id="orbit-weather-disable" class="glass-btn-secondary hide" onclick="disableOrbitWeather()">Turn off local weather</button>
  <p class="orbit-weather-attribution">Weather by <a href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer">Open-Meteo</a> · Air quality: <a href="https://atmosphere.copernicus.eu/" target="_blank" rel="noopener noreferrer">CAMS</a> · Places by <a href="https://www.bigdatacloud.com/" target="_blank" rel="noopener noreferrer">BigDataCloud</a></p>
 </div></div>
-<script defer src="js/orbit-private-photos.js?v=calculator-appearance-20261020-r2"></script>
-<script defer src="js/orbit-banner-weather.js?v=calculator-appearance-20261020-r2"></script>
-<script defer src="js/liquid-glass.js?v=calculator-appearance-20261020-r2"></script>
-    <script defer src="js/messaging-experience.js?v=calculator-appearance-20261020-r2"></script>
-<script defer src="js/call-experience.js?v=calculator-appearance-20261020-r2"></script>
-<script defer src="js/orbit-interface.js?v=calculator-appearance-20261020-r2"></script>
+<script defer src="js/orbit-private-photos.js?v=delivery-notes-20261021-r3"></script>
+<script defer src="js/orbit-banner-weather.js?v=delivery-notes-20261021-r3"></script>
+<script defer src="js/liquid-glass.js?v=delivery-notes-20261021-r3"></script>
+    <script defer src="js/messaging-experience.js?v=delivery-notes-20261021-r3"></script>
+<script defer src="js/call-experience.js?v=delivery-notes-20261021-r3"></script>
+<script defer src="js/orbit-interface.js?v=delivery-notes-20261021-r3"></script>
+<script defer src="js/orbit-notes.js?v=delivery-notes-20261021-r3"></script>
 </body>
 </html>
