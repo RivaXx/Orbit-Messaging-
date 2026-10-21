@@ -21,6 +21,7 @@ function notifyFeedUserInteraction() {
 
 async function openChatRoom(roomId, roomTitle, avatarUrl, isSelf = false, peerUserId = null) {
     if (!roomId) return;
+    if(typeof disposeOrbitTyping==='function')disposeOrbitTyping();
     if(typeof orbitCancelEdit==='function')orbitCancelEdit();
     // Inbox previews are speculative; the opened conversation has priority.
     if (typeof recentChatsController !== 'undefined') recentChatsController?.abort();
@@ -299,7 +300,8 @@ function navBackFromChat() {
 
     // Hide mention autocomplete
     hideMentionAutocomplete();
-    stopTypingBroadcast();
+    if(typeof disposeOrbitTyping==='function')disposeOrbitTyping();
+    else stopTypingBroadcast();
 
 
     currentRoom = null;
