@@ -79,3 +79,38 @@ test('a call answered on another device stops local ringing without ending the r
  await c.receiveOrbitCall({id,caller_id:'peer',callee_id:'owner',state:'connecting',created_at:new Date().toISOString()});
  assert.equal(notifyPeer,false);assert.equal(c._activeCallId,null);assert.match(toasts[0],/another device/);
 });
+
+test('incoming call rings and notifies without waiting for the ICE network subscription',async()=>{
+ const {c}=setup();vm.runInContext(read('js/orbit-chat-services.js'),c);c._activeCallId=null;c._activeCallRole=null;c.isUserBlocked=()=>false;const actions=[];
+ c.orbitWatchIce=()=>new Promise(()=>{});c._showVoiceCallModal=()=>actions.push('paint');c._setVoiceCallStatus=()=>{};c.orbitCallRing=()=>actions.push('ring');c.orbitNotifyIncomingCall=()=>actions.push('notify');
+ await c.receiveOrbitCall({id,caller_id:'peer',callee_id:'owner',room:'room',state:'ringing',created_at:new Date().toISOString(),offer:{}});assert.deepEqual(actions,['paint','ring','notify']);
+});
+test('call-stop push is silent and replaces ringing; note pushes open the note',async()=>{
+ const {handlers,shown,opened}=worker();let pending;
+ handlers.push({data:{json:()=>({isCall:true,ended:true,callId:id,timestamp:Date.now(),title:'Alex',body:'Missed voice call'})},waitUntil:p=>pending=p});await pending;
+ assert.equal(shown[0].silent,true);assert.equal(shown[0].requireInteraction,false);assert.equal(shown[0].tag,'orbit-call-'+id);assert.equal(shown[0].body,'Missed voice call');
+ handlers.push({data:{json:()=>({noteId:'19',title:'Note reminder',body:'Plan trip',timestamp:Date.now()})},waitUntil:p=>pending=p});await pending;assert.equal(shown[1].actions[0].title,'Open note');
+ handlers.notificationclick({notification:{close(){},data:shown[1].data},action:'open',waitUntil:p=>pending=p});await pending;assert.equal(new URL(opened[0]).searchParams.get('noteId'),'19');
+});
+
+test('a stale ringing snapshot cannot resurrect a call after a terminal update',async()=>{
+ const {c}=setup();vm.runInContext(read('js/orbit-chat-services.js'),c);c._activeCallId=null;c._activeCallRole=null;c.isUserBlocked=()=>false;let rings=0;c._showVoiceCallModal=()=>rings++;c._setVoiceCallStatus=()=>{};c.orbitCallRing=()=>{};c.orbitNotifyIncomingCall=()=>{};c.orbitWatchIce=async()=>{};
+ const row={id,caller_id:'peer',callee_id:'owner',room:'room',created_at:new Date().toISOString()};await c.receiveOrbitCall({...row,state:'ended'});await c.receiveOrbitCall({...row,state:'ringing'});assert.equal(rings,0);assert.equal(c._activeCallId,null);
+});
+test('call inbox subscribes before a hanging block-list synchronization',async()=>{
+ const {c}=setup();vm.runInContext(read('js/orbit-chat-services.js'),c);c._activeCallId=null;c._activeCallRole=null;c.blockedUsersSet=new Set();c.orbitRetryCallEnds=()=>{};c.recoverOrbitIncomingCall=async()=>{};let subscribed=false;
+ c.ensureSupabase=async()=>({channel:()=>({on(){return this;},subscribe(){subscribed=true;return this;}}),from:()=>({select(){return this;},eq:()=>new Promise(()=>{})})});
+ c.initOrbitChatServices();for(let n=0;n<5;n++)await Promise.resolve();assert.equal(subscribed,true);
+});
+test('closed-tab push honors stored device privacy and call sound preferences',async()=>{
+ const {c,handlers,shown}=worker();let stored,pending;c.caches.open=async()=>({put:async(_key,response)=>{stored=await response.json();},match:async()=>stored?Response.json(stored):null});
+ handlers.message({data:{type:'ORBIT_ALERT_PREFERENCES',preferences:{previews:false,callSilent:true}},waitUntil:p=>pending=p});await pending;
+ handlers.push({data:{json:()=>({isCall:true,callId:id,title:'Private caller',timestamp:Date.now()})},waitUntil:p=>pending=p});await pending;assert.equal(shown[0].silent,true);assert.equal(shown[0].title,'Orbit Messenger');
+});
+
+test('already-granted notification permission repairs a missing subscription once',async()=>{
+ const {c}=setup();vm.runInContext(read('js/messaging-notifications.js'),c);let subscriptions=0,saves=0;
+ c.window.Notification={};c.Notification={permission:'granted'};c.window.PushManager={};c.atob=s=>Buffer.from(s,'base64').toString('binary');c.notificationPreference=()=>true;c.updateNotificationSettingsUI=()=>{};
+ const registration={pushManager:{getSubscription:async()=>null,subscribe:async()=>{subscriptions++;return {toJSON:()=>({endpoint:'https://fcm.googleapis.com/test'})};}}};c.navigator.serviceWorker={ready:Promise.resolve(registration)};c.ensureSupabase=async()=>({rpc:async()=>({data:{publicKey:'AQID'}})});c.orbitPushApi=async()=>{saves++;};
+ const one=c.enableOrbitBackgroundPush(),two=c.enableOrbitBackgroundPush();assert.equal(one,two);assert.equal(await one,true);assert.equal(subscriptions,1);assert.equal(saves,1);
+});

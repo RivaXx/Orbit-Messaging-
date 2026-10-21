@@ -101,3 +101,8 @@ test('glass appearance stays identical through scrolling and idle while noise an
  g.context.window.setOrbitGlassQuality('fast');assert.doesNotMatch(g.properties.get('--liquid-backdrop'),/url\(/);
  assert.equal(glass({saved:Object.fromEntries(g.store)}).controls['glass-quality'].value,'fast');
 });
+
+test('making a navigation tab visible only scrolls its own pod',()=>{
+ const {context,pod,buttons}=navigation();let parentScrolled=false;buttons[3].scrollIntoView=()=>parentScrolled=true;
+ context.orbitEnsureTabVisible(buttons[3],false);assert.equal(pod.scrollLeft,80);assert.equal(parentScrolled,false);
+});
