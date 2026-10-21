@@ -82,7 +82,7 @@ test('a late deletion response never clears selection in a different conversatio
  assert.equal(a.run("orbitMessageSelection.has('new-selection')"),true);
 });
 test('recipient realtime deletion persists across aliases and rejects a later stale update',()=>{
- const a=setup();a.c.window=a.c;a.c.resolveRoomAliases=()=>['room','alias'];
+ const a=setup();a.c.addEventListener=()=>{};a.c.window=a.c;a.c.resolveRoomAliases=()=>['room','alias'];
  a.c.document.querySelector=()=>null;a.c.renderMessageFeed=()=>{};
  vm.runInContext(fs.readFileSync(path.join(root,'js/chat/chat-realtime.js'),'utf8'),a.c);
  a.c.update={...a.message,deleted_at:new Date().toISOString(),text:'🚫 This message was deleted',attachments:[]};
