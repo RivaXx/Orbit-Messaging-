@@ -232,8 +232,14 @@ function filterNewsCategory(cat, btn) {
 }
 
 function cleanFeedText(value) {
-    const doc = new DOMParser().parseFromString(String(value || ''), 'text/html');
-    return (doc.body.textContent || '').replace(/\s+/g, ' ').trim();
+    let text=String(value||'');
+    // Old cached feeds may contain entity-escaped HTML more than once.
+    for(let i=0;i<4;i++){
+        const doc=new DOMParser().parseFromString(text.replace(/<(script|style)\b[^>]*>[\s\S]*?<\/\1>/gi,''),'text/html');
+        const next=(doc.body.textContent||'').replace(/\s+/g,' ').trim();
+        if(next===text)return next;text=next;
+    }
+    return text.replace(/<[^>]*>/g,'').replace(/&nbsp;/gi,' ').trim();
 }
 
 function formatFeedTimestamp(value) {
@@ -445,6 +451,7 @@ async function refreshNewsFeed() {
         if (!items.length) throw new Error('No recent stories were returned');
         const seen=new Set();
         items=items.filter(item=>{const key=item.title.toLocaleLowerCase().replace(/\W/g,'');if(seen.has(key))return false;seen.add(key);return true;}).sort((a,b)=>Date.parse(b.pubDate)-Date.parse(a.pubDate)).slice(0,60);
+        items=items.map(item=>({...item,title:cleanFeedText(item.title),source:cleanFeedText(item.source),body:cleanFeedText(item.body)}));
         liveNewsCache[category] = items;
         try { localStorage.setItem(`orbit_news_${category}`, JSON.stringify(items)); } catch(e) {}
         if (category === currentNewsCategory) { setFeedUpdatedAt('news-last-updated'); loadNewsFeed(); }
@@ -494,9 +501,9 @@ function openNewsReader(newsId) {
     const item = Object.values(liveNewsCache).flat().find(news => news.id === newsId);
     if (!item) return;
     activeReadingNews = item;
-    document.getElementById('news-reader-title').innerText = item.title;
-    document.getElementById('news-reader-meta').innerText = `${item.source} · ${formatFeedTimestamp(item.pubDate)}`;
-    document.getElementById('news-reader-body').innerText = item.body;
+    document.getElementById('news-reader-title').innerText = cleanFeedText(item.title);
+    document.getElementById('news-reader-meta').innerText = `${cleanFeedText(item.source)} · ${formatFeedTimestamp(item.pubDate)}`;
+    document.getElementById('news-reader-body').innerText = cleanFeedText(item.body)||cleanFeedText(item.title);
     const hero = document.getElementById('news-reader-img'), image = safeNewsImage(item.img);
     hero.hidden = !image; hero.onerror = () => { hero.hidden = true; };
     if (image) hero.src = image; else hero.removeAttribute('src');
