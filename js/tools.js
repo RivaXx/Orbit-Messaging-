@@ -1,4 +1,4 @@
-﻿// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 // ORBIT PRO TOOLS SUITE MODULE (js/tools.js)
 // Includes: Clock Suite (World, Alarms, Stopwatch, Timer),
 //           Calendar with Indian Holidays (2024-2028),
@@ -628,6 +628,7 @@ function syncWeekNumbersUI() {
 }
 
 function initCalendar() {
+    if(typeof OrbitNotes!=='undefined')OrbitNotes.syncCalendar();
     syncWeekNumbersUI();
     renderCalendarMonth();
     if (calViewMode === 'agenda') {
@@ -831,8 +832,8 @@ function renderCalendarEvents(dateStr) {
                     <div class="cal-agenda-time"><i class="fa-regular fa-clock"></i> ${ev.time || 'All Day'}</div>
                     ${ev.desc ? ('<div style="font-size:11.5px; color:var(--text-secondary); margin-top:4px;">' + escapeHtml(ev.desc) + '</div>') : ''}
                 </div>
-                <button class="btn-reset touch-fix" onclick="deleteCalendarEvent('${ev.id}')" style="color:var(--text-muted); font-size:13px; padding:6px;" title="Delete Event">
-                    <i class="fa-solid fa-trash-can"></i>
+                <button class="btn-reset touch-fix" onclick="deleteCalendarEvent('${ev.id}')" style="color:var(--text-muted); font-size:13px; padding:6px;" title="${ev.noteId?'Edit note reminder':'Delete event'}">
+                    <i class="fa-solid ${ev.noteId?'fa-pen':'fa-trash-can'}"></i>
                 </button>
             </div>
         `).join('');
@@ -853,8 +854,8 @@ function renderCalendarEvents(dateStr) {
                         <div class="cal-agenda-title">${escapeHtml(ev.title)} <span style="font-size:11px; font-weight:600; color:var(--text-muted); margin-left:6px;">(${evDate})</span></div>
                         <div class="cal-agenda-time"><i class="fa-regular fa-clock"></i> ${ev.time || 'All Day'}</div>
                     </div>
-                    <button class="btn-reset touch-fix" onclick="event.stopPropagation(); deleteCalendarEvent('${ev.id}')" style="color:var(--text-muted); font-size:13px; padding:6px;" title="Delete Event">
-                        <i class="fa-solid fa-trash-can"></i>
+                    <button class="btn-reset touch-fix" onclick="event.stopPropagation(); deleteCalendarEvent('${ev.id}')" style="color:var(--text-muted); font-size:13px; padding:6px;" title="${ev.noteId?'Edit note reminder':'Delete event'}">
+                        <i class="fa-solid ${ev.noteId?'fa-pen':'fa-trash-can'}"></i>
                     </button>
                 </div>
             `;
@@ -873,6 +874,7 @@ function renderCalendarAgendaView() {
     userCalendarEvents.forEach(ev => {
         combined.push({
             type: 'user',
+            noteId: ev.noteId,
             id: ev.id,
             date: ev.date,
             time: ev.time || 'All Day',
@@ -932,8 +934,8 @@ function renderCalendarAgendaView() {
                         <div class="cal-agenda-time"><i class="fa-regular fa-clock"></i> ${item.time}</div>
                         ${item.desc ? ('<div style="font-size:11px; color:var(--text-secondary); margin-top:3px;">' + escapeHtml(item.desc) + '</div>') : ''}
                     </div>
-                    <button class="btn-reset touch-fix" onclick="deleteCalendarEvent('${item.id}')" style="color:var(--text-muted); font-size:13px; padding:6px;" title="Delete Event">
-                        <i class="fa-solid fa-trash-can"></i>
+                    <button class="btn-reset touch-fix" onclick="deleteCalendarEvent('${item.id}')" style="color:var(--text-muted); font-size:13px; padding:6px;" title="${item.noteId?'Edit note reminder':'Delete event'}">
+                        <i class="fa-solid ${item.noteId?'fa-pen':'fa-trash-can'}"></i>
                     </button>
                 </div>
             `;
@@ -981,7 +983,7 @@ function saveCalendarEvent() {
         desc
     });
 
-    try { localStorage.setItem('orbit_cal_events', JSON.stringify(userCalendarEvents)); } catch(e) {}
+    try { localStorage.setItem('orbit_cal_events', JSON.stringify(userCalendarEvents.filter(row=>!row.noteId))); } catch(e) {}
     closeCalendarEventModal();
     if (titleInp) titleInp.value = '';
     if (descInp) descInp.value = '';
@@ -1004,8 +1006,10 @@ function saveCalendarEvent() {
 }
 
 function deleteCalendarEvent(id) {
+    const linked=userCalendarEvents.find(row=>row.id===id&&row.noteId);
+    if(linked){switchTab('notes');OrbitNotes.open(linked.noteId);showToast('Edit or remove the reminder in its note.','info');return;}
     userCalendarEvents = userCalendarEvents.filter(ev => ev.id !== id);
-    try { localStorage.setItem('orbit_cal_events', JSON.stringify(userCalendarEvents)); } catch(e) {}
+    try { localStorage.setItem('orbit_cal_events', JSON.stringify(userCalendarEvents.filter(row=>!row.noteId))); } catch(e) {}
     renderCalendarMonth();
     if (calViewMode === 'agenda') {
         renderCalendarAgendaView();

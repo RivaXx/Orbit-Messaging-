@@ -476,7 +476,8 @@ function initCalcAppearance() {
         input.dataset.bound = 'true';
         input.addEventListener('change', saveCalcWallpaper);
     }
-    try { applyCalcWallpaper(localStorage.getItem('orbit_calc_wallpaper') || ''); } catch (_) {}
+    const revision=calcWallpaperRevision;
+    restoreCalcWallpaper(revision);
     scheduleCalcLayout();
 }
 function chooseCalcWallpaper() {
@@ -496,6 +497,39 @@ function applyCalcWallpaper(data) {
     tab.style.setProperty('--calc-wallpaper', valid ? `url("${data}")` : 'none');
     tab.classList.toggle('calc-has-wallpaper', valid);
     document.getElementById('calc-wallpaper-clear')?.classList.toggle('hide', !valid);
+}
+// IndexedDB has a separate, larger quota and stores images without bloating chat preferences.
+let calcImageDB=null,calcImageWrites=Promise.resolve();
+function calcWallpaperDB(){
+    if(typeof indexedDB==='undefined')return Promise.reject(new Error('Image storage unavailable'));
+    if(!calcImageDB)calcImageDB=new Promise((resolve,reject)=>{
+        const request=indexedDB.open('orbit-calculator-images',1);
+        const timer=setTimeout(()=>reject(new Error('Image storage unavailable')),3000);
+        request.onupgradeneeded=()=>{if(!request.result.objectStoreNames.contains('images'))request.result.createObjectStore('images');};
+        request.onsuccess=()=>{clearTimeout(timer);resolve(request.result);};
+        request.onerror=request.onblocked=()=>{clearTimeout(timer);reject(new Error('Image storage unavailable'));};
+    }).catch(error=>{calcImageDB=null;throw error;});
+    return calcImageDB;
+}
+async function calcWallpaperStorage(action,value){
+    const execute=async()=>{
+        const db=await calcWallpaperDB();
+        return new Promise((resolve,reject)=>{
+            const tx=db.transaction('images',action==='get'?'readonly':'readwrite'),store=tx.objectStore('images');
+            const request=action==='get'?store.get('wallpaper'):action==='delete'?store.delete('wallpaper'):store.put(value,'wallpaper');
+            tx.oncomplete=()=>resolve(request.result);tx.onerror=tx.onabort=()=>reject(tx.error||new Error('Image storage unavailable'));
+        });
+    };
+    const result=calcImageWrites.then(execute,execute);calcImageWrites=result.catch(()=>{});return result;
+}
+async function restoreCalcWallpaper(revision){
+    let legacy='';try{legacy=localStorage.getItem('orbit_calc_wallpaper')||'';}catch(_){}
+    try{
+        const image=await calcWallpaperStorage('get');
+        if(revision!==calcWallpaperRevision)return;
+        applyCalcWallpaper(legacy||image);
+        if(legacy){await calcWallpaperStorage('put',legacy);if(revision===calcWallpaperRevision)try{localStorage.removeItem('orbit_calc_wallpaper');}catch(_){}}
+    }catch(_){if(revision===calcWallpaperRevision)applyCalcWallpaper(legacy);}
 }
 let calcWallpaperRevision = 0;
 async function saveCalcWallpaper(event) {
@@ -533,10 +567,12 @@ async function saveCalcWallpaper(event) {
         }
         if (!data.startsWith('data:image/jpeg;base64,')) throw new Error('This browser could not convert the image.');
         if (revision !== calcWallpaperRevision) return;
-        try { localStorage.setItem('orbit_calc_wallpaper', data); }
-        catch (_) { throw new Error('Device storage is full. Free some space or choose a smaller photo.'); }
+        let saved=false;
+        try{await calcWallpaperStorage('put',data);saved=true;try{localStorage.removeItem('orbit_calc_wallpaper');}catch(_){}}
+        catch(_){try{localStorage.setItem('orbit_calc_wallpaper',data);saved=true;}catch(_){}}
+        if(revision!==calcWallpaperRevision)return;
         applyCalcWallpaper(data);
-        showToast('Calculator wallpaper saved.', 'success');
+        showToast(saved?'Calculator wallpaper saved.':'Wallpaper applied for this session. Your browser is blocking saved images.',saved?'success':'info');
     } catch (error) {
         if (revision !== calcWallpaperRevision) return;
         console.warn('[Orbit Calculator] Wallpaper could not be saved:', error);
@@ -545,6 +581,7 @@ async function saveCalcWallpaper(event) {
 }
 function clearCalcWallpaper() {
     ++calcWallpaperRevision;
+    calcWallpaperStorage('delete').catch(()=>{});
     try { localStorage.removeItem('orbit_calc_wallpaper'); } catch (_) {}
     applyCalcWallpaper('');
 }

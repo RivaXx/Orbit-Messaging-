@@ -1,57 +1,59 @@
 // Orbit Messenger — messaging delivery and storage policy repair
-const CACHE_NAME = 'orbit-calculator-appearance-20261020-r2';
+const CACHE_NAME = 'orbit-delivery-notes-20261021-r3';
 const PRECACHE_URLS = [
+    "./notes.css?v=delivery-notes-20261021-r3",
+    "./js/orbit-notes.js?v=delivery-notes-20261021-r3",
     "./",
     "./index.html",
-    "./intro.css?v=calculator-appearance-20261020-r2",
-    "./js/orbit-introduction.js?v=calculator-appearance-20261020-r2",
-    "./js/orbit-intro-scene.js?v=calculator-appearance-20261020-r2",
+    "./intro.css?v=delivery-notes-20261021-r3",
+    "./js/orbit-introduction.js?v=delivery-notes-20261021-r3",
+    "./js/orbit-intro-scene.js?v=delivery-notes-20261021-r3",
     "./manifest.json",
     "./orbit-icon.svg",
     "./orbit-icon.svg?v=brand-20261015",
     "./assets/vendor/tus.min.js",
-    "./js/logger.js?v=calculator-appearance-20261020-r2",
-    "./assets/vendor/supabase.min.js?v=calculator-appearance-20261020-r2",
-    "./style.css?v=calculator-appearance-20261020-r2",
-    "./tools.css?v=calculator-appearance-20261020-r2",
-    "./chat-upgrades.css?v=calculator-appearance-20261020-r2",
-    "./photo-weather.css?v=calculator-appearance-20261020-r2",
-    "./messaging-experience.css?v=calculator-appearance-20261020-r2",
-    "./app-polish.css?v=calculator-appearance-20261020-r2",
-    "./js/config.js?v=calculator-appearance-20261020-r2",
-    "./js/rooms.js?v=calculator-appearance-20261020-r2",
-    "./js/chat-actions.js?v=calculator-appearance-20261020-r2",
-    "./js/actions/media-lightbox.js?v=calculator-appearance-20261020-r2",
-    "./js/actions/media-preview.js?v=calculator-appearance-20261020-r2",
-    "./js/actions/file-viewer.js?v=calculator-appearance-20261020-r2",
-    "./js/actions/voice-recorder.js?v=calculator-appearance-20261020-r2",
-    "./js/actions/chat-extras.js?v=calculator-appearance-20261020-r2",
-    "./js/messaging-notifications.js?v=calculator-appearance-20261020-r2",
-    "./js/chat-gestures.js?v=calculator-appearance-20261020-r2",
-    "./js/chat-select.js?v=calculator-appearance-20261020-r2",
-    "./js/chat-share.js?v=calculator-appearance-20261020-r2",
-    "./js/chat/message-controls.js?v=calculator-appearance-20261020-r2",
-    "./js/chat/chat-history.js?v=calculator-appearance-20261020-r2",
-    "./js/chat/chat-feed.js?v=calculator-appearance-20261020-r2",
-    "./js/chat/chat-dispatcher.js?v=calculator-appearance-20261020-r2",
-    "./js/chat/chat-realtime.js?v=calculator-appearance-20261020-r2",
-    "./js/chat.js?v=calculator-appearance-20261020-r2",
-    "./js/calculator.js?v=calculator-appearance-20261020-r2",
-    "./js/tools.js?v=calculator-appearance-20261020-r2",
-    "./js/celestial.js?v=calculator-appearance-20261020-r2",
-    "./js/ui/ui-auth.js?v=calculator-appearance-20261020-r2",
-    "./js/ui/ui-navigation.js?v=calculator-appearance-20261020-r2",
-    "./js/ui/ui-modals.js?v=calculator-appearance-20261020-r2",
-    "./js/ui/ui-notifications.js?v=calculator-appearance-20261020-r2",
-    "./js/ui.js?v=calculator-appearance-20261020-r2",
-    "./js/orbit-chat-services.js?v=calculator-appearance-20261020-r2",
-    "./js/orbit-media-editor.js?v=calculator-appearance-20261020-r2",
-    "./js/orbit-private-photos.js?v=calculator-appearance-20261020-r2",
-    "./js/orbit-banner-weather.js?v=calculator-appearance-20261020-r2",
-    "./js/liquid-glass.js?v=calculator-appearance-20261020-r2",
-    "./js/messaging-experience.js?v=calculator-appearance-20261020-r2",
-    "./js/call-experience.js?v=calculator-appearance-20261020-r2",
-    "./js/orbit-interface.js?v=calculator-appearance-20261020-r2"
+    "./js/logger.js?v=delivery-notes-20261021-r3",
+    "./assets/vendor/supabase.min.js?v=delivery-notes-20261021-r3",
+    "./style.css?v=delivery-notes-20261021-r3",
+    "./tools.css?v=delivery-notes-20261021-r3",
+    "./chat-upgrades.css?v=delivery-notes-20261021-r3",
+    "./photo-weather.css?v=delivery-notes-20261021-r3",
+    "./messaging-experience.css?v=delivery-notes-20261021-r3",
+    "./app-polish.css?v=delivery-notes-20261021-r3",
+    "./js/config.js?v=delivery-notes-20261021-r3",
+    "./js/rooms.js?v=delivery-notes-20261021-r3",
+    "./js/chat-actions.js?v=delivery-notes-20261021-r3",
+    "./js/actions/media-lightbox.js?v=delivery-notes-20261021-r3",
+    "./js/actions/media-preview.js?v=delivery-notes-20261021-r3",
+    "./js/actions/file-viewer.js?v=delivery-notes-20261021-r3",
+    "./js/actions/voice-recorder.js?v=delivery-notes-20261021-r3",
+    "./js/actions/chat-extras.js?v=delivery-notes-20261021-r3",
+    "./js/messaging-notifications.js?v=delivery-notes-20261021-r3",
+    "./js/chat-gestures.js?v=delivery-notes-20261021-r3",
+    "./js/chat-select.js?v=delivery-notes-20261021-r3",
+    "./js/chat-share.js?v=delivery-notes-20261021-r3",
+    "./js/chat/message-controls.js?v=delivery-notes-20261021-r3",
+    "./js/chat/chat-history.js?v=delivery-notes-20261021-r3",
+    "./js/chat/chat-feed.js?v=delivery-notes-20261021-r3",
+    "./js/chat/chat-dispatcher.js?v=delivery-notes-20261021-r3",
+    "./js/chat/chat-realtime.js?v=delivery-notes-20261021-r3",
+    "./js/chat.js?v=delivery-notes-20261021-r3",
+    "./js/calculator.js?v=delivery-notes-20261021-r3",
+    "./js/tools.js?v=delivery-notes-20261021-r3",
+    "./js/celestial.js?v=delivery-notes-20261021-r3",
+    "./js/ui/ui-auth.js?v=delivery-notes-20261021-r3",
+    "./js/ui/ui-navigation.js?v=delivery-notes-20261021-r3",
+    "./js/ui/ui-modals.js?v=delivery-notes-20261021-r3",
+    "./js/ui/ui-notifications.js?v=delivery-notes-20261021-r3",
+    "./js/ui.js?v=delivery-notes-20261021-r3",
+    "./js/orbit-chat-services.js?v=delivery-notes-20261021-r3",
+    "./js/orbit-media-editor.js?v=delivery-notes-20261021-r3",
+    "./js/orbit-private-photos.js?v=delivery-notes-20261021-r3",
+    "./js/orbit-banner-weather.js?v=delivery-notes-20261021-r3",
+    "./js/liquid-glass.js?v=delivery-notes-20261021-r3",
+    "./js/messaging-experience.js?v=delivery-notes-20261021-r3",
+    "./js/call-experience.js?v=delivery-notes-20261021-r3",
+    "./js/orbit-interface.js?v=delivery-notes-20261021-r3"
 ];
 
 self.addEventListener('install', event => {
@@ -101,34 +103,48 @@ self.addEventListener('fetch', event => {
     })());
 });
 
+// Device preferences survive closed tabs and shell-cache upgrades.
+const ALERT_PREF_CACHE='notification-preferences';
+const alertPreferenceKey=()=>new URL('_orbit_alert_preferences',self.registration.scope).href;
+self.addEventListener('message',event=>{
+ if(event.data?.type!=='ORBIT_ALERT_PREFERENCES')return;
+ const prefs=event.data.preferences||{};
+ event.waitUntil((async()=>{const cache=await caches.open(ALERT_PREF_CACHE);await cache.put(alertPreferenceKey(),new Response(JSON.stringify({previews:prefs.previews!==false,callSilent:prefs.callSilent===true,messageSilent:prefs.messageSilent===true}),{headers:{'Content-Type':'application/json'}}));})());
+});
+async function orbitWorkerAlertPreferences(){try{const cache=await caches.open(ALERT_PREF_CACHE),response=await cache.match(alertPreferenceKey());return response?await response.json():{};}catch(_){return {};}}
+
 // Call alerts expire quickly; message and call tags are shared with foreground alerts.
 self.addEventListener('push', event => {
  let data={};try{data=event.data?event.data.json():{};}catch(_){data={body:'New Orbit notification'};}
  const isCall=data.isCall===true,callId=isCall?(data.callId||data.msgId):null;
- if(isCall&&(!callId||!Number.isFinite(Number(data.timestamp))||Date.now()-Number(data.timestamp)>45000))return;
+ if(isCall&&(!callId||!Number.isFinite(Number(data.timestamp))||(!data.ended&&Date.now()-Number(data.timestamp)>45000)))return;
  const tag=isCall?'orbit-call-'+callId:(data.tag||'orbit-message-'+(data.msgId||Date.now()));
  event.waitUntil((async()=>{
   const windows=await self.clients.matchAll({type:'window',includeUncontrolled:true});
+  if(isCall)for(const client of windows)client.postMessage({type:'ORBIT_CALL_PUSH',callId,ended:!!data.ended});
   const states=await Promise.all(windows.map(client=>new Promise(resolve=>{
    const channel=new MessageChannel();const timer=setTimeout(()=>{channel.port1.close();resolve({});},500);
    channel.port1.onmessage=reply=>{clearTimeout(timer);channel.port1.close();resolve(reply.data||{});};
    client.postMessage({type:'ORBIT_PUSH_VISIBLE_QUERY',roomId:data.roomId,isCall,callId},[channel.port2]);
   })));
-  if(states.some(state=>state.active===true))return;
-  if((await self.registration.getNotifications({tag})).length)return;
-  const previews=!states.some(state=>state.previews===false),silent=states.some(state=>state.silent===true);
+  if(!data.ended&&states.some(state=>state.active===true))return;
+  const existing=await self.registration.getNotifications({tag});
+  if(!data.ended&&existing.length)return;
+  const preferences=await orbitWorkerAlertPreferences();
+  const previews=preferences.previews!==false&&!states.some(state=>state.previews===false),silent=!!data.ended||(isCall?preferences.callSilent:preferences.messageSilent)||states.some(state=>state.silent===true);
   await self.registration.showNotification(previews?(data.title||'Orbit Messenger'):'Orbit Messenger',{
-   body:isCall?'Incoming voice call · Open Orbit to answer':previews?(data.body||'You have a new message'):'You have a new message',
-   icon:'./orbit-icon.svg',badge:'./orbit-icon.svg',tag,renotify:false,requireInteraction:isCall,
+   body:isCall?(data.ended?(data.body||'Voice call ended'):'Incoming voice call · Open Orbit to answer'):previews?(data.body||'You have a new message'):'You have a new message',
+   icon:'./orbit-icon.svg',badge:'./orbit-icon.svg',tag,renotify:false,requireInteraction:isCall&&!data.ended,
    silent,vibrate:silent?[]:isCall?[300,150,300,150,300]:[150,80,150],timestamp:Number(data.timestamp)||Date.now(),
-   data:{url:self.registration.scope,roomId:data.roomId||null,msgId:isCall?null:(data.msgId||null),callId,timestamp:data.timestamp||Date.now()},
-   actions:[{action:'open',title:isCall?'View call':'Open chat'},{action:'dismiss',title:'Dismiss alert'}]
+   data:{url:self.registration.scope,roomId:data.roomId||null,msgId:isCall?null:(data.msgId||null),callId,noteId:data.noteId||null,ended:!!data.ended,timestamp:data.timestamp||Date.now()},
+   actions:[{action:'open',title:isCall?'View call':data.noteId?'Open note':'Open chat'},{action:'dismiss',title:'Dismiss alert'}]
   });
  })());
 });
 self.addEventListener('notificationclick',event=>{
  event.notification.close();if(event.action==='dismiss')return;
  const data=event.notification.data||{},target=new URL(self.registration.scope);
+ if(data.noteId)target.searchParams.set('noteId',data.noteId);
  if(data.roomId)target.searchParams.set('openRoom',data.roomId);
  if(data.callId)target.searchParams.set('callId',data.callId);
  else if(data.msgId)target.searchParams.set('focusMsg',data.msgId);
@@ -136,7 +152,7 @@ self.addEventListener('notificationclick',event=>{
  event.waitUntil((async()=>{
   const windows=await self.clients.matchAll({type:'window',includeUncontrolled:true});
   const client=windows.find(client=>new URL(client.url).origin===self.location.origin&&client.focused)||windows.find(client=>new URL(client.url).origin===self.location.origin);
-  if(client){client.postMessage({type:'NOTIFICATION_NAVIGATE',roomId:data.roomId,msgId:data.msgId,callId:data.callId,timestamp:data.timestamp});return client.focus();}
+  if(client){client.postMessage({type:'NOTIFICATION_NAVIGATE',roomId:data.roomId,msgId:data.msgId,callId:data.callId,noteId:data.noteId,timestamp:data.timestamp});return client.focus();}
   if(self.clients.openWindow)return self.clients.openWindow(target.href);
  })());
 });

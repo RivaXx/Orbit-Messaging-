@@ -1,0 +1,17 @@
+# Calls, notifications, notes, news and mobile wallpaper
+
+Incoming calls now display, ring and notify before ICE setup. The call inbox subscribes before unrelated sync work, reconnects through realtime, and uses bounded recovery polls when realtime is disconnected. Terminal-call memory prevents stale responses from ringing a call again after hangup. Call tones are cancelled at hangup. Existing notification permission repairs missing push enrollment; concurrent enrollments are combined.
+
+The additive Supabase migration creates an immediate call-event outbox with retries and a ten-second lightweight scheduler. Notes reminders use the same server queue. Calling no longer relies on the message-history insert to alert the callee. Call-end pushes replace ringing alerts silently; expired ringing pushes are discarded. Device preview/sound preferences remain available to the service worker with no open tab. Delivery still depends on browser/OS permissions, internet, Focus/battery settings and push-service availability; a powered-off device cannot receive a live call. iPhone/iPad users must add Orbit to Home Screen and allow notifications there. Orbit remains a web app, without native CallKit/full-screen phone-call integration.
+
+Calculator wallpaper is stored in IndexedDB instead of filling the shared text-preference quota. Legacy photos migrate, uploads remain revision-safe and a browser that blocks both storage methods can still apply a session wallpaper with honest feedback.
+
+News uses a same-origin server RSS aggregator (BBC and Google News), dates/sorts/deduplicates up to 60 stories per category, renders in pages of 20 and refreshes every two minutes while visible. Sources are cached briefly on the server; provider publication time remains visible. Existing fallbacks remain available.
+
+Notes now support create/edit, search/tags, colour, pinning, archive, recoverable Trash, checklists, persistent local drafts, reminders and account sync. Saves are confirmed, optimistic version checks prevent stale overwrites, quick checklist changes serialize, and drafts remain account-scoped. Reminders derive Calendar entries from the same cloud note and open the note for editing. Existing calendar events are preserved. New notes RLS includes a restrictive owner guard. Light/dark note surfaces have paired text colours. Fixed a missing legacy theme-toggle that could stop light-mode startup and stopped navigation focus scrolling the app frame sideways.
+
+Backend deployment: migration and reminder-queue checks passed in a rolled-back transaction. Migration installed on project dhtbiggamuwoqurguhib; orbit-message-push deployed; authenticated webhook health probe returned HTTP 200 with sent:0 (no notification sent). Scheduler active at ten-second intervals; notes RLS enabled. Separate rolled-back checks confirmed own-note access and cross-account read/write denial. Accounts, existing notes, chats, profile pictures and media are preserved.
+
+Validation: Node regression suite plus browser checks for both note themes, editing/checklists, reminders in Calendar, navigation alignment and actual wallpaper upload/reload. No real users were called or messaged. Lock-screen delivery latency on physical phones has not been measured in this environment.
+
+Release assets: delivery-notes-20261021-r3. Apply the migration after the existing chat/notification setup when installing another environment. Deploy api/news.js with the frontend on Vercel (serve.cjs also supports it locally).

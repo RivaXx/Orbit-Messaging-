@@ -3,6 +3,9 @@ let orbitServicesOwner = null, orbitCallsChannel = null, orbitIceChannel = null,
 let orbitCallRow = null, orbitCallClosing = false, orbitAnswerInProgress = false, orbitLocalIce = [], orbitSeenIce = new Set();
 let orbitRingTimer = null, orbitRingAudio = null, orbitScheduleTarget = null, orbitScheduleRequest = null;
 let orbitSchedules = [], orbitScheduleSaving = false;
+let orbitCallsConnected = false, orbitCallRecoveryTimer = null, orbitCallRecoveryBusy = false;
+const orbitClosedCallIds=new Map();
+function orbitRememberClosedCall(id){if(!id)return;orbitClosedCallIds.set(id,Date.now());for(const [key,time] of orbitClosedCallIds)if(time<Date.now()-300000||orbitClosedCallIds.size>128)orbitClosedCallIds.delete(key);}
 const orbitTerminalCalls = new Set(['ended','declined','missed','failed']);
 
 async function orbitRpc(name,args) {
@@ -15,9 +18,20 @@ async function initOrbitChatServices() {
     const owner = currentUser?.id;
     if (!owner || orbitServicesOwner === owner) return;
     await stopOrbitChatServices();
-    orbitServicesOwner = owner;
     const client = await ensureSupabase();
     if (currentUser?.id !== owner) return;
+    orbitServicesOwner = owner;
+    // Subscribe before migrations/profile work: a slow sync must never delay a call.
+    orbitCallsChannel = client.channel(`orbit-call-inbox-${owner}`)
+        .on('postgres_changes',{event:'*',schema:'public',table:'orbit_calls',filter:`callee_id=eq.${owner}`},event=>receiveOrbitCall(event.new))
+        .on('postgres_changes',{event:'*',schema:'public',table:'orbit_calls',filter:`caller_id=eq.${owner}`},event=>receiveOrbitCall(event.new))
+        .subscribe(status=>{orbitCallsConnected=status==='SUBSCRIBED';if(orbitCallsConnected)recoverOrbitIncomingCall().catch(()=>{});});
+    recoverOrbitIncomingCall().catch(()=>{});
+    orbitCallRecoveryTimer=setInterval(()=>{
+        if(currentUser?.id===owner&&!document.hidden&&!orbitCallsConnected)recoverOrbitIncomingCall().catch(()=>{});
+    },3000);
+    orbitRetryCallEnds();
+    if(typeof orbitPendingCallLink!=='undefined'&&orbitPendingCallLink)orbitOpenCallNotification(orbitPendingCallLink);
     try {
         const {data,error} = await client.from('orbit_user_blocks').select('blocked').eq('blocker',owner);
         if (error) throw error;
@@ -32,15 +46,11 @@ async function initOrbitChatServices() {
         updateChatOptionsMenuState(); updateVoiceCallButton();
     } catch (error) { console.warn('[Orbit] Block sync:',error.message); }
     await migrateOrbitLegacySchedules(owner);
-    orbitCallsChannel = client.channel(`orbit-call-inbox-${owner}`)
-        .on('postgres_changes',{event:'*',schema:'public',table:'orbit_calls'},event=>receiveOrbitCall(event.new))
-        .subscribe(status=>{if(status==='SUBSCRIBED') recoverOrbitIncomingCall();});
-    orbitRetryCallEnds();
-    await recoverOrbitIncomingCall();
-    if(typeof orbitPendingCallLink!=='undefined'&&orbitPendingCallLink)orbitOpenCallNotification(orbitPendingCallLink);
+
 }
 async function stopOrbitChatServices() {
     if (_activeCallId || _activeCallRole || peerConnection || localAudioStream) await endVoiceCall(true);
+    clearInterval(orbitCallRecoveryTimer);orbitCallRecoveryTimer=null;orbitCallsConnected=false;
     const client = getSupabase();
     if (orbitCallsChannel) await client?.removeChannel(orbitCallsChannel);
     if (orbitIceChannel) await client?.removeChannel(orbitIceChannel);
@@ -48,12 +58,17 @@ async function stopOrbitChatServices() {
     blockedUsersSet.clear(); orbitSchedules=[];
 }
 async function recoverOrbitIncomingCall() {
-    if (!currentUser) return;
+    if (!currentUser||orbitCallRecoveryBusy||navigator.onLine===false) return;
+    orbitCallRecoveryBusy=true;
+    const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),4000);
+    const bounded=query=>typeof query.abortSignal==='function'?query.abortSignal(controller.signal):query;
+    try {
     const owner=currentUser.id, client=await ensureSupabase();
     const activeId=_activeCallId;
-    if(activeId){const {data:active}=await client.from('orbit_calls').select('*').eq('id',activeId).single();if(currentUser?.id===owner&&_activeCallId===activeId&&active)await receiveOrbitCall(active);return;}
-    const {data,error}=await client.from('orbit_calls').select('*').eq('callee_id',owner).eq('state','ringing').gt('created_at',new Date(Date.now()-45000).toISOString()).order('created_at',{ascending:false}).limit(1);
+    if(activeId){const {data:active}=await bounded(client.from('orbit_calls').select('*').eq('id',activeId).single());if(currentUser?.id===owner&&_activeCallId===activeId&&active)await receiveOrbitCall(active);return;}
+    const {data,error}=await bounded(client.from('orbit_calls').select('*').eq('callee_id',owner).eq('state','ringing').gt('created_at',new Date(Date.now()-45000).toISOString()).order('created_at',{ascending:false}).limit(1));
     if (!error && currentUser?.id===owner && data?.[0]) receiveOrbitCall(data[0]);
+    } finally {clearTimeout(timeout);orbitCallRecoveryBusy=false;}
 }
 async function migrateOrbitLegacySchedules(owner) {
     const key=`orbit_scheduled_${owner}`;
@@ -169,9 +184,10 @@ async function checkAndDispatchScheduledMessages(){await updateScheduledChipForC
 function _canStartVoiceCall(){return !!currentUser && !!navigator.mediaDevices?.getUserMedia && typeof RTCPeerConnection!=='undefined';}
 function updateVoiceCallButton(){const b=document.getElementById('btn-chat-voice-call');if(b)b.classList.toggle('hide',!_canStartVoiceCall()||!activeChatPeerId||isGroupChat||isSelfChat||isUserBlocked(activeChatPeerId));}
 function orbitCallRing(stop=false) {
+    orbitStopCallTones();
     clearInterval(orbitRingTimer);orbitRingTimer=null;
     if(stop){if(orbitRingAudio){orbitRingAudio.close().catch(()=>{});orbitRingAudio=null;}return;}
-    const beep=()=>{if(_activeCallRole==='callee'&&localStorage.getItem('orbit_call_ringtone')==='silent')return;orbitPlayTone(_activeCallRole==='caller'?'ringback':(localStorage.getItem('orbit_call_ringtone')||'orbit'),Number(localStorage.getItem('orbit_call_volume')??'.12'));};
+    const beep=()=>{if(!_activeCallRole||!['ringing'].includes(orbitCallRow?.state))return;if(_activeCallRole==='callee'&&localStorage.getItem('orbit_call_ringtone')==='silent')return;orbitPlayTone(_activeCallRole==='caller'?'ringback':(localStorage.getItem('orbit_call_ringtone')||'orbit'),Number(localStorage.getItem('orbit_call_volume')??'.12'),'call');};
     beep();orbitRingTimer=setInterval(beep,_activeCallRole==='caller'?3000:2200);
 }
 function _showVoiceCallModal({incoming=false}={}) {
@@ -206,8 +222,9 @@ async function orbitReceiveIce(signal) {
 }
 async function _sendVoiceCallSignal(type,extra={}) {
     if(!_activeCallId||!currentUser)return false;
+    const callId=_activeCallId,owner=currentUser.id;
     try {
-        if(type==='candidate'){const client=await ensureSupabase();const {error}=await client.from('orbit_call_signals').insert({call_id:_activeCallId,sender_id:currentUser.id,candidate:extra.candidate});if(error)throw error;}
+        if(type==='candidate'){const client=await ensureSupabase();if(_activeCallId!==callId||currentUser?.id!==owner)return false;const {error}=await client.from('orbit_call_signals').insert({call_id:callId,sender_id:owner,candidate:extra.candidate});if(error)throw error;}
         else if(type==='end')await orbitRpc('orbit_update_call',{call_key:_activeCallId,next_state:orbitCallRow?.state==='ringing'&&_activeCallRole==='callee'?'declined':'ended'});
         return true;
     }catch(error){console.warn('[Orbit Call]',error.message);return false;}
@@ -245,28 +262,30 @@ async function startVoiceCall() {
         await pc.setLocalDescription(await pc.createOffer());
         const row=await orbitRpc('orbit_start_call',{chat_room:room,peer_id:peer,description:pc.localDescription.toJSON()});
         if(currentUser?.id!==owner||_activeCallRoom!==room||epoch!==orbitCallEpoch){orbitReportCallEnd(row.id,'ended',owner);return;}
-        orbitCallRow=row;_activeCallId=row.id;await orbitWatchIce(row);
-        for(const candidate of orbitLocalIce.splice(0))await _sendVoiceCallSignal('candidate',{candidate});
+        orbitCallRow=row;_activeCallId=row.id;orbitWatchIce(row).catch(error=>console.warn('[Orbit Call] ICE subscription:',error.message));
         _showVoiceCallModal();_setVoiceCallStatus('Ringing…');orbitCallRing();
+        Promise.allSettled(orbitLocalIce.splice(0).map(candidate=>_sendVoiceCallSignal('candidate',{candidate})));
         callNoAnswerTimer=setTimeout(()=>{if(orbitCallRow?.state==='ringing')endVoiceCall(true,'missed');},47000);
         const client=await ensureSupabase();const {data}=await client.from('orbit_calls').select('*').eq('id',row.id).single();if(data)receiveOrbitCall(data);
     }catch(error){if(epoch===orbitCallEpoch){showToast(error.message||'Could not start call.','error');await endVoiceCall(false);}}
 }
 async function receiveOrbitCall(row) {
     if(!row?.id||!currentUser||![row.caller_id,row.callee_id].includes(currentUser.id))return;
+    if(orbitTerminalCalls.has(row.state))orbitRememberClosedCall(row.id);
+    else if(orbitClosedCallIds.has(row.id))return;
     if(row.id!==_activeCallId){
         if(row.callee_id!==currentUser.id||row.state!=='ringing'||(!Number.isFinite(Date.parse(row.created_at))||Date.parse(row.created_at)<Date.now()-45000)||_activeCallId||peerConnection||isUserBlocked(row.caller_id))return;
         orbitCallRow=row;_activeCallId=row.id;_activeCallPeerId=row.caller_id;_activeCallRoom=row.room;_activeCallRole='callee';_pendingCallOffer=row.offer;_pendingCallCandidates=[];
-        await orbitWatchIce(row);
-        if(_activeCallId!==row.id||orbitCallRow?.state!=='ringing')return;
+        // Paint, ring and notify before any additional network round trip.
         _showVoiceCallModal({incoming:true});_setVoiceCallStatus('Incoming voice call');orbitCallRing();
         orbitNotifyIncomingCall(row);
+        orbitWatchIce(row).catch(error=>console.warn('[Orbit Call] ICE subscription:',error.message));
         callNoAnswerTimer=setTimeout(()=>{if(orbitCallRow?.state==='ringing')endVoiceCall(true,'missed');},Math.max(1000,Date.parse(row.created_at)+47000-Date.now()));
         return;
     }
     orbitCallRow=row;
     if(_activeCallRole==='callee'&&!peerConnection&&!orbitAnswerInProgress&&['connecting','connected'].includes(row.state)){showToast('Call answered on another device.','info');await endVoiceCall(false);return;}
-    if(orbitTerminalCalls.has(row.state)){if(!orbitCallClosing){if(row.state==='missed'&&row.callee_id===currentUser.id&&document.hidden)showNativeOrbitNotification(row.caller_name,'Missed voice call',row.room,row.id);showToast(row.state==='declined'?'Call declined.':row.state==='missed'?'Missed voice call.':'Call ended.');await endVoiceCall(false);}return;}
+    if(orbitTerminalCalls.has(row.state)){if(!orbitCallClosing){showToast(row.state==='declined'?'Call declined.':row.state==='missed'?'Missed voice call.':'Call ended.');await endVoiceCall(false);}return;}
     if(row.answer&&_activeCallRole==='caller'&&peerConnection&&!peerConnection.remoteDescription){try{orbitCallRing(true);await peerConnection.setRemoteDescription(row.answer);await _applyPendingCallCandidates();_setVoiceCallStatus('Connecting…');}catch(error){showToast(error.message,'error');}}
 }
 async function answerVoiceCall() {
@@ -292,6 +311,7 @@ async function endVoiceCall(notifyPeer=true,outcome=null) {
     if(orbitCallClosing)return;orbitCallClosing=true;
     orbitCallEpoch++;
     const id=_activeCallId,row=orbitCallRow,role=_activeCallRole;
+    orbitRememberClosedCall(id);
     try {
         if(notifyPeer&&id)orbitReportCallEnd(id,outcome||(row?.state==='ringing'&&role==='callee'?'declined':'ended'),row?(role==='caller'?row.caller_id:row.callee_id):currentUser?.id);
     }catch(error){console.warn('[Orbit Call] End:',error.message);}

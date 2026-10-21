@@ -1129,6 +1129,7 @@ function setNotificationPreviewPreference(enabled) {
 
 function setNotificationSoundPreference(enabled) {
     try { localStorage.setItem('orbit_notification_sound', enabled ? 'true' : 'false'); } catch(e) {}
+    if(typeof syncOrbitAlertPreferences==='function')syncOrbitAlertPreferences();
     showToast(enabled ? 'In-app alert sound enabled.' : 'In-app alert sound muted.');
 }
 
@@ -1163,7 +1164,7 @@ async function requestNotificationPermission() {
         if (typeof enableOrbitBackgroundPush === 'function') await enableOrbitBackgroundPush(true);
         try { localStorage.setItem('orbit_device_notifications', 'true'); } catch(e) {}
         updateNotificationSettingsUI();
-        showToast('Device notifications are enabled.', 'success');
+        showToast(typeof orbitPushStatus!=='undefined'&&orbitPushStatus.startsWith('Background notifications connected.')?'Background notifications are connected.':'Notification permission is allowed. Check the background-alert status below.','info');
         return true;
     }
     if (Notification.permission === 'denied') {
@@ -1177,7 +1178,7 @@ async function requestNotificationPermission() {
         try { localStorage.setItem('orbit_device_notifications', granted ? 'true' : 'false'); } catch(e) {}
         if (granted && typeof initServiceWorker === 'function') await initServiceWorker();
         updateNotificationSettingsUI();
-        showToast(granted ? 'Device notifications enabled.' : 'Notification permission was not granted.', granted ? 'success' : 'info');
+        showToast(granted ? 'Notification permission allowed. Check the background-alert status below.' : 'Notification permission was not granted.','info');
         return granted;
     } catch(e) {
         showToast('Could not request notification permission.', 'error');

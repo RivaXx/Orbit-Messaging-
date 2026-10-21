@@ -76,3 +76,8 @@ test('cached stock thumbnails render a neutral fallback instead of a repeated fa
  c.loadNewsFeed();assert.ok(element('news-feed-list').innerHTML.includes('No publisher image'));
  assert.ok(!element('news-feed-list').innerHTML.includes('<img'));
 });
+
+test('saved light mode initializes without the removed legacy theme-toggle element',()=>{
+ const {context:c,element,cache}=baseContext();cache.set('orbit_theme','light');c.document.body={classList:{add(){},remove(){},toggle(){},contains:()=>false}};c.document.documentElement={style:{setProperty(){}}};const original=c.document.getElementById;c.document.getElementById=id=>id==='theme-toggle'?null:original(id);for(const key of ['setChatWallpaper','handleWallpaperDimSlider','handleRefractionSlider','handleBlurSlider','handleOpacitySlider','handleGlowSlider'])c[key]=()=>{};
+ vm.runInContext(fs.readFileSync(path.join(root,'js/ui/ui-modals.js'),'utf8'),c);for(const key of ['setChatWallpaper','handleWallpaperDimSlider','handleRefractionSlider','handleBlurSlider','handleOpacitySlider','handleGlowSlider'])c[key]=()=>{};assert.doesNotThrow(()=>c.initTheme());
+});

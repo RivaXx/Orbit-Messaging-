@@ -1,31 +1,35 @@
 // ORBIT UI - AUTHENTICATION & SESSION MANAGEMENT (js/ui/ui-auth.js)
 // Service worker, deep links, login, signup, forgot password OTP, session verification, logout.
 
+let orbitWorkerMessagesBound=false;
 async function initServiceWorker() {
-    if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
-        try {
-            // Only the worker's activate handler knows the current cache name.
-            // Deleting caches here used to erase the current offline shell.
-            const reg = await navigator.serviceWorker.register('./sw.js?v=introduction-20261020-r2', { scope: './' });
-            reg.update().catch(() => {});
-            navigator.serviceWorker.addEventListener('message', event => {
-                if (event.data?.type === 'ORBIT_PUSH_VISIBLE_QUERY') {
-                    const active = event.data.isCall ? !!(_activeCallId===event.data.callId&&!document.hidden&&document.hasFocus()) : isOrbitChatVisible(event.data.roomId);
-                    const silent=!notificationPreference('orbit_notification_sound',true)||!!_activeCallId;
-                    const previews=notificationPreference('orbit_notification_previews',true);
-                    event.ports[0]?.postMessage({active,silent,previews});
-                }
-                if (event.data && event.data.type === 'NOTIFICATION_NAVIGATE') {
-                    if(event.data.callId)orbitOpenCallNotification(event.data.callId);
-                    else handleDeepLinkNavigation(event.data.roomId, event.data.msgId, event.data.timestamp);
-                }
-            });
-        } catch(e) {}
+    if(!('serviceWorker' in navigator)||!/^https?:$/.test(location.protocol))return;
+    // Bind immediately, even when a worker update is waiting on the network.
+    if(!orbitWorkerMessagesBound){
+        orbitWorkerMessagesBound=true;
+        navigator.serviceWorker.addEventListener('message',event=>{
+            if(event.data?.type==='ORBIT_PUSH_VISIBLE_QUERY'){
+                const active=event.data.isCall?!!(_activeCallId===event.data.callId&&!document.hidden&&document.hasFocus()):isOrbitChatVisible(event.data.roomId);
+                const silent=event.data.isCall?localStorage.getItem('orbit_call_ringtone')==='silent':!notificationPreference('orbit_notification_sound',true)||!!_activeCallId;
+                event.ports[0]?.postMessage({active,silent,previews:notificationPreference('orbit_notification_previews',true)});
+            }
+            if(event.data?.type==='ORBIT_CALL_PUSH')recoverOrbitIncomingCall().catch(()=>{});
+            if(event.data?.type==='NOTIFICATION_NAVIGATE'){
+                if(event.data.noteId)orbitOpenNoteLink(event.data.noteId);
+                else if(event.data.callId)orbitOpenCallNotification(event.data.callId);
+                else handleDeepLinkNavigation(event.data.roomId,event.data.msgId,event.data.timestamp);
+            }
+        });
     }
+    try{
+        const registration=await navigator.serviceWorker.register('./sw.js?v=delivery-notes-20261021-r3',{scope:'./'});
+        registration.update().catch(()=>{});
+    }catch(_){}
 }
 
 function handleUrlDeepLinkParams() {
     const params = new URLSearchParams(window.location.search);
+    const noteId=params.get('noteId');if(noteId){orbitOpenNoteLink(noteId);return;}
     const openRoom = params.get('openRoom');
     const focusMsg = params.get('focusMsg');
     const msgTime = params.get('msgTime');
@@ -668,6 +672,7 @@ async function signOut() {
             const disconnected = await disableOrbitBackgroundPush();
             if (!disconnected) { showToast('Reconnect so Orbit can turn off notifications before signing out.', 'error'); return; }
         }
+        if(typeof OrbitNotes!=='undefined')OrbitNotes.stop();
         stopOrbitWeather();closeViewOnceViewer();
         await stopOrbitChatServices();
         try {

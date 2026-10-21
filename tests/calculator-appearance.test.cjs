@@ -24,12 +24,22 @@ test('wallpaper converts, persists, restores and removes; cancellation preserves
  const restored=fixture(Object.fromEntries(storage));restored.c.applyCalcWallpaper(restored.storage.get('orbit_calc_wallpaper'));assert.match(restored.node('tab-calculator').style['--calc-wallpaper'],/^url/);
  c.clearCalcWallpaper();assert.equal(storage.has('orbit_calc_wallpaper'),false);assert.equal(node('tab-calculator').style['--calc-wallpaper'],'none');
 });
-test('invalid wallpaper and full storage preserve previous photo and never report success',async()=>{
+test('invalid wallpaper preserves photo; blocked persistent storage still applies a session wallpaper',async()=>{
  const {c,node,storage,toasts,pending,released}=fixture({orbit_calc_wallpaper:'data:image/jpeg;base64,b2xk'});c.applyCalcWallpaper(storage.get('orbit_calc_wallpaper'));
  await c.saveCalcWallpaper({target:{files:[{type:'text/html',size:10}],value:''}});assert.equal(toasts.at(-1)[1],'error');
  c.localStorage.setItem=()=>{throw Error('QuotaExceededError');};const save=c.saveCalcWallpaper({target:{files:[{name:'photo.jpg',type:'',size:10}],value:''}});pending.shift()();await save;
- assert.match(toasts.at(-1)[0],/storage is full/);assert.equal(storage.get('orbit_calc_wallpaper'),'data:image/jpeg;base64,b2xk');assert.equal(released.length,1);assert.equal(node('tab-calculator').style['--calc-wallpaper'],'url("data:image/jpeg;base64,b2xk")');
+ assert.match(toasts.at(-1)[0],/applied for this session/);assert.equal(storage.get('orbit_calc_wallpaper'),'data:image/jpeg;base64,b2xk');assert.equal(released.length,1);assert.equal(node('tab-calculator').style['--calc-wallpaper'],'url("data:image/jpeg;base64,YWJj")');
 });
 test('clearing while an image is loading cannot restore it later',async()=>{
  const {c,node,storage,pending,released}=fixture();const save=c.saveCalcWallpaper({target:{files:[{type:'image/png',size:10}],value:''}});c.clearCalcWallpaper();pending.shift()();await save;assert.equal(storage.has('orbit_calc_wallpaper'),false);assert.equal(node('tab-calculator').style['--calc-wallpaper'],'none');assert.equal(released.length,1);
+});
+
+test('mobile wallpaper saves through IndexedDB even when text storage is full',async()=>{
+ const {c,node,storage,pending}=fixture();const images=new Map();
+ c.localStorage.setItem=()=>{throw Error('Text quota');};
+ c.indexedDB={open(){const req={};queueMicrotask(()=>{req.result={transaction(){const tx={objectStore:()=>({put(value,k){images.set(k,value);const r={};queueMicrotask(()=>tx.oncomplete());return r;},get(k){const r={result:images.get(k)};queueMicrotask(()=>tx.oncomplete());return r;},delete(k){images.delete(k);const r={};queueMicrotask(()=>tx.oncomplete());return r;}})};return tx;}};req.onsuccess();});return req;}};
+ const saved=c.saveCalcWallpaper({target:{files:[{type:'image/png',size:100}],value:''}});pending.shift()();await saved;
+ assert.equal(images.get('wallpaper'),'data:image/jpeg;base64,YWJj');assert.equal(storage.has('orbit_calc_wallpaper'),false);assert.equal(node('tab-calculator').classList.contains('calc-has-wallpaper'),true);
+ c.applyCalcWallpaper('');await c.restoreCalcWallpaper(1);assert.equal(node('tab-calculator').classList.contains('calc-has-wallpaper'),true);
+ c.clearCalcWallpaper();await new Promise(resolve=>setImmediate(resolve));assert.equal(images.size,0);
 });

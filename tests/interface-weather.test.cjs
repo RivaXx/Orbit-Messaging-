@@ -106,3 +106,7 @@ test('calculator settings remain available across converter and date modes',()=>
  }
  c.switchCalcSubmode('invalid');assert.equal(node('calc-app-title').textContent,'Calculator');
 });
+
+test('notification navigation listener binds once before a stalled worker update',()=>{
+ const {c}=setup();let listeners=0;c.location={protocol:'https:'};c.navigator.serviceWorker={register:()=>new Promise(()=>{}),addEventListener:()=>listeners++};vm.runInContext(read('js/ui/ui-auth.js'),c);c.initServiceWorker();c.initServiceWorker();assert.equal(listeners,1);
+});

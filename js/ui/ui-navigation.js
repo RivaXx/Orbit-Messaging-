@@ -32,6 +32,7 @@ async function launchApp({introduction=false,forceIntroduction=false}={}) {
     if(typeof orbitRememberSessionActivity==='function')orbitRememberSessionActivity(true);
     if (typeof syncOrbitCleanupWatermark === 'function') syncOrbitCleanupWatermark().catch(() => {});
     initOrbitWeather().catch(()=>{});
+    if(typeof OrbitNotes!=='undefined'){OrbitNotes.load();if(window.orbitPendingNote)orbitOpenNoteLink(window.orbitPendingNote);}
     initOrbitChatServices().catch(error=>console.warn('[Orbit Services]',error.message));
     if (typeof enableOrbitBackgroundPush === 'function' && notificationPreference('orbit_device_notifications', true)) enableOrbitBackgroundPush();
     document.getElementById('screen-auth').classList.remove('active');
@@ -216,13 +217,14 @@ function startLiveFeedAutoRefresh() {
         if (!document.getElementById('screen-dash')?.classList.contains('active')) return;
         if (!document.getElementById('tab-news')?.classList.contains('hide')) refreshNewsFeed();
         if (!document.getElementById('tab-trending')?.classList.contains('hide')) refreshTrendingFeed();
-    }, 5 * 60 * 1000);
+    }, 2 * 60 * 1000);
 }
 startLiveFeedAutoRefresh();
 
 function filterNewsCategory(cat, btn) {
     if (!['global', 'india', 'tech', 'finance', 'entertainment', 'sports'].includes(cat)) return;
     currentNewsCategory = cat;
+    newsVisibleCount=20;
     document.querySelectorAll('#tab-news .news-filter-chip').forEach(b => b.classList.remove('active'));
     if (btn) btn.classList.add('active');
     loadNewsFeed();
@@ -268,7 +270,7 @@ function readCachedFeed(key) {
     } catch(e) { return []; }
 }
 
-async function fetchRssItems(feedUrl, limit = 10) {
+async function fetchRssItems(feedUrl, limit = 40) {
     const errors = [];
     const fetchText = async (url) => {
         const controller = new AbortController();
@@ -342,9 +344,9 @@ async function fetchGdeltNews(category) {
     };
     const params = new URLSearchParams({
         query: queries[category] || queries.global,
-        mode: 'ArtList', format: 'json', maxrecords: '30', timespan: '24h', sort: 'DateDesc'
+        mode: 'ArtList', format: 'json', maxrecords: '75', timespan: '24h', sort: 'DateDesc'
     });
-    const response = await fetch(`https://api.gdeltproject.org/api/v2/doc/doc?${params}`, { cache: 'no-store' });
+    const response = await fetch(`https://api.gdeltproject.org/api/v2/doc/doc?${params}`, { cache: 'no-store',signal:AbortSignal.timeout(6500) });
     if (!response.ok) throw new Error(`Live news source returned ${response.status}`);
     const data = await response.json();
     if (!Array.isArray(data.articles)) throw new Error('Live news source returned no article list');
@@ -360,7 +362,7 @@ async function fetchGdeltNews(category) {
             pubDate: published.toISOString(), img: safeNewsImage(article.socialimage),
             body: title, link, category
         };
-    }).filter(Boolean).sort((a, b) => new Date(b.pubDate) - new Date(a.pubDate)).slice(0, 10);
+    }).filter(Boolean).sort((a, b) => new Date(b.pubDate) - new Date(a.pubDate)).slice(0, 40);
 }
 
 function safeNewsImage(value) {
@@ -389,9 +391,10 @@ function makeNewsItems(items, category, defaultSource = 'Google News') {
             link: item.link,
             category
         };
-    }).filter(Boolean).slice(0, 10);
+    }).filter(Boolean).slice(0, 40);
 }
 
+let newsVisibleCount=20;
 const newsRefreshPending = new Set();
 const newsPublisherFeeds = {
     global:'https://feeds.bbci.co.uk/news/world/rss.xml',
@@ -411,8 +414,12 @@ async function refreshNewsFeed() {
     if (list && !liveNewsCache[currentNewsCategory]?.length) list.innerHTML = '<div class="feed-state">Loading the latest headlines…</div>';
     try {
         let items = [];
+        try{
+            const response=await fetch('/api/news?category='+encodeURIComponent(category),{cache:'no-store',signal:AbortSignal.timeout(8000)});
+            if(response.ok){const feed=await response.json();if(Array.isArray(feed.items))items=feed.items.filter(row=>row.category===category&&row.title&&/^https?:/.test(row.link)&&Number.isFinite(Date.parse(row.pubDate)));}
+        }catch(error){console.warn('[Orbit News] Aggregator unavailable:',error.message);}
         // Publisher RSS carries story images. Never substitute a stock photo.
-        try { items = makeNewsItems(await fetchRssItems(newsPublisherFeeds[category] || newsPublisherFeeds.global), category, category === 'sports' ? 'BBC Sport' : 'BBC News'); }
+        try { if(!items.length) items = makeNewsItems(await fetchRssItems(newsPublisherFeeds[category] || newsPublisherFeeds.global), category, category === 'sports' ? 'BBC Sport' : 'BBC News'); }
         catch (error) { console.warn('[Orbit News] Publisher feed unavailable:', error.message); }
         try { if (!items.length) items = await fetchGdeltNews(category); }
         catch (primaryError) { console.warn('[Orbit News] Primary live feed unavailable; trying backup:', primaryError); }
@@ -423,7 +430,7 @@ async function refreshNewsFeed() {
             const ids = (await response.json()).slice(0, 40);
             const stories = await Promise.all(ids.map(id => fetch(`https://hacker-news.firebaseio.com/v0/item/${id}.json`, { cache: 'no-store' }).then(r => r.ok ? r.json() : null).catch(() => null)));
             items = stories.filter(story => story?.title && story?.url && story.time)
-                .sort((a, b) => b.time - a.time).slice(0, 10).map(story => ({
+                .sort((a, b) => b.time - a.time).slice(0, 40).map(story => ({
                 id: `hn_${story.id}`, title: story.title, source: `Hacker News · ${story.by || 'community'}`,
                 pubDate: new Date(story.time * 1000).toISOString(), img: '',
                 body: `${story.title}\n\n${story.score || 0} points · ${story.descendants || 0} comments`, link: story.url, category
@@ -436,6 +443,8 @@ async function refreshNewsFeed() {
             items = makeNewsItems(await fetchRssItems(feed), category);
         }
         if (!items.length) throw new Error('No recent stories were returned');
+        const seen=new Set();
+        items=items.filter(item=>{const key=item.title.toLocaleLowerCase().replace(/\W/g,'');if(seen.has(key))return false;seen.add(key);return true;}).sort((a,b)=>Date.parse(b.pubDate)-Date.parse(a.pubDate)).slice(0,60);
         liveNewsCache[category] = items;
         try { localStorage.setItem(`orbit_news_${category}`, JSON.stringify(items)); } catch(e) {}
         if (category === currentNewsCategory) { setFeedUpdatedAt('news-last-updated'); loadNewsFeed(); }
@@ -465,7 +474,7 @@ function loadNewsFeed() {
         list.innerHTML = '<div class="feed-state">Headlines will appear here when the live feed loads.</div>';
         return;
     }
-    list.innerHTML = items.map(item => {
+    list.innerHTML = items.slice(0,newsVisibleCount).map(item => {
         const image = safeNewsImage(item.img);
         return `<button type="button" class="news-card-liquid touch-fix" data-news-id="${escapeHtml(item.id)}">
             <div class="news-thumb-wrap ${image ? '' : 'no-news-image'}">
@@ -477,6 +486,7 @@ function loadNewsFeed() {
             </span>
         </button>`;
     }).join('');
+    if(items.length>newsVisibleCount){list.innerHTML+='<button type="button" class="news-filter-chip" onclick="newsVisibleCount+=20;loadNewsFeed()">More headlines ('+(items.length-newsVisibleCount)+')</button>';}
     list.querySelectorAll('[data-news-id]').forEach(button => button.addEventListener('click', () => openNewsReader(button.dataset.newsId)));
 }
 
@@ -522,7 +532,7 @@ async function refreshTrendingFeed() {
             const pubDate = item.pubDate ? new Date(item.pubDate) : null;
             if (!title || !pubDate || Number.isNaN(pubDate.getTime())) return null;
             return { rank: index + 1, tag: title, category: cleanFeedText(item.category || 'Google Search'), pubDate: pubDate.toISOString(), link: item.link || `https://trends.google.com/trending?geo=IN&q=${encodeURIComponent(title)}` };
-        }).filter(Boolean).slice(0, 10);
+        }).filter(Boolean).slice(0, 40);
         if (!liveTrends.length) throw new Error('Google Trends returned no current search terms');
         CURATED_TRENDING = liveTrends;
         setFeedUpdatedAt('trending-last-updated');
@@ -590,11 +600,19 @@ function shareTrendingToChat(tag) {
 }
 
 
+function orbitEnsureTabVisible(button,smooth=true){
+    const pod=document.getElementById('dash-tabs-wrapper');if(!pod||!button)return;
+    const item=button.getBoundingClientRect(),frame=pod.getBoundingClientRect();
+    const right=item.right??item.left+button.offsetWidth;
+    const delta=item.left<frame.left?item.left-frame.left:right>frame.right?right-frame.right:0;
+    if(!delta)return;const left=Math.max(0,pod.scrollLeft+delta);
+    if(pod.scrollTo)pod.scrollTo({left,behavior:smooth?'smooth':'auto'});else pod.scrollLeft=left;
+}
 function switchTab(tabKey) {
     document.querySelectorAll('.liquid-tab-btn').forEach(b => b.classList.remove('active'));
     const selectedTabButton = document.querySelector(`.liquid-tab-btn[data-tab="${tabKey}"]`);
     selectedTabButton?.classList.add('active');
-    selectedTabButton?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+    orbitEnsureTabVisible(selectedTabButton);
 
     // Smoothly animate liquid glass pod indicator
     updateLiquidPodThumb(tabKey);
@@ -865,7 +883,7 @@ function initOrbitTabReorder() {
         if (!button || !event.altKey || !['ArrowLeft','ArrowRight'].includes(event.key)) return;
         event.preventDefault();
         if (moveOrbitTab(button, event.key === 'ArrowLeft' ? -1 : 1)) {
-            saveOrbitTabOrder(); button.focus({preventScroll:true}); button.scrollIntoView({block:'nearest',inline:'nearest'}); announceOrbitTab(button);
+            saveOrbitTabOrder(); button.focus({preventScroll:true}); orbitEnsureTabVisible(button,false); announceOrbitTab(button);
         }
     });
     pod.addEventListener('contextmenu', event => { if (state?.dragging) event.preventDefault(); });
@@ -899,27 +917,7 @@ function updateAdminTabVisibility() {
 }
 
 
-async function loadPersonalNotes() {
-    const list = document.getElementById('notes-list');
-    try {
-        const { data, error } = await sb.from('secure_notes').select('*').eq('user_id', currentUser.id).order('updated_at', { ascending: false });
-        if (error || !data || data.length === 0) {
-            list.innerHTML = '<div style="text-align:center; padding:30px; color:#888;">No notes created yet.</div>';
-            return;
-        }
-
-        let html = '';
-        data.forEach(n => {
-            html += `
-                <div class="contact-glass-card touch-fix" style="flex-direction:column; align-items:flex-start; gap:6px;">
-                    <div style="font-weight:700; font-size:14px; color:var(--accent);">${escapeHtml(n.title)}</div>
-                    <div style="font-size:12.5px; color:var(--text-primary); white-space:pre-wrap;">${escapeHtml(n.content)}</div>
-                </div>
-            `;
-        });
-        list.innerHTML = html;
-    } catch(e) {}
-}
+async function loadPersonalNotes(){await OrbitNotes.load();}
 
 // ══════════════════════════════════════════════════════════════════════════
 // GENERAL HELPERS & UI
