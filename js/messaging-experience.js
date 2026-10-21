@@ -161,12 +161,17 @@ function orbitUnlockAudio() {
 }
 document.addEventListener('pointerdown',()=>orbitUnlockAudio(),{once:true,passive:true});
 document.addEventListener('keydown',()=>orbitUnlockAudio(),{once:true});
-function orbitPlayTone(kind='orbit',volume=.16) {
+const orbitCallToneNodes=new Set();
+function orbitStopCallTones(){
+    for(const node of orbitCallToneNodes){try{node.stop();node.disconnect();}catch(_){}}
+    orbitCallToneNodes.clear();
+}
+function orbitPlayTone(kind='orbit',volume=.16,channel='general') {
     if(volume<=0)return;
     const context=orbitUnlockAudio();if(!context||context.state!=='running')return;
     const notes={orbit:[659,830,988,830],gentle:[523,659,784],classic:[880,880,660,880],ringback:[440,480]}[kind]||[659,830,988,830];
     notes.forEach((frequency,index)=>{const start=context.currentTime+index*.17,osc=context.createOscillator(),gain=context.createGain();
-        osc.type='sine';osc.frequency.value=frequency;gain.gain.setValueAtTime(0,start);gain.gain.linearRampToValueAtTime(volume,start+.015);gain.gain.exponentialRampToValueAtTime(.001,start+.15);osc.connect(gain);gain.connect(context.destination);osc.start(start);osc.stop(start+.17);osc.onended=()=>{osc.disconnect();gain.disconnect();};});
+        osc.type='sine';osc.frequency.value=frequency;gain.gain.setValueAtTime(0,start);gain.gain.linearRampToValueAtTime(volume,start+.015);gain.gain.exponentialRampToValueAtTime(.001,start+.15);osc.connect(gain);gain.connect(context.destination);if(channel==='call')orbitCallToneNodes.add(osc);osc.start(start);osc.stop(start+.17);osc.onended=()=>{orbitCallToneNodes.delete(osc);osc.disconnect();gain.disconnect();};});
 }
 async function orbitEnableClockNotifications() {
     orbitUnlockAudio();
@@ -223,7 +228,7 @@ function orbitPrepareCallPanel(incoming) {
         panel.append(controls);
         const tone=document.getElementById('orbit-call-ringtone'),volume=document.getElementById('orbit-call-volume');
         tone.value=localStorage.getItem('orbit_call_ringtone')||'orbit';volume.value=localStorage.getItem('orbit_call_volume')||'.12';
-        tone.onchange=()=>{localStorage.setItem('orbit_call_ringtone',tone.value);if(tone.value!=='silent')orbitPlayTone(tone.value,Number(volume.value));};
+        tone.onchange=()=>{localStorage.setItem('orbit_call_ringtone',tone.value);if(typeof syncOrbitAlertPreferences==='function')syncOrbitAlertPreferences();if(tone.value!=='silent')orbitPlayTone(tone.value,Number(volume.value));};
         volume.oninput=()=>localStorage.setItem('orbit_call_volume',volume.value);
         const hint=document.createElement('p');hint.className='orbit-call-hint';hint.textContent='Audio stays on your selected speaker or headphones. Use device controls when audio switching is unavailable.';panel.append(hint);
         document.getElementById('call-status-label').setAttribute('role','status');
