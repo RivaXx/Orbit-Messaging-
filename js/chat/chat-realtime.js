@@ -438,39 +438,61 @@ function handleRealtimeUpdate(payload, primaryRoomId, aliases) {
 
 
 // Typing uses a participant-authorized private channel. No draft text is sent.
+let orbitTypingRemoval=Promise.resolve(),orbitTypingRetry=null,orbitTypingFailures=0;
+function scheduleOrbitTypingRetry(){
+    if(orbitTypingRetry||!currentRoom||isSelfChat||document.hidden||!navigator.onLine)return;
+    const room=currentRoom,owner=currentUser?.id,view=_chatViewEpoch;
+    orbitTypingRetry=setTimeout(()=>{
+        orbitTypingRetry=null;
+        if(currentRoom===room&&currentUser?.id===owner&&_chatViewEpoch===view)
+            ensureSupabase().then(client=>setupOrbitTypingChannel(client,room,view)).catch(scheduleOrbitTypingRetry);
+    },Math.min(15000,1000*2**Math.min(orbitTypingFailures++,4)));
+}
+function resumeOrbitTyping(){
+    if(document.hidden||!navigator.onLine||!currentRoom||isSelfChat)return;
+    if(orbitTypingChannel?.state==='joined')broadcastTypingStatus();
+    else scheduleOrbitTypingRetry();
+}
 async function setupOrbitTypingChannel(client,roomId,viewEpoch){
     disposeOrbitTyping();
     if(isSelfChat||!currentUser?.id)return;
     const epoch=orbitTypingEpoch,owner=currentUser.id;
     const topic=!isGroupChat&&activeChatPeerId?getDeterministicDMId(owner,activeChatPeerId):roomId;
     try{
-        await client.realtime.setAuth();
+        // Removing and immediately recreating the same SDK topic can reuse a
+        // leaving channel. Finish its removal before subscribing again.
+        await orbitTypingRemoval;
+        let authTimer;
+        try{await Promise.race([client.realtime.setAuth(),new Promise((_,reject)=>{authTimer=setTimeout(()=>reject(new Error('Typing auth timeout')),8000);})]);}finally{clearTimeout(authTimer);}
         if(epoch!==orbitTypingEpoch||currentRoom!==roomId||_chatViewEpoch!==viewEpoch||currentUser?.id!==owner)return;
-        const channel=client.channel('orbit_typing_'+topic,{config:{private:true,broadcast:{self:false}}});
+        const channel=client.channel('orbit_typing_'+topic,{config:{private:true,broadcast:{self:false,ack:true}}});
         orbitTypingChannel=channel;orbitTypingRoom=roomId;orbitTypingOwner=owner;orbitTypingTopic=topic;
         channel.on('broadcast',{event:'typing'},event=>{
             if(orbitTypingChannel===channel&&currentRoom===roomId&&currentUser?.id===owner)handleRemoteTyping(event.payload);
         }).subscribe(state=>{
             if(orbitTypingChannel!==channel)return;
-            if(state==='SUBSCRIBED'&&document.getElementById('msg-input')?.value.trim())broadcastTypingStatus();
-            if(['CLOSED','CHANNEL_ERROR','TIMED_OUT'].includes(state)){isTypingActive=false;clearRemoteTyping();}
+            const status=document.getElementById('chat-target-status');if(status)status.dataset.typingConnection=state;
+            if(state==='SUBSCRIBED'){clearTimeout(orbitTypingRetry);orbitTypingRetry=null;orbitTypingFailures=0;if(document.getElementById('msg-input')?.value.trim())broadcastTypingStatus();}
+            if(['CLOSED','CHANNEL_ERROR','TIMED_OUT'].includes(state)){isTypingActive=false;clearRemoteTyping();scheduleOrbitTypingRetry();}
         });
-    }catch(_){/* Chat delivery remains available if typing cannot connect. */}
+    }catch(_){if(epoch===orbitTypingEpoch)scheduleOrbitTypingRetry();}
 }
 function clearRemoteTyping(){
     activeTypingUsers.forEach(value=>clearTimeout(value.timer));activeTypingUsers.clear();renderTypingStatusDOM();
 }
 function disposeOrbitTyping(){
+    clearTimeout(orbitTypingRetry);orbitTypingRetry=null;
     stopTypingBroadcast();++orbitTypingEpoch;
     clearRemoteTyping();
     const channel=orbitTypingChannel;
     orbitTypingChannel=null;orbitTypingRoom=null;orbitTypingOwner=null;orbitTypingTopic=null;
-    if(channel){try{getSupabase()?.removeChannel(channel)?.catch(()=>{});}catch(_){}}
+    if(channel){try{orbitTypingRemoval=Promise.resolve(getSupabase()?.removeChannel(channel)).catch(()=>{});}catch(_){}}
 }
 function broadcastTypingStatus(){
     const input=document.getElementById('msg-input');
     if(!input?.value.trim()||document.hidden||!navigator.onLine){stopTypingBroadcast();return;}
-    if(!orbitTypingChannel||orbitTypingChannel.state!=='joined'||currentRoom!==orbitTypingRoom||currentUser?.id!==orbitTypingOwner||isSelfChat)return;
+    if(!orbitTypingChannel||orbitTypingChannel.state!=='joined'){scheduleOrbitTypingRetry();return;}
+    if(currentRoom!==orbitTypingRoom||currentUser?.id!==orbitTypingOwner||isSelfChat)return;
     clearTimeout(typingInactivityTimer);
     // Refresh during continuous typing; receiver expiry must not flicker off.
     if(!isTypingActive||Date.now()-lastTypingBroadcastTime>=1200)sendTypingSignal('start');
@@ -485,7 +507,9 @@ function stopTypingBroadcast(){
 function sendTypingSignal(state='start'){
     if(!orbitTypingChannel||orbitTypingChannel.state!=='joined'||!orbitTypingOwner)return;
     isTypingActive=state==='start';lastTypingBroadcastTime=Date.now();
-    try{orbitTypingChannel.send({type:'broadcast',event:'typing',payload:{room:orbitTypingTopic,userId:orbitTypingOwner,state}}).catch(()=>{});}catch(_){}
+    const channel=orbitTypingChannel;
+    const failed=()=>{if(channel===orbitTypingChannel){isTypingActive=false;scheduleOrbitTypingRetry();}};
+    try{channel.send({type:'broadcast',event:'typing',payload:{room:orbitTypingTopic,userId:orbitTypingOwner,state}}).then(result=>{if(result&&result!=='ok')failed();}).catch(failed);}catch(_){failed();}
 }
 function handleRemoteTyping(payload){
     if(!payload||!currentUser||!currentRoom||payload.room!==orbitTypingTopic||typeof payload.userId!=='string'||payload.userId===currentUser.id||isSelfChat)return;
@@ -521,7 +545,9 @@ function renderTypingStatusDOM(){
     if(labelNode){if(labelNode.innerHTML!==label)labelNode.innerHTML=label;return;}
     statusEl.innerHTML='<span class="typing-indicator-pill" role="status" aria-live="polite"><span class="typing-dots" aria-hidden="true"><span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span></span><span class="typing-label">'+label+'</span></span>';
 }
-document.addEventListener('visibilitychange',()=>{if(document.hidden){stopTypingBroadcast();clearRemoteTyping();}});
+document.addEventListener('visibilitychange',()=>{if(document.hidden){stopTypingBroadcast();clearRemoteTyping();}else resumeOrbitTyping();});
+window.addEventListener('online',resumeOrbitTyping);
+window.addEventListener('pageshow',resumeOrbitTyping);
 window.addEventListener('pagehide',stopTypingBroadcast);
 window.addEventListener('offline',()=>{stopTypingBroadcast();clearRemoteTyping();});
 document.getElementById('msg-input')?.addEventListener('blur',stopTypingBroadcast);
