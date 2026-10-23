@@ -22,7 +22,7 @@ async function initServiceWorker() {
         });
     }
     try{
-        const registration=await navigator.serviceWorker.register('./sw.js?v=albums-typing-startup-20261022-r1',{scope:'./'});
+        const registration=await navigator.serviceWorker.register('./sw.js?v=receipts-notifications-20261023-r1',{scope:'./'});
         registration.update().catch(()=>{});
     }catch(_){}
 }
