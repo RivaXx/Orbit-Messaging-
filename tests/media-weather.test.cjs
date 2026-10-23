@@ -18,6 +18,18 @@ function mediaContext(){
  vm.runInContext(fs.readFileSync(path.join(root,'js/chat/chat-dispatcher.js'),'utf8'),context);
  return {context,toasts,events};
 }
+
+test('queued photos persist the chosen SD, HD or original mode in attachment metadata',async()=>{
+ for(const quality of ['sd','hd','original']){
+  const {context:c}=mediaContext();c.isPreviewHdQuality=quality==='hd';c._deliverOutboxMessage=async()=>{};
+  c.ensureSupabase=async()=>({rpc:async()=>({error:null})});
+  const file=new Blob(['photo bytes'],{type:'image/jpeg'});
+  await c.queueMediaMessage([{file,name:'photo.jpg',type:'image',originalQuality:quality==='original'}]);
+  const item=vm.runInContext('Array.from(_messageOutbox.values())[0]',c);await item.mediaReadyPromise;
+  assert.equal(item.payload.attachments[0].quality,quality);
+  await c._deleteOutboxMedia(item.payload.id);
+ }
+});
 test('denied IndexedDB does not prevent photos, videos or files from entering the upload queue',async()=>{
  for(const type of ['image/png','video/mp4','application/pdf']){
   const {context:c,toasts}=mediaContext();let delivered;

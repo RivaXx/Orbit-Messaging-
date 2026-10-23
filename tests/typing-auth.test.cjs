@@ -43,6 +43,31 @@ test('group typing uses trusted names and escapes markup; self-chat never subscr
  h.c.handleRemoteTyping({room:'uuid-room',userId:'peer',state:'start',username:'spoofed'});assert.match(h.node('chat-target-status').innerHTML,/&lt;Alex> is typing/);assert.doesNotMatch(h.node('chat-target-status').innerHTML,/spoofed/);
  h.c.isSelfChat=true;await h.c.setupOrbitTypingChannel(h.client,'uuid-room',1);assert.equal(h.channels.length,1);
 });
+
+test('typing waits for the old subscription to leave before rejoining the same topic',async()=>{
+ const h=harness();h.load('js/chat/chat-realtime.js');await h.c.setupOrbitTypingChannel(h.client,'uuid-room',1);
+ let release;h.client.removeChannel=()=>new Promise(resolve=>release=resolve);
+ const joining=h.c.setupOrbitTypingChannel(h.client,'uuid-room',1);await Promise.resolve();assert.equal(h.channels.length,1);
+ release();await joining;assert.equal(h.channels.length,2);
+});
+test('typing reconnects after channel failure and ignores retry callbacks after room changes',async()=>{
+ const h=harness();h.load('js/chat/chat-realtime.js');await h.c.setupOrbitTypingChannel(h.client,'uuid-room',1);
+ h.channels[0].state='closed';h.channels[0].stateChanged('CHANNEL_ERROR');
+ const retry=[...h.timers.values()].find(t=>t.ms===1000);assert.ok(retry);retry.fn();
+ for(let i=0;i<10;i++)await Promise.resolve();assert.equal(h.channels.length,2);
+ h.channels[1].stateChanged('TIMED_OUT');h.c.currentRoom='other';
+ for(const t of h.timers.values())if(t.ms<8000)t.fn();for(let i=0;i<10;i++)await Promise.resolve();assert.equal(h.channels.length,2);
+});
+test('full draft storage does not suppress typing signals',()=>{
+ const h=harness();h.load('js/chat/chat-feed.js');let signals=0;
+ h.c.updateDynamicActionButtons=()=>{};h.c.hideMentionAutocomplete=()=>{};h.c.broadcastTypingStatus=()=>signals++;
+ h.c.localStorage.setItem=()=>{throw new Error('Quota exceeded');};h.c.handleChatInputText({value:'hello'});assert.equal(signals,1);
+});
+test('an expired hourly token with a refresh token restores the remembered shell without a network wait',async()=>{
+ const h=harness();h.load('js/ui/ui-auth.js');h.storage.set('sb-example-auth-token',JSON.stringify({user:{id:'me'},expires_at:1,refresh_token:'test-refresh'}));
+ h.c.ensureSupabase=()=>{throw new Error('Must refresh in background');};await h.c.checkExistingSession();assert.equal(h.c.launches,1);
+ h.storage.set('orbit_explicit_signout','true');await h.c.checkExistingSession();assert.equal(h.c.launches,1);
+});
 test('password reset email requests use the exact production recovery callback and prevent duplicate sends',async()=>{
  const h=harness();h.load('js/ui/ui-auth.js');let requests=0,args;h.client.auth.resetPasswordForEmail=async(...a)=>{requests++;args=a;return {};};h.node('forgot-email-input').value='user@example.com';
  await h.c.handleSendForgotOtp();assert.equal(args[1].redirectTo,'https://orbit-messaging.vercel.app/?orbit_auth=recovery');await h.c.handleSendForgotOtp();assert.equal(requests,1);
