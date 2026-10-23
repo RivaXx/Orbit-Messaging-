@@ -31,10 +31,6 @@ async function launchApp({introduction=false,forceIntroduction=false}={}) {
     try{localStorage.removeItem('orbit_explicit_signout');}catch(_){}
     if(typeof orbitRememberSessionActivity==='function')orbitRememberSessionActivity(true);
     if (typeof syncOrbitCleanupWatermark === 'function') syncOrbitCleanupWatermark().catch(() => {});
-    initOrbitWeather().catch(()=>{});
-    if(typeof OrbitNotes!=='undefined'){OrbitNotes.load();if(window.orbitPendingNote)orbitOpenNoteLink(window.orbitPendingNote);}
-    initOrbitChatServices().catch(error=>console.warn('[Orbit Services]',error.message));
-    if (typeof enableOrbitBackgroundPush === 'function' && notificationPreference('orbit_device_notifications', true)) enableOrbitBackgroundPush();
     document.getElementById('screen-auth').classList.remove('active');
     document.getElementById('screen-dash').classList.add('active');
 
@@ -44,9 +40,18 @@ async function launchApp({introduction=false,forceIntroduction=false}={}) {
     }
     const cachedProfile = localStorage.getItem(`orbit_profile_${currentUser.id}`);
     if (cachedProfile) {
-        userProfile = JSON.parse(cachedProfile);
-        updateUserHeaderUI();
+        try{userProfile = JSON.parse(cachedProfile);updateUserHeaderUI();}catch(_){}
     }
+    document.documentElement.classList.remove('orbit-restoring');
+    // Give the cached chat list its first frame before optional suites start.
+    const launchOwner=currentUser.id;
+    setTimeout(()=>{
+        if(currentUser?.id!==launchOwner)return;
+        initOrbitWeather().catch(()=>{});
+        if(typeof OrbitNotes!=='undefined'){OrbitNotes.load();if(window.orbitPendingNote)orbitOpenNoteLink(window.orbitPendingNote);}
+        initOrbitChatServices().catch(error=>console.warn('[Orbit Services]',error.message));
+        if(typeof enableOrbitBackgroundPush==='function'&&notificationPreference('orbit_device_notifications',true))enableOrbitBackgroundPush();
+    },0);
 
     // Synchronously pre-warm global users from disk cache so clicking Global tab is instant
     const cachedGlobal = localStorage.getItem('orbit_global_cache_v26');
@@ -54,7 +59,7 @@ async function launchApp({introduction=false,forceIntroduction=false}={}) {
         try {
             globalUsersArray = JSON.parse(cachedGlobal);
             globalUsersArray.forEach(u => globalUsersMap.set(u.user_id, u));
-            renderGlobalUsersDOM(globalUsersArray); // pre-render into hidden tab
+            // The hidden directory is rendered only when opened.
         } catch(e) {}
     }
 
@@ -80,6 +85,13 @@ async function launchApp({introduction=false,forceIntroduction=false}={}) {
             const owner=currentUser?.id;
             const client = await ensureSupabase();
             const result = await client.auth.getSession();
+            if(!result.error&&!result.data?.session&&currentUser?.id===owner){
+                currentUser=null;userProfile=null;
+                document.querySelectorAll('.screen.active').forEach(node=>node.classList.remove('active'));
+                document.getElementById('screen-auth').classList.add('active');
+                if(typeof disposeOrbitTyping==='function')disposeOrbitTyping();
+                return;
+            }
             const session = await ensureCompactAuthSession(client, result.data?.session);
             if (currentUser?.id===owner && session?.user?.id === owner) currentUser = session.user;
         } catch (error) { console.warn('[Orbit] Session repair could not finish: ' + error.message); }})();
