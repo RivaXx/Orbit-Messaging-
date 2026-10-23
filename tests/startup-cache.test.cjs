@@ -16,3 +16,13 @@ test('every deferred local script and stylesheet has an offline cache entry and 
  for(const [tag,type,url] of assets){if(type==='script')assert.match(tag,/\bdefer\b/);assert.ok(fs.existsSync(path.join(root,url.split('?')[0])),url);assert.ok(worker.includes('"./'+url+'"'),url);}
  assert.doesNotMatch(worker,/_polish-review/);
 });
+
+test('other HTML pages do not accidentally receive the cached main app shell',async()=>{
+ const handlers={},cached=new Response('wrong app shell');let response;
+ const c=vm.createContext({URL,Response,Promise,fetch:async()=>new Response('correct separate page'),setTimeout,
+ self:{location:{origin:'https://orbit.example'},registration:{scope:'https://orbit.example/'},addEventListener:(name,fn)=>handlers[name]=fn},
+ caches:{open:async()=>({match:async key=>key==='./index.html'?cached:null,put:async()=>{}})}});
+ vm.runInContext(fs.readFileSync(path.join(__dirname,'../sw.js'),'utf8'),c);
+ handlers.fetch({request:{method:'GET',url:'https://orbit.example/other.html',mode:'navigate'},waitUntil(){},respondWith:value=>response=value});
+ assert.equal(await(await response).text(),'correct separate page');
+});
