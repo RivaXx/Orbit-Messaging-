@@ -254,19 +254,6 @@ async function openChatRoom(roomId, roomTitle, avatarUrl, isSelf = false, peerUs
             updateDynamicActionButtons();
         }
 
-        // Mark room messages as read by current user
-        if (currentUser && currentUser.id && roomId) {
-            try {
-                ensureSupabase().then(client => {
-                    client.from('messages')
-                        .update({ is_read: true, read_by: [currentUser.id] })
-                        .eq('room', roomId)
-                        .neq('sender_id', currentUser.id)
-                        .then(() => {});
-                }).catch(() => {});
-            } catch(e) {}
-        }
-
         // Update scheduled messages chip safely
         if (typeof updateScheduledChipForCurrentRoom === 'function') {
             try { updateScheduledChipForCurrentRoom(); } catch(e) {}
@@ -385,7 +372,7 @@ async function queryRoomHistoryPage(client, aliases, cursor = null, signal = nul
             return query.order('created_at', { ascending:false }).order('id', { ascending:false })
                 .limit(ROOM_HISTORY_PAGE_SIZE).abortSignal(controller.signal);
         };
-        let result = await run('id,room,sender_id,username,text,type,attachments,reactions,reply_to,read_by,pinned,created_at,deleted_at,expires_at');
+        let result = await run('id,room,sender_id,username,text,type,attachments,reactions,reply_to,read_by,delivered_to,pinned,created_at,deleted_at,expires_at');
         // Missing optional columns warrant a schema fallback; a slow network does not.
         const firstErrorText = `${result.error?.code || ''} ${result.error?.message || ''}`;
         if (result.error && /42703|PGRST204|column .* (?:does not exist|not found)|could not find .*column/i.test(firstErrorText)) {
@@ -472,6 +459,7 @@ async function fetchFreshRoomMessages(roomId, peerUserId = activeChatPeerId, vie
         const retained = existing.filter(m => !fresh.some(d => d.id === m.id) &&
             (['sending','queued','failed'].includes(m.status) || Date.parse(m.created_at) >= startedAt ||
              (oldestFresh !== null && Date.parse(m.created_at) < oldestFresh)));
+        if(typeof orbitAcknowledgeDelivery==='function')orbitAcknowledgeDelivery(fresh);
         const combined = deduplicateAndSort([...fresh, ...retained]);
         hasMoreOlderMessages = data.length === ROOM_HISTORY_PAGE_SIZE;
         persistRoomHistory(roomId, aliases, combined);

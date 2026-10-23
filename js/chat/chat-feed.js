@@ -187,6 +187,7 @@ function isDirectRecipientOnline() {
 
 function getTickIconHtml(msg) {
     if (!msg || msg.type === 'call') return '';
+    if(typeof orbitNormalizeMessage==='function')msg=orbitNormalizeMessage(msg);
     if (msg.status === 'failed' || msg.status === 'error') {
         const tempId = msg.client_temp_id || msg.id;
         return `<span class="msg-status-tick retry-error" onclick="event.stopPropagation(); retrySendMessage('${escapeHtml(String(tempId))}')" title="Failed to send. Tap to retry" style="color:#FF453A; cursor:pointer;"><i class="fa-solid fa-circle-exclamation"></i></span>`;
@@ -199,13 +200,16 @@ function getTickIconHtml(msg) {
         const pctHtml = pctVal !== null ? `<span class="msg-sending-pct">${pctVal}%</span>` : '';
         return `<span class="msg-status-tick sending sending-tick" title="${title}"><i class="fa-regular fa-clock orbit-spin-clock"></i>${pctHtml}</span>`;
     }
-    const isRead = Array.isArray(msg.read_by) 
-        ? msg.read_by.length > 0 
-        : (msg.read_by && Object.keys(msg.read_by).length > 0) || msg.is_read || msg.status === 'read';
+    const readers = Array.isArray(msg.read_by) ? msg.read_by : Object.keys(msg.read_by || {});
+    const receivers = Array.isArray(msg.delivered_to) ? msg.delivered_to : [];
+    const room = typeof allRoomsMap !== 'undefined' ? allRoomsMap.get(msg.room) : null;
+    const peers = Array.isArray(room?.participants) ? room.participants.filter(id=>id!==msg.sender_id) : [];
+    const hasReceipt = list => peers.length ? peers.every(id=>list.includes(id)) : list.some(id=>id!==msg.sender_id);
+    const isRead = hasReceipt(readers);
     if (isRead) {
         return `<span class="msg-status-tick tick-read" title="Read"><i class="fa-solid fa-check-double"></i></span>`;
     }
-    if (msg.status === 'delivered') {
+    if (hasReceipt(receivers)) {
         return `<span class="msg-status-tick tick-delivered" title="Delivered"><i class="fa-solid fa-check-double"></i></span>`;
     }
     return `<span class="msg-status-tick tick-sent" title="Sent"><i class="fa-solid fa-check"></i></span>`;
@@ -1130,6 +1134,8 @@ function handleInputResize(textarea) {
     if (!textarea) return;
     textarea.style.height = 'auto';
     textarea.style.height = `${Math.min(textarea.scrollHeight, 120)}px`;
+    textarea.style.overflowY = textarea.scrollHeight > 120 ? 'auto' : 'hidden';
+    textarea.closest('.input-glass-pill')?.classList.toggle('composer-multiline',textarea.scrollHeight>48);
     
     // Auto-capitalize first character if user starts typing
     if (textarea.value.length === 1 && textarea.value !== textarea.value.toUpperCase()) {

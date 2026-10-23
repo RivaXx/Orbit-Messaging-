@@ -3,6 +3,7 @@ const orbitMessageSelection = new Set();
 let orbitSelectionRoom = null;
 let orbitDeleteBusy = false;
 const orbitDeletionLedger = new Map();
+const orbitReceiptLedger = new Map();
 function orbitMessageKey(id) { return `${currentUser?.id || ''}:${id}`; }
 function orbitHiddenKey() { return `orbit_hidden_messages_${currentUser?.id || 'guest'}`; }
 function orbitHiddenMessages() {
@@ -16,6 +17,12 @@ function orbitLocationExpired(message, now = Date.now()) {
 }
 function orbitNormalizeMessage(message) {
     if (!message) return message;
+    const receiptKey=orbitMessageKey(message.id),known=orbitReceiptLedger.get(receiptKey)||{};
+    const ids=value=>Array.isArray(value)?value:Object.keys(value||{});
+    const read_by=[...new Set([...ids(known.read_by),...ids(message.read_by)])];
+    const delivered_to=[...new Set([...ids(known.delivered_to),...ids(message.delivered_to),...read_by])];
+    orbitReceiptLedger.set(receiptKey,{read_by,delivered_to});
+    message={...message,read_by,delivered_to};
     let reply = message.reply_to;
     if (typeof reply === 'string') { try { reply = JSON.parse(reply); } catch (_) { reply = null; } }
     if (reply?.id && orbitDeletionLedger.has(orbitMessageKey(reply.id)) && reply.text !== 'This message was deleted') {

@@ -165,11 +165,15 @@ async function setupRealtimeChatSubscription(roomId, viewEpoch = _chatViewEpoch)
 }
 
 // ── Global Realtime Message Listener (Bug B Fix: Live delivery across all rooms) ──
+let orbitGlobalRetry=null;
 async function setupGlobalRealtimeMessageListener() {
     if (globalRealtimeChannel) return;
     try {
         const client = await ensureSupabase();
-        globalRealtimeChannel = client.channel('orbit_global_messages')
+        const owner=currentUser?.id;
+        const globalChannel = client.channel('orbit_global_messages');
+        globalRealtimeChannel=globalChannel;
+        globalChannel
             .on('postgres_changes', {
                 event: 'INSERT',
                 schema: 'public',
@@ -179,6 +183,7 @@ async function setupGlobalRealtimeMessageListener() {
                 if (!newMsg || !currentUser) return;
                 // Ignore own message echo
                 if (newMsg.sender_id === currentUser.id) return;
+                if(typeof orbitAcknowledgeDelivery==='function')orbitAcknowledgeDelivery([newMsg]);
 
                 const currentRoomAliases = currentRoom ? resolveRoomAliases(currentRoom) : [];
                 const isViewingActiveRoom = currentRoom && (newMsg.room === currentRoom || currentRoomAliases.includes(newMsg.room));
@@ -215,8 +220,15 @@ async function setupGlobalRealtimeMessageListener() {
             })
             .on('postgres_changes', {event:'UPDATE',schema:'public',table:'messages'}, payload => {
                 if (payload.new?.deleted_at || payload.new?.text === '🚫 This message was deleted') orbitRememberDeletion(payload.new);
+                if(payload.new?.sender_id===currentUser?.id&&currentRoom){const aliases=resolveRoomAliases(currentRoom,activeChatPeerId);if(aliases.includes(payload.new.room))handleRealtimeUpdate(payload,currentRoom,aliases);}
             })
-            .subscribe();
+            .subscribe(state=>{
+                if(globalRealtimeChannel!==globalChannel)return;
+                if(['CHANNEL_ERROR','TIMED_OUT','CLOSED'].includes(state)){
+                    client.removeChannel(globalChannel).catch(()=>{});globalRealtimeChannel=null;
+                    clearTimeout(orbitGlobalRetry);orbitGlobalRetry=setTimeout(()=>{if(currentUser?.id===owner&&navigator.onLine)setupGlobalRealtimeMessageListener();},3000);
+                }
+            });
     } catch(e) {
         console.warn('[Orbit] setupGlobalRealtimeMessageListener note:', e);
     }
