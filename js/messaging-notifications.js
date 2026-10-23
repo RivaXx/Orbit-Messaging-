@@ -1,5 +1,39 @@
 // Browser push enrollment and notification visibility.
 let orbitPushStatus = '';
+let orbitStorageWarningAt=0;
+window.addEventListener('orbit-storage-full',()=>{
+    if(Date.now()-orbitStorageWarningAt<10000)return;orbitStorageWarningAt=Date.now();
+    if(typeof showToast==='function')showToast('Browser storage is full. This change could not be saved; your drafts and pending uploads were kept.','error');
+});
+async function orbitAcknowledgeDelivery(messages){
+    const owner=currentUser?.id;
+    const ids=messages.filter(m=>m.id&&m.sender_id!==owner&&!m.broadcast_pending&&!(m.delivered_to||[]).includes(owner)).map(m=>m.id).slice(0,100);
+    if(!owner||!ids.length||!navigator.onLine)return;
+    try{const client=await ensureSupabase();if(currentUser?.id!==owner)return;await orbitAwaitPushQuery(client.rpc('orbit_mark_messages_delivered',{message_keys:ids}));}catch(_){}
+}
+let orbitReceiptSyncBusy=false,orbitLastDeliverySweep=0;
+async function orbitRefreshReceipts(){
+    if(orbitReceiptSyncBusy||document.hidden||!navigator.onLine||!currentUser?.id)return;
+    const owner=currentUser.id,room=currentRoom;orbitReceiptSyncBusy=true;
+    try{
+        const client=await ensureSupabase();
+        if(Date.now()-orbitLastDeliverySweep>60000){
+            const incoming=await orbitAwaitPushQuery(client.from('messages').select('id,sender_id,delivered_to').neq('sender_id',owner).order('created_at',{ascending:false}).limit(100));
+            if(currentUser?.id!==owner)return;
+            if(!incoming.error){orbitLastDeliverySweep=Date.now();await orbitAcknowledgeDelivery(incoming.data||[]);}
+        }
+        if(room&&isOrbitChatVisible(room)){
+            const aliases=resolveRoomAliases(room,activeChatPeerId);
+            const result=await orbitAwaitPushQuery(client.from('messages').select('id,room,sender_id,read_by,delivered_to').in('room',aliases).eq('sender_id',owner).order('created_at',{ascending:false}).limit(100));
+            if(currentUser?.id!==owner||currentRoom!==room||result.error)return;
+            for(const receipt of result.data||[]){const old=(messageCache.get(room)||[]).find(m=>m.id===receipt.id);if(old)handleRealtimeUpdate({new:{...old,...receipt}},room,aliases);}
+            markRoomAsRead(room);
+        }
+    }catch(_){}finally{orbitReceiptSyncBusy=false;}
+}
+setInterval(orbitRefreshReceipts,10000);
+window.addEventListener('online',orbitRefreshReceipts);
+window.addEventListener('focus',orbitRefreshReceipts);
 let orbitPushConnectPromise=null,orbitPushConnectOwner=null,orbitPushEpoch=0;
 function isOrbitChatVisible(roomId) {
     if (!currentUser || !currentRoom || document.hidden || !document.hasFocus() ||
