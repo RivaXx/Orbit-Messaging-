@@ -1,0 +1,13 @@
+# Receipts, composer, notifications and browser storage
+
+- One tick means server accepted the message. Two grey ticks require recipient delivery acknowledgement; two blue ticks require a recipient read acknowledgement. Groups wait for every other known participant. Sender-only read lists and legacy flags cannot manufacture reads. Receipt state is preserved across stale updates and reconciled while the chat is visible.
+- Read acknowledgements are sent only for a visible, focused chat. Opening a background chat no longer performs an unconditional read update. New server functions validate membership and prevent forged or removed receipts.
+- Multiline composition uses a 24px corner radius, bounded padding, a five-line scroll area and flexible width. Long message text and code wrap within their bubbles in both themes.
+- Message notifications now use a persistent recipient outbox, immediate dispatch and scheduled retries with backoff. A private per-device acceptance ledger avoids resending to devices that already accepted a retry. Calls and notes retain their existing event paths. Message pushes request high urgency; expired subscriptions are removed. Foreground message subscriptions reconnect after channel errors.
+- Browser quota recovery discards only explicitly regenerable directory and history caches, then retries the actual save. Pending/failed messages, local-only media, drafts, notes, preferences, session data and wallpapers are preserved. Oversized optional caches no longer consume the entire storage quota. If protected data leaves no recoverable space, saving still reports an error rather than silently discarding personal data.
+
+## Verification and limits
+
+Server receipt and notification tests use synthetic messages inside rolled-back transactions. Receipt ownership, idempotency, delivery/read separation, anti-forgery, retry claim exclusivity, call/note constraint compatibility and ledger protection passed on the production database. Local regression tests exercise receipt rendering, stale state, multiline sizing, push retry deduplication and storage quota recovery. A 390px preview verified a 120px composer with scrollable overflow and text contained inside the pill in light mode.
+
+No chat purge or account reset is included. Native WhatsApp/Telegram/Signal delivery guarantees cannot be replicated by browser code: Web Push still depends on connectivity, OS permission, browser support and power restrictions. A powered-off device cannot ring immediately. Push-provider acceptance is tracked separately from actual in-app delivery and reading; it never manufactures blue ticks. No test notification or chat was sent to real users.

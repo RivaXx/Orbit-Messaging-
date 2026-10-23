@@ -1,59 +1,60 @@
 // Orbit Messenger — messaging delivery and storage policy repair
-const CACHE_NAME = 'orbit-albums-typing-startup-20261022-r1';
+const CACHE_NAME = 'orbit-receipts-notifications-20261023-r1';
 const PRECACHE_URLS = [
-    "./notes.css?v=albums-typing-startup-20261022-r1",
-    "./js/orbit-notes.js?v=albums-typing-startup-20261022-r1",
+    "./js/storage-recovery.js?v=receipts-notifications-20261023-r1",
+    "./notes.css?v=receipts-notifications-20261023-r1",
+    "./js/orbit-notes.js?v=receipts-notifications-20261023-r1",
     "./",
     "./index.html",
-    "./intro.css?v=albums-typing-startup-20261022-r1",
-    "./js/orbit-introduction.js?v=albums-typing-startup-20261022-r1",
-    "./js/orbit-intro-scene.js?v=albums-typing-startup-20261022-r1",
+    "./intro.css?v=receipts-notifications-20261023-r1",
+    "./js/orbit-introduction.js?v=receipts-notifications-20261023-r1",
+    "./js/orbit-intro-scene.js?v=receipts-notifications-20261023-r1",
     "./manifest.json",
     "./orbit-icon.svg",
     "./orbit-icon.svg?v=brand-20261015",
     "./assets/vendor/tus.min.js",
-    "./js/logger.js?v=albums-typing-startup-20261022-r1",
-    "./assets/vendor/supabase.min.js?v=albums-typing-startup-20261022-r1",
-    "./style.css?v=albums-typing-startup-20261022-r1",
-    "./tools.css?v=albums-typing-startup-20261022-r1",
-    "./chat-upgrades.css?v=albums-typing-startup-20261022-r1",
-    "./photo-weather.css?v=albums-typing-startup-20261022-r1",
-    "./messaging-experience.css?v=albums-typing-startup-20261022-r1",
-    "./app-polish.css?v=albums-typing-startup-20261022-r1",
-    "./js/config.js?v=albums-typing-startup-20261022-r1",
-    "./js/rooms.js?v=albums-typing-startup-20261022-r1",
-    "./js/chat-actions.js?v=albums-typing-startup-20261022-r1",
-    "./js/actions/media-lightbox.js?v=albums-typing-startup-20261022-r1",
-    "./js/actions/media-preview.js?v=albums-typing-startup-20261022-r1",
-    "./js/actions/file-viewer.js?v=albums-typing-startup-20261022-r1",
-    "./js/actions/voice-recorder.js?v=albums-typing-startup-20261022-r1",
-    "./js/actions/chat-extras.js?v=albums-typing-startup-20261022-r1",
-    "./js/messaging-notifications.js?v=albums-typing-startup-20261022-r1",
-    "./js/chat-gestures.js?v=albums-typing-startup-20261022-r1",
-    "./js/chat-select.js?v=albums-typing-startup-20261022-r1",
-    "./js/chat-share.js?v=albums-typing-startup-20261022-r1",
-    "./js/chat/message-controls.js?v=albums-typing-startup-20261022-r1",
-    "./js/chat/chat-history.js?v=albums-typing-startup-20261022-r1",
-    "./js/chat/chat-feed.js?v=albums-typing-startup-20261022-r1",
-    "./js/chat/chat-dispatcher.js?v=albums-typing-startup-20261022-r1",
-    "./js/chat/chat-realtime.js?v=albums-typing-startup-20261022-r1",
-    "./js/chat.js?v=albums-typing-startup-20261022-r1",
-    "./js/calculator.js?v=albums-typing-startup-20261022-r1",
-    "./js/tools.js?v=albums-typing-startup-20261022-r1",
-    "./js/celestial.js?v=albums-typing-startup-20261022-r1",
-    "./js/ui/ui-auth.js?v=albums-typing-startup-20261022-r1",
-    "./js/ui/ui-navigation.js?v=albums-typing-startup-20261022-r1",
-    "./js/ui/ui-modals.js?v=albums-typing-startup-20261022-r1",
-    "./js/ui/ui-notifications.js?v=albums-typing-startup-20261022-r1",
-    "./js/ui.js?v=albums-typing-startup-20261022-r1",
-    "./js/orbit-chat-services.js?v=albums-typing-startup-20261022-r1",
-    "./js/orbit-media-editor.js?v=albums-typing-startup-20261022-r1",
-    "./js/orbit-private-photos.js?v=albums-typing-startup-20261022-r1",
-    "./js/orbit-banner-weather.js?v=albums-typing-startup-20261022-r1",
-    "./js/liquid-glass.js?v=albums-typing-startup-20261022-r1",
-    "./js/messaging-experience.js?v=albums-typing-startup-20261022-r1",
-    "./js/call-experience.js?v=albums-typing-startup-20261022-r1",
-    "./js/orbit-interface.js?v=albums-typing-startup-20261022-r1"
+    "./js/logger.js?v=receipts-notifications-20261023-r1",
+    "./assets/vendor/supabase.min.js?v=receipts-notifications-20261023-r1",
+    "./style.css?v=receipts-notifications-20261023-r1",
+    "./tools.css?v=receipts-notifications-20261023-r1",
+    "./chat-upgrades.css?v=receipts-notifications-20261023-r1",
+    "./photo-weather.css?v=receipts-notifications-20261023-r1",
+    "./messaging-experience.css?v=receipts-notifications-20261023-r1",
+    "./app-polish.css?v=receipts-notifications-20261023-r1",
+    "./js/config.js?v=receipts-notifications-20261023-r1",
+    "./js/rooms.js?v=receipts-notifications-20261023-r1",
+    "./js/chat-actions.js?v=receipts-notifications-20261023-r1",
+    "./js/actions/media-lightbox.js?v=receipts-notifications-20261023-r1",
+    "./js/actions/media-preview.js?v=receipts-notifications-20261023-r1",
+    "./js/actions/file-viewer.js?v=receipts-notifications-20261023-r1",
+    "./js/actions/voice-recorder.js?v=receipts-notifications-20261023-r1",
+    "./js/actions/chat-extras.js?v=receipts-notifications-20261023-r1",
+    "./js/messaging-notifications.js?v=receipts-notifications-20261023-r1",
+    "./js/chat-gestures.js?v=receipts-notifications-20261023-r1",
+    "./js/chat-select.js?v=receipts-notifications-20261023-r1",
+    "./js/chat-share.js?v=receipts-notifications-20261023-r1",
+    "./js/chat/message-controls.js?v=receipts-notifications-20261023-r1",
+    "./js/chat/chat-history.js?v=receipts-notifications-20261023-r1",
+    "./js/chat/chat-feed.js?v=receipts-notifications-20261023-r1",
+    "./js/chat/chat-dispatcher.js?v=receipts-notifications-20261023-r1",
+    "./js/chat/chat-realtime.js?v=receipts-notifications-20261023-r1",
+    "./js/chat.js?v=receipts-notifications-20261023-r1",
+    "./js/calculator.js?v=receipts-notifications-20261023-r1",
+    "./js/tools.js?v=receipts-notifications-20261023-r1",
+    "./js/celestial.js?v=receipts-notifications-20261023-r1",
+    "./js/ui/ui-auth.js?v=receipts-notifications-20261023-r1",
+    "./js/ui/ui-navigation.js?v=receipts-notifications-20261023-r1",
+    "./js/ui/ui-modals.js?v=receipts-notifications-20261023-r1",
+    "./js/ui/ui-notifications.js?v=receipts-notifications-20261023-r1",
+    "./js/ui.js?v=receipts-notifications-20261023-r1",
+    "./js/orbit-chat-services.js?v=receipts-notifications-20261023-r1",
+    "./js/orbit-media-editor.js?v=receipts-notifications-20261023-r1",
+    "./js/orbit-private-photos.js?v=receipts-notifications-20261023-r1",
+    "./js/orbit-banner-weather.js?v=receipts-notifications-20261023-r1",
+    "./js/liquid-glass.js?v=receipts-notifications-20261023-r1",
+    "./js/messaging-experience.js?v=receipts-notifications-20261023-r1",
+    "./js/call-experience.js?v=receipts-notifications-20261023-r1",
+    "./js/orbit-interface.js?v=receipts-notifications-20261023-r1"
 ];
 
 self.addEventListener('install', event => {
@@ -81,12 +82,14 @@ self.addEventListener('fetch', event => {
     const url = new URL(request.url);
     const local = url.origin === self.location.origin;
     const navigation = local && (request.mode === 'navigate' || url.pathname.endsWith('.html'));
+    const entryPath=new URL('./',self.registration?.scope||self.location.origin+'/').pathname;
+    const appEntry=navigation&&(url.pathname===entryPath||url.pathname===entryPath+'index.html');
     const shellAsset = local && /\.(js|css|json|svg|woff2?)$/i.test(url.pathname);
     const library = ['cdn.jsdelivr.net', 'cdnjs.cloudflare.com', 'fonts.googleapis.com', 'fonts.gstatic.com'].includes(url.hostname);
     if (!navigation && !shellAsset && !library) return;
     event.respondWith((async () => {
         const cache = await caches.open(CACHE_NAME);
-        const cached = await cache.match(request) || (navigation ? await cache.match('./index.html') : null);
+        const cached = await cache.match(request) || (appEntry ? await cache.match('./index.html') : null);
         // Release-tagged assets are immutable until the next worker version.
         if(cached && shellAsset && url.searchParams.has("v"))return cached;
         const network = fetch(request).then(response => {
