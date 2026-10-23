@@ -460,7 +460,7 @@ function createMessageDOMNode(msg, isConsecutive = false) {
                 if (msg.type === 'poll') return;
 
                 if (isImage) {
-                    images.push({ url: cleanUrl, name: fileName, view_once: att.view_once===true || att.view_once==='true', storage_bucket:att.storage_bucket });
+                    images.push({ url: cleanUrl, name: fileName, quality: att.quality, view_once: att.view_once===true || att.view_once==='true', storage_bucket:att.storage_bucket });
                 } else {
                     files.push({ url: cleanUrl, name: fileName, isVideo, isAudio, type: att.type || msg.type, size: att.size });
                 }
@@ -536,13 +536,13 @@ function createMessageDOMNode(msg, isConsecutive = false) {
                 <div class="wa-image-bunch-grid bunch-1" style="position:relative; border-radius:16px; overflow:hidden; margin-top:4px; max-width:320px; cursor:pointer; background:rgba(0,0,0,0.25);" onclick="openBatchLightbox(['${images[0].url}'], 0)">
                     <img src="${images[0].url}" alt="Photo" onerror="retryMediaPreview(this)" style="width:100%; max-height:360px; object-fit:cover; display:block; border-radius:16px;" loading="lazy">
                     ${mediaUploadOverlayHtml}
-                    ${mediaFloatingMetaHtml}
+                    ${mediaFloatingMetaHtml}${orbitPhotoQualityBadge(images[0])}
                 </div>
             `;
         } else if (images.length > 1) {
             const batchKey = `bunch_${String(msg.id || msg.client_temp_id || Date.now()).replace(/[^a-zA-Z0-9_-]/g,'')}`;
             if (!window._orbitBatches) window._orbitBatches = {};
-            window._orbitBatches[batchKey] = images.map(im => im.url);
+            window._orbitBatches[batchKey] = images.map(im => ({...im}));
 
             if (images.length === 2) {
                 // 2 images side-by-side
@@ -552,6 +552,7 @@ function createMessageDOMNode(msg, isConsecutive = false) {
                         ${images.map((img, i) => `
                             <div style="position:relative; aspect-ratio:1; cursor:pointer; overflow:hidden;" onclick="openBatchLightbox(window._orbitBatches['${batchKey}'], ${i})">
                                 <img src="${img.url}" alt="Photo ${i + 1}" onerror="retryMediaPreview(this)" style="width:100%; height:100%; object-fit:cover; display:block;" loading="lazy">
+                                ${orbitPhotoQualityBadge(img)}
                             </div>
                         `).join('')}
                     </div>
@@ -562,13 +563,13 @@ function createMessageDOMNode(msg, isConsecutive = false) {
                     <div class="wa-image-bunch-grid bunch-3" style="position:relative; display:grid; grid-template-columns:1.2fr 1fr; grid-template-rows:1fr 1fr; gap:3px; max-width:320px; width:100%; border-radius:16px; overflow:hidden; margin-top:4px; aspect-ratio:4/3; background:rgba(0,0,0,0.25);">
                         ${mediaUploadOverlayHtml}
                         <div style="grid-row:span 2; position:relative; cursor:pointer; overflow:hidden;" onclick="openBatchLightbox(window._orbitBatches['${batchKey}'], 0)">
-                            <img src="${images[0].url}" alt="Photo 1" onerror="retryMediaPreview(this)" style="width:100%; height:100%; object-fit:cover; display:block;" loading="lazy">
+                            <img src="${images[0].url}" alt="Photo 1" onerror="retryMediaPreview(this)" style="width:100%; height:100%; object-fit:cover; display:block;" loading="lazy">${orbitPhotoQualityBadge(images[0])}
                         </div>
                         <div style="position:relative; cursor:pointer; overflow:hidden;" onclick="openBatchLightbox(window._orbitBatches['${batchKey}'], 1)">
-                            <img src="${images[1].url}" alt="Photo 2" onerror="retryMediaPreview(this)" style="width:100%; height:100%; object-fit:cover; display:block;" loading="lazy">
+                            <img src="${images[1].url}" alt="Photo 2" onerror="retryMediaPreview(this)" style="width:100%; height:100%; object-fit:cover; display:block;" loading="lazy">${orbitPhotoQualityBadge(images[1])}
                         </div>
                         <div style="position:relative; cursor:pointer; overflow:hidden;" onclick="openBatchLightbox(window._orbitBatches['${batchKey}'], 2)">
-                            <img src="${images[2].url}" alt="Photo 3" onerror="retryMediaPreview(this)" style="width:100%; height:100%; object-fit:cover; display:block;" loading="lazy">
+                            <img src="${images[2].url}" alt="Photo 3" onerror="retryMediaPreview(this)" style="width:100%; height:100%; object-fit:cover; display:block;" loading="lazy">${orbitPhotoQualityBadge(images[2])}
                         </div>
                     </div>
                 `;
@@ -584,6 +585,7 @@ function createMessageDOMNode(msg, isConsecutive = false) {
                             return `
                                 <div style="position:relative; aspect-ratio:1; cursor:pointer; overflow:hidden;" onclick="openBatchLightbox(window._orbitBatches['${batchKey}'], ${i})">
                                     <img src="${img.url}" alt="Photo ${i + 1}" onerror="retryMediaPreview(this)" style="width:100%; height:100%; object-fit:cover; display:block;" loading="lazy">
+                                    ${orbitPhotoQualityBadge(img)}
                                     ${hasOverlay ? `
                                         <div style="position:absolute; inset:0; background:rgba(0,0,0,0.62); backdrop-filter:blur(3px); display:flex; align-items:center; justify-content:center; color:#ffffff; font-size:26px; font-weight:800; letter-spacing:0.5px; z-index:2; text-shadow:0 2px 8px rgba(0,0,0,0.7);">
                                             +${remaining}
@@ -597,6 +599,10 @@ function createMessageDOMNode(msg, isConsecutive = false) {
             }
         }
 
+        if (!hasViewOnce && images.length > 1 && !isMediaUploading) {
+            const key = 'bunch_' + String(msg.id || msg.client_temp_id || '').replace(/[^a-zA-Z0-9_-]/g,'');
+            mediaGridHtml += '<button type="button" class="orbit-album-download" onclick="event.stopPropagation(); orbitDownloadAlbum(window._orbitBatches[\'' + key + '\'],this)"><i class="fa-solid fa-download" aria-hidden="true"></i> Download ' + images.length + ' photos</button>';
+        }
         // Non-Image Attachments (Videos, Voice Notes with Speed Controls, Docs, Files)
         let filesHtml = '';
         files.forEach(f => {
@@ -1952,13 +1958,15 @@ function handleChatInputText(textarea) {
     updateDynamicActionButtons();
 
     // 1. Auto-save Draft
-    if (currentRoom) {
+    try { if (currentRoom) {
         if (text.trim()) {
             localStorage.setItem(`orbit_draft_${currentRoom}`, text);
         } else {
             localStorage.removeItem(`orbit_draft_${currentRoom}`);
         }
     }
+
+    } catch (_) { /* Storage quotas must not disable typing or composition. */ }
 
     // 2. Broadcast Typing Indicator (debounced)
     broadcastTypingStatus();

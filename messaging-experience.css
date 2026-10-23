@@ -195,3 +195,7 @@ body.light-mode.orbit-glass-enabled #modal-voice-call .call-modal-box { backgrou
 body.orbit-glass-enabled #modal-voice-call .call-modal-box::before { content:''; position:absolute; inset:0; border-radius:inherit; pointer-events:none; z-index:-1; background:radial-gradient(ellipse at 4% 0%,rgba(255,255,255,calc(var(--liquid-highlight-alpha) * .2)),transparent 54%); }
 body:not(.orbit-glass-enabled) #modal-voice-call .call-modal-box { backdrop-filter:none!important; -webkit-backdrop-filter:none!important; }
 @media(prefers-reduced-transparency:reduce) { body.orbit-glass-enabled #modal-voice-call .call-modal-box { background:rgb(var(--readable-surface-rgb))!important; backdrop-filter:none!important; -webkit-backdrop-filter:none!important; } }
+/* Quality labels retain contrast over any photo or wallpaper. */
+.orbit-photo-quality{position:absolute;top:8px;left:8px;z-index:3;padding:3px 6px;border:1px solid #ffffff80;border-radius:6px;background:#101820db;color:#fff;font:700 10px/1.2 system-ui;pointer-events:none}
+.orbit-album-download{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;box-sizing:border-box;margin:8px 0 2px;padding:11px 12px;border:1px solid currentColor;border-radius:12px;background:transparent;color:inherit;font:600 12px/1.4 system-ui;text-decoration:none;cursor:pointer}
+.orbit-album-download:disabled{opacity:.65;cursor:progress}

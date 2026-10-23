@@ -588,7 +588,7 @@ async function queueMediaMessage(items, caption = '', messageType = null, target
         const previewUrl = (file instanceof Blob || file instanceof File) ? URL.createObjectURL(file) : (item.url || '');
         item.file = file;
         mediaUploadInfo.push({ index, name, type, mime: file.type || 'application/octet-stream', rotation: Number(item.rotation || 0), hdQuality: !!isPreviewHdQuality, originalQuality: !!item.originalQuality, subfolder: type === 'image' ? 'images' : type === 'video' ? 'videos' : 'documents' });
-        return { name, url: previewUrl, type, size: file.size, upload_pending: true, view_once: !!item.viewOnce };
+        return { name, url: previewUrl, type, quality: type === 'image' ? (item.originalQuality ? 'original' : isPreviewHdQuality ? 'hd' : 'sd') : undefined, size: file.size, upload_pending: true, view_once: !!item.viewOnce };
     });
     const payload = {
         id,

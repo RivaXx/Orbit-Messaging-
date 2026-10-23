@@ -22,7 +22,7 @@ async function initServiceWorker() {
         });
     }
     try{
-        const registration=await navigator.serviceWorker.register('./sw.js?v=typing-auth-news-20261021-r1',{scope:'./'});
+        const registration=await navigator.serviceWorker.register('./sw.js?v=albums-typing-startup-20261022-r1',{scope:'./'});
         registration.update().catch(()=>{});
     }catch(_){}
 }
@@ -87,9 +87,9 @@ async function checkExistingSession() {
             const client=await ensureSupabase();await client.auth.signOut({scope:'local'});
             localStorage.removeItem(`sb-${project}-auth-token`);return;
         }
-        // A still-valid local session can paint its cached shell immediately.
-        // Supabase continues to authenticate all network reads and writes.
-        if(cached?.user?.id && Number(cached.expires_at)>Date.now()/1000+30){
+        // Render this device's remembered shell without waiting for the hourly
+        // token refresh. This is not authentication: the SDK/RLS still gate I/O.
+        if(cached?.user?.id && (cached.refresh_token || Number(cached.expires_at)>Date.now()/1000+30)){
             currentUser=cached.user;await launchApp();return;
         }
         if (!navigator.onLine) {

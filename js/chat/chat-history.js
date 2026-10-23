@@ -96,7 +96,7 @@ async function openChatRoom(roomId, roomTitle, avatarUrl, isSelf = false, peerUs
     }
 
     const roomMeta = typeof allRoomsMap !== 'undefined' ? allRoomsMap.get(roomId) : null;
-    isGroupChat = !isSelf && (roomMeta ? roomMeta.is_direct === false : (!roomId.startsWith('dm_') && roomId.length > 20));
+    isGroupChat = !isSelf && (roomMeta ? roomMeta.is_direct === false : (!peerUserId && !roomId.startsWith('dm_') && roomId.length > 20));
 
     // Resolve peer user ID for 1-on-1 chats safely
     activeChatPeerId = peerUserId || null;

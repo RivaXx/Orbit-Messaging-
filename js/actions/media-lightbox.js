@@ -5,6 +5,69 @@ let lightboxZoomLevel = 1.0;
 let currentLightboxIndex = 0;
 let _batchLightboxUrls = [];
 
+function orbitPhotoQualityBadge(photo) {
+    const label = {hd:'HD',sd:'SD',original:'Original'}[photo?.quality];
+    // Older messages did not record quality. Do not invent a label for them.
+    return label ? `<span class="orbit-photo-quality" aria-label="Photo quality: ${label}">${label}</span>` : '';
+}
+
+// ZIP STORE: photos are already compressed. No dependency download or recompression.
+async function orbitBuildPhotoZip(files) {
+    const parts=[],directory=[]; let offset=0;
+    const table=Uint32Array.from({length:256},(_,n)=>{for(let k=0;k<8;k++)n=n&1?0xedb88320^(n>>>1):n>>>1;return n>>>0;});
+    for(let i=0;i<files.length;i++) {
+        const file=files[i],bytes=new Uint8Array(await file.blob.arrayBuffer());
+        let crc=0xffffffff;
+        for(let p=0;p<bytes.length;p++){crc=table[(crc^bytes[p])&255]^(crc>>>8);if(p>0&&p%1048576===0)await new Promise(resolve=>setTimeout(resolve,0));}
+        crc=(crc^0xffffffff)>>>0;
+        const safe=String(file.name||'photo.jpg').replace(/[\\/<>:"|?*\x00-\x1f]/g,'_').slice(-160);
+        const name=new TextEncoder().encode(String(i+1).padStart(3,'0')+'-'+safe);
+        const header=new Uint8Array(30+name.length),h=new DataView(header.buffer);
+        h.setUint32(0,0x04034b50,true);h.setUint16(4,20,true);h.setUint16(6,0x800,true);
+        h.setUint16(12,33,true);h.setUint32(14,crc,true);h.setUint32(18,bytes.length,true);h.setUint32(22,bytes.length,true);h.setUint16(26,name.length,true);header.set(name,30);
+        const central=new Uint8Array(46+name.length),c=new DataView(central.buffer);
+        c.setUint32(0,0x02014b50,true);c.setUint16(4,20,true);c.setUint16(6,20,true);c.setUint16(8,0x800,true);c.setUint16(14,33,true);c.setUint32(16,crc,true);c.setUint32(20,bytes.length,true);c.setUint32(24,bytes.length,true);c.setUint16(28,name.length,true);c.setUint32(42,offset,true);central.set(name,46);
+        parts.push(header,file.blob);directory.push(central);offset+=header.length+bytes.length;
+        // Yield between images so progress and chat controls continue to paint.
+        await new Promise(resolve=>setTimeout(resolve,0));
+    }
+    const end=new Uint8Array(22),e=new DataView(end.buffer);
+    e.setUint32(0,0x06054b50,true);e.setUint16(8,files.length,true);e.setUint16(10,files.length,true);e.setUint32(12,directory.reduce((n,b)=>n+b.length,0),true);e.setUint32(16,offset,true);
+    return new Blob([...parts,...directory,end],{type:'application/zip'});
+}
+async function orbitDownloadAlbum(photos,button) {
+    if(!Array.isArray(photos)||!photos.length||photos.length>100||button.disabled)return;
+    if(photos.some(p=>p.view_once||p.storage_bucket==='orbit-view-once'))return;
+    const owner=currentUser?.id,room=currentRoom,originalLabel=button.textContent;
+    const current=()=>currentUser?.id===owner&&currentRoom===room&&button.isConnected;
+    const files=[];let total=0;button.disabled=true;
+    try {
+        for(let i=0;i<photos.length;i++) {
+            if(!current())throw new Error('Chat changed. Open the album and try again.');
+            button.textContent=`Preparing ${i+1} of ${photos.length}…`;
+            let url=photos[i].url||photos[i];
+            if(typeof resolveMediaUrlForAccess==='function')url=await resolveMediaUrlForAccess(url)||url;
+            const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),30000);
+            try {
+                const response=await fetch(url,{signal:controller.signal,credentials:'omit'});
+                if(!response.ok)throw new Error('A photo could not be downloaded. Please retry.');
+                if(total+Number(response.headers.get('content-length')||0)>100*1024*1024)throw new Error('This album is over 100 MB. Download its photos individually.');
+                const reader=response.body.getReader(),chunks=[];let size=0;
+                while(true){const {done,value}=await reader.read();if(done)break;size+=value.length;total+=value.length;if(total>100*1024*1024){await reader.cancel();throw new Error('This album is over 100 MB. Download its photos individually.');}chunks.push(value);}
+                files.push({name:photos[i].name||`photo-${i+1}.jpg`,blob:new Blob(chunks,{type:response.headers.get('content-type')||'application/octet-stream'})});
+            }finally{clearTimeout(timer);}
+        }
+        const zip=await orbitBuildPhotoZip(files);
+        if(!current())throw new Error('Chat changed. Open the album and try again.');
+        const url=URL.createObjectURL(zip),link=document.createElement('a');
+        link.href=url;link.download=`Orbit-photos-${new Date().toISOString().slice(0,10)}.zip`;link.className='orbit-album-download';link.textContent=`Save ZIP · ${files.length} photos`;link.onclick=e=>{e.stopPropagation();if(currentUser?.id!==owner||currentRoom!==room){e.preventDefault();URL.revokeObjectURL(url);link.remove();}};
+        button.replaceWith(link);
+        // A separate Save tap retains a user gesture on mobile browsers.
+        setTimeout(()=>{URL.revokeObjectURL(url);if(link.isConnected)link.replaceWith(button);},300000);
+    }catch(error){if(current())showToast(error.name==='AbortError'?'Photo download timed out. Please retry.':error.message,'error');}
+    finally{button.disabled=false;button.textContent=originalLabel;}
+}
+
 function openMediaLightbox(url, title = 'Media') {
     currentLightboxUrl = url;
     currentLightboxIndex = 0;
@@ -35,7 +98,8 @@ function openMediaLightbox(url, title = 'Media') {
 
 function openBatchMediaLightbox(urlsArray, startIdx = 0) {
     if (!Array.isArray(urlsArray) || urlsArray.length === 0) return;
-    _batchLightboxUrls = urlsArray;
+    _batchLightboxUrls = urlsArray.map(item => typeof item === 'string' ? item : item.url);
+    urlsArray = _batchLightboxUrls;
     currentLightboxIndex = (startIdx >= 0 && startIdx < urlsArray.length) ? startIdx : 0;
     currentLightboxUrl = _batchLightboxUrls[currentLightboxIndex];
     lightboxZoomLevel = 1.0;

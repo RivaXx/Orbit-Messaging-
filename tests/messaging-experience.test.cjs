@@ -14,6 +14,7 @@ function context(){
   currentUser:{id:'me',email:'member@example.com'},currentRoom:'room',globalUsersMap:new Map(),userAlarms:[],messageCache:new Map(),
   showToast:msg=>toasts.push(msg),formatSmartActivity:(date,online)=>`${date}:${online}`,formatMediaUrl:x=>x,renderAlarmsList(){},handleChatInputText(){}});
  vm.runInContext(read('js/messaging-experience.js'),c);
+ vm.runInContext(read('js/actions/media-lightbox.js'),c);
  return {c,nodes,events,store,timers,toasts,element};
 }
 test('editing accepts only owned text before the exact 10-minute boundary',()=>{
