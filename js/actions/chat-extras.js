@@ -23,7 +23,7 @@ function openShareContactModal() {
             list.innerHTML = '<div style="text-align:center; padding:18px; color:var(--text-muted); font-size:12.5px;">No contacts available. Enter manual details below.</div>';
         } else {
             list.innerHTML = contacts.map(c => `
-                <div class="contact-card-top touch-fix" onclick="sendContactCard('${escapeHtml(c.name)}', '${escapeHtml(c.username)}', '${escapeHtml(c.phone)}', '${escapeHtml(c.avatar_url)}')" style="cursor:pointer; padding:8px 10px; border-radius:10px; background:rgba(255,255,255,0.04); border:1px solid var(--glass-border); display:flex; align-items:center; gap:10px; margin-bottom:6px;">
+                <div class="contact-card-top touch-fix" onclick="sendContactCard(${escapeHtml(JSON.stringify(c.name||''))}, ${escapeHtml(JSON.stringify(c.username||''))}, ${escapeHtml(JSON.stringify(c.phone||''))}, ${escapeHtml(JSON.stringify(c.avatar_url||''))})" style="cursor:pointer; padding:8px 10px; border-radius:10px; background:rgba(255,255,255,0.04); border:1px solid var(--glass-border); display:flex; align-items:center; gap:10px; margin-bottom:6px;">
                     <div class="contact-card-av" style="width:36px; height:36px; font-size:14px; border-radius:50%; background:rgba(10,132,255,0.2); display:flex; align-items:center; justify-content:center; color:#fff; font-weight:700;">
                         ${c.avatar_url ? `<img src="${formatMediaUrl(c.avatar_url)}" style="width:100%; height:100%; border-radius:50%; object-fit:cover;">` : (c.name[0] || 'U').toUpperCase()}
                     </div>
@@ -473,134 +473,14 @@ async function submitPollToChat() {
 }
 
 async function voteOnPollMessage(msgId, optionIndex) {
-    if (!currentUser) {
-        showToast('Please sign in to vote', 'error');
-        return;
-    }
-    try {
-        const uid = currentUser.id;
-        const aliases = typeof resolveRoomAliases === 'function' ? resolveRoomAliases(currentRoom) : [currentRoom];
-
-        // Locate message in-memory across all aliases
-        let target = null;
-        for (const alias of aliases) {
-            const list = messageCache.get(alias) || [];
-            target = list.find(m => m.id === msgId || m.client_temp_id === msgId);
-            if (target) break;
-        }
-
-        let pollData = null;
-        if (target) {
-            pollData = target.metadata?.poll || target.metadata || (Array.isArray(target.attachments) ? target.attachments.find(a => a && (a.type === 'poll' || a.poll))?.poll || target.attachments[0]?.poll : null);
-        }
-
-        const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(msgId);
-
-        if ((!pollData || !Array.isArray(pollData.options)) && isUuid) {
-            try {
-                const client = await ensureSupabase();
-                const { data: dbMsg } = await client.from('messages').select('*').eq('id', msgId).maybeSingle();
-                if (dbMsg) {
-                    target = dbMsg;
-                    pollData = dbMsg.metadata?.poll || dbMsg.metadata || (Array.isArray(dbMsg.attachments) ? dbMsg.attachments.find(a => a && (a.type === 'poll' || a.poll))?.poll || dbMsg.attachments[0]?.poll : null);
-                }
-            } catch(e) {}
-        }
-
-        if (!pollData || !Array.isArray(pollData.options)) {
-            showToast('Unable to load poll data to vote', 'info');
-            return;
-        }
-
-        // Single-choice vs Multiple-choice voting logic
-        const allowMultiple = pollData.multiple_answers === true;
-        const targetOpt = pollData.options[optionIndex];
-        const alreadyVotedTarget = targetOpt && Array.isArray(targetOpt.voters) && targetOpt.voters.includes(uid);
-
-        pollData.options.forEach((opt, idx) => {
-            if (!Array.isArray(opt.voters)) {
-                opt.voters = Array.isArray(opt.votes) ? opt.votes : [];
-            }
-            if (!allowMultiple) {
-                // Single-choice: remove user's vote from all other options
-                opt.voters = opt.voters.filter(id => id !== uid);
-            }
-            if (idx === optionIndex) {
-                if (allowMultiple) {
-                    if (opt.voters.includes(uid)) {
-                        opt.voters = opt.voters.filter(id => id !== uid);
-                    } else {
-                        opt.voters.push(uid);
-                    }
-                } else {
-                    // Single choice: if they previously had NOT voted for target, add their vote;
-                    // if they already had voted for it, it remains deselected (toggle off).
-                    if (!alreadyVotedTarget) {
-                        opt.voters.push(uid);
-                    }
-                }
-            }
-            opt.votes = opt.voters.length;
-        });
-
-        // 1. Optimistic in-memory update across all aliases
-        aliases.forEach(alias => {
-            let list = messageCache.get(alias) || [];
-            const t = list.find(m => m.id === msgId || m.client_temp_id === msgId);
-            if (t) {
-                t.metadata = { ...(t.metadata || {}), poll: pollData };
-                t.attachments = [{ type: 'poll', poll: pollData }];
-            }
-            try { localStorage.setItem(`orbit_cache_msgs_${alias}`, JSON.stringify(list.slice(-40))); } catch(e) {}
-        });
-
-        // 2. Re-render message node smoothly in DOM
-        if (typeof handleRemotePollVote === 'function') {
-            handleRemotePollVote({ msgId, poll: pollData }, currentRoom, aliases);
-        } else {
-            const existingNode = document.getElementById(`msg-${msgId}`);
-            if (existingNode && target && typeof createMessageDOMNode === 'function') {
-                target.metadata = { ...(target.metadata || {}), poll: pollData };
-                target.attachments = [{ type: 'poll', poll: pollData }];
-                const newNode = createMessageDOMNode(target);
-                existingNode.replaceWith(newNode);
-            }
-        }
-
-        // 3. Peer-to-peer real-time broadcast (<100ms instant sync for all participants)
-        if (typeof activeRealtimeChannel !== 'undefined' && activeRealtimeChannel) {
-            try {
-                activeRealtimeChannel.send({
-                    type: 'broadcast',
-                    event: 'poll_vote',
-                    payload: { msgId, poll: pollData, room: currentRoom }
-                });
-            } catch(e) {}
-        }
-
-        // 4. Background DB persist
-        if (isUuid) {
-            (async () => {
-                try {
-                    const client = await ensureSupabase();
-                    const { error: upErr } = await client.from('messages').update({
-                        attachments: [{ type: 'poll', poll: pollData }]
-                    }).eq('id', msgId);
-                    if (upErr) {
-                        await client.from('messages').update({
-                            metadata: { poll: pollData },
-                            attachments: [{ type: 'poll', poll: pollData }]
-                        }).eq('id', msgId);
-                    }
-                } catch(err) {
-                    console.warn('[Orbit] Poll vote background update note:', err);
-                }
-            })();
-        }
-    } catch(e) {
-        console.error('Vote error:', e);
-    }
+ if(!currentUser||!currentRoom||!Number.isInteger(optionIndex))return;
+ const owner=currentUser.id,room=currentRoom;
+ try{const client=await ensureSupabase();const {error}=await client.rpc('orbit_security_vote',{message_key:msgId,option_index:optionIndex});if(error)throw error;
+  if(currentUser?.id!==owner||currentRoom!==room)return;
+  await orbitRefreshConfirmedMessage(msgId,room,resolveRoomAliases(room));
+ }catch(_){showToast('Vote was not saved. Reconnect and try again.','error');}
 }
+
 window.voteOnPollMessage = voteOnPollMessage;
 
 // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
@@ -965,6 +845,7 @@ async function answerVoiceCall() {
 window.answerVoiceCall = answerVoiceCall;
 
 async function handleWebRTCSignal(payload) {
+    if(typeof isUserBlocked==='function'&&isUserBlocked(payload?.from))return;
     if (!payload || payload.to !== currentUser?.id || payload.room !== currentRoom || payload.from !== activeChatPeerId) return;
     try {
         if (payload.type === 'offer') {

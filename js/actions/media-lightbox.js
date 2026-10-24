@@ -98,7 +98,7 @@ function openMediaLightbox(url, title = 'Media') {
 
 function openBatchMediaLightbox(urlsArray, startIdx = 0) {
     if (!Array.isArray(urlsArray) || urlsArray.length === 0) return;
-    _batchLightboxUrls = urlsArray.map(item => typeof item === 'string' ? item : item.url);
+    _batchLightboxUrls = urlsArray.map(item => formatMediaUrl(typeof item === 'string' ? item : item.url));
     urlsArray = _batchLightboxUrls;
     currentLightboxIndex = (startIdx >= 0 && startIdx < urlsArray.length) ? startIdx : 0;
     currentLightboxUrl = _batchLightboxUrls[currentLightboxIndex];
@@ -473,7 +473,7 @@ function renderFilteredGallery(tab) {
             grid.innerHTML = '<div style="grid-column:span 3; text-align:center; padding:40px 20px; color:var(--text-muted); font-size:13px;">No documents shared yet.</div>';
         } else {
             grid.innerHTML = items.map(item => `
-                <div class="contact-glass-card touch-fix" style="grid-column:span 3; margin-bottom:4px; padding:10px 12px; cursor:pointer;" onclick="handleDocumentFilePreview('${item.url}', '${escapeHtml(item.name)}')">
+                <div class="contact-glass-card touch-fix" style="grid-column:span 3; margin-bottom:4px; padding:10px 12px; cursor:pointer;" onclick="handleDocumentFilePreview('${item.url}', ${escapeHtml(JSON.stringify(item.name))})">
                     <div class="doc-card-icon" style="background:rgba(127,87,255,0.2); color:#7F57FF;"><i class="fa-solid fa-file-lines"></i></div>
                     <div class="doc-card-info">
                         <div class="doc-card-name">${escapeHtml(item.name)}</div>
@@ -498,7 +498,7 @@ function renderFilteredGallery(tab) {
             grid.innerHTML = '<div style="grid-column:span 3; text-align:center; padding:40px 20px; color:var(--text-muted); font-size:13px;">No web links shared yet.</div>';
         } else {
             grid.innerHTML = items.map(item => `
-                <div class="contact-glass-card touch-fix" style="grid-column:span 3; margin-bottom:4px; padding:10px 12px;" onclick="window.open('${item.url}', '_blank')">
+                <div class="contact-glass-card touch-fix" style="grid-column:span 3; margin-bottom:4px; padding:10px 12px;" onclick="window.open(${escapeHtml(JSON.stringify(item.url))}, '_blank', 'noopener,noreferrer')">
                     <div class="doc-card-icon" style="background:rgba(0,176,255,0.2); color:#00B0FF;"><i class="fa-solid fa-link"></i></div>
                     <div class="doc-card-info">
                         <div class="doc-card-name" style="color:var(--accent);">${escapeHtml(item.url)}</div>
