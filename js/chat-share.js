@@ -462,7 +462,7 @@
             list.innerHTML = '<div style="text-align:center; padding:18px; color:var(--text-muted); font-size:12.5px;">No contacts available. Enter manual details below.</div>';
         } else {
             list.innerHTML = contacts.map(c => `
-                <div class="contact-card-top touch-fix" onclick="sendContactCard('${escapeHtml(c.name)}', '${escapeHtml(c.username)}', '${escapeHtml(c.phone)}', '${escapeHtml(c.avatar_url)}')" style="cursor:pointer; padding:8px 10px; border-radius:10px; background:rgba(255,255,255,0.04); border:1px solid var(--glass-border); display:flex; align-items:center; gap:10px; margin-bottom:6px;">
+                <div class="contact-card-top touch-fix" onclick="sendContactCard(${escapeHtml(JSON.stringify(c.name||''))}, ${escapeHtml(JSON.stringify(c.username||''))}, ${escapeHtml(JSON.stringify(c.phone||''))}, ${escapeHtml(JSON.stringify(c.avatar_url||''))})" style="cursor:pointer; padding:8px 10px; border-radius:10px; background:rgba(255,255,255,0.04); border:1px solid var(--glass-border); display:flex; align-items:center; gap:10px; margin-bottom:6px;">
                     <div class="contact-card-av" style="width:36px; height:36px; font-size:14px; border-radius:50%; background:rgba(10,132,255,0.2); display:flex; align-items:center; justify-content:center; color:#fff; font-weight:700;">
                         ${c.avatar_url ? `<img src="${formatMediaUrl(c.avatar_url)}" style="width:100%; height:100%; border-radius:50%; object-fit:cover;">` : (c.name[0] || 'U').toUpperCase()}
                     </div>
