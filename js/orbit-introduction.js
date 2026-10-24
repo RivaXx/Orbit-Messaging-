@@ -31,7 +31,7 @@
  }
  function loadScene(){
   if(typeof window.createOrbitIntroScene==='function')return Promise.resolve(window.createOrbitIntroScene);
-  if(!scenePromise)scenePromise=new Promise((resolve,reject)=>{const script=document.createElement('script');script.src='js/orbit-intro-scene.js?v=receipts-notifications-20261023-r1';script.onload=()=>typeof window.createOrbitIntroScene==='function'?resolve(window.createOrbitIntroScene):reject(Error('Scene unavailable'));script.onerror=()=>reject(Error('Scene unavailable'));document.head.append(script);}).catch(error=>{scenePromise=null;throw error;});
+  if(!scenePromise)scenePromise=new Promise((resolve,reject)=>{const script=document.createElement('script');script.src='js/orbit-intro-scene.js?v=calculator-engine-20261023-r1';script.onload=()=>typeof window.createOrbitIntroScene==='function'?resolve(window.createOrbitIntroScene):reject(Error('Scene unavailable'));script.onerror=()=>reject(Error('Scene unavailable'));document.head.append(script);}).catch(error=>{scenePromise=null;throw error;});
   return scenePromise;
  }
  function finish(){

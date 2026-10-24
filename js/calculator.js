@@ -1,3 +1,70 @@
+// Exact rational arithmetic for decimal inputs; scientific functions use Math.
+// Work limits keep malformed expressions from monopolizing the UI thread.
+const OrbitCalcMath=(()=>{
+ const abs=n=>n<0n?-n:n;
+ function rat(n,d=1n){if(!d)throw Error('Cannot divide by zero');if(d<0n){n=-n;d=-d;}let a=abs(n),b=d;while(b){[a,b]=[b,a%b];}n/=a||1n;d/=a||1n;if(n.toString().length+d.toString().length>4096)throw Error('Result exceeds calculator range');return {n,d};}
+ function number(s){const m=String(s).match(/^([+-]?)(\d+(?:\.\d*)?|\.\d+)(?:e([+-]?\d+))?$/i);if(!m)throw Error('Invalid number');const exponent=Number(m[3]||0);if(Math.abs(exponent)>308)throw Error('Number exceeds calculator range');const parts=m[2].split('.'),digits=(parts[0]||'0')+(parts[1]||'');let scale=(parts[1]?.length||0)-exponent;return scale>=0?rat(BigInt((m[1]||'')+digits),10n**BigInt(scale)):rat(BigInt((m[1]||'')+digits)*10n**BigInt(-scale));}
+ function numeric(x){const v=Number(format(x));if(!Number.isFinite(v))throw Error('Result exceeds calculator range');return v;}
+ function op(a,b,kind){
+  if(kind==='+')return rat(a.n*b.d+b.n*a.d,a.d*b.d);
+  if(kind==='-')return rat(a.n*b.d-b.n*a.d,a.d*b.d);
+  if(kind==='*')return rat(a.n*b.n,a.d*b.d);
+  if(kind==='/')return rat(a.n*b.d,a.d*b.n);
+  if(kind==='^'){
+   if(b.d===1n){if(abs(b.n)>512n)throw Error('Exponent exceeds calculator range');if(a.n===0n&&b.n<=0n)throw Error('Undefined power');const p=abs(b.n);if(BigInt(a.n.toString().length+a.d.toString().length)*p>4096n)throw Error('Result exceeds calculator range');return b.n<0n?rat(a.d**p,a.n**p):rat(a.n**p,a.d**p);}
+   const value=a.n<0n&&b.d%2n===1n?Math.pow(-numeric(a),numeric(b))*(abs(b.n)%2n===1n?-1:1):Math.pow(numeric(a),numeric(b));if(!Number.isFinite(value))throw Error('Power has no finite real result');return number(value.toPrecision(15));
+  }throw Error('Unknown operator');
+ }
+ function format(x){
+  if(!x.n)return '0';const sign=x.n<0n?'-':'',n=abs(x.n),d=x.d;
+  let exponent=n.toString().length-d.toString().length;
+  if(exponent>=0?n<d*10n**BigInt(exponent):n*10n**BigInt(-exponent)<d)exponent--;
+  if(exponent>308||exponent< -308)throw Error('Result exceeds calculator range');
+  const shift=14-exponent,scaledN=shift>=0?n*10n**BigInt(shift):n,scaledD=shift>=0?d:d*10n**BigInt(-shift);
+  let digits=scaledN/scaledD;if((scaledN%scaledD)*2n>=scaledD)digits++;
+  let text=digits.toString();if(text.length>15){exponent++;text=text.slice(0,15);}
+  if(exponent>=15||exponent< -6){const mantissa=(text[0]+'.'+text.slice(1)).replace(/\.?0+$/,'');return sign+mantissa+'e'+(exponent>=0?'+':'')+exponent;}
+  const point=exponent+1;let result=point<=0?'0.'+'0'.repeat(-point)+text:point>=text.length?text+'0'.repeat(point-text.length):text.slice(0,point)+'.'+text.slice(point);
+  if(result.includes('.'))result=result.replace(/0+$/,'').replace(/\.$/,'');return sign+result;
+ }
+ function parse(source,answer=null){
+  source=String(source).replace(/×/g,'*').replace(/÷/g,'/').replace(/−/g,'-');
+  if(!source.trim()||source.length>512)throw Error('Enter a shorter expression');
+  if(/\d\s+\d/.test(source))throw Error('Missing operator');
+  const tokens=[];let pos=0;
+  while(pos<source.length){if(answer&&source.slice(pos,pos+3)==='Ans'){tokens.push({answer});pos+=3;continue;}if(/\s/.test(source[pos])){pos++;continue;}const m=source.slice(pos).match(/^(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?/i);if(m){if(tokens.at(-1)?.value)throw Error('Missing operator');tokens.push({value:m[0]});pos+=m[0].length;}else if('+-*/^()%'.includes(source[pos]))tokens.push(source[pos++]);else throw Error('Invalid character');if(tokens.length>256)throw Error('Expression is too long');}
+  let i=0,depth=0;
+  function expr(min=0){
+   if(++depth>32)throw Error('Too many nested operations');let left,t=tokens[i++];
+   if(t==='+'||t==='-'){left={kind:'unary',sign:t,child:expr(3)};}
+   else if(t==='('){left=expr(0);if(tokens[i++]!==')')throw Error('Close the parentheses');left={kind:'group',child:left};}
+   else if(t?.answer){left={kind:'rational',value:t.answer};}
+   else if(t?.value){left={kind:'number',value:t.value};}else throw Error('Enter a number');
+   while(i<tokens.length){t=tokens[i];if(t==='%'){if(5<min)break;i++;left={kind:'percent',child:left};continue;}
+    const implicit=t==='('||!!t?.value,kind=implicit?'*':t,precedence={'+':1,'-':1,'*':2,'/':2,'^':4}[kind];
+    if(!precedence||precedence<min)break;if(!implicit)i++;
+    left={kind:'binary',op:kind,left,right:expr(kind==='^'?precedence:precedence+1)};
+   }depth--;return left;
+  }
+  const tree=expr();if(i!==tokens.length)throw Error('Unexpected token');return tree;
+ }
+ function evaluate(tree){
+  if(tree.kind==='rational')return tree.value;
+  if(tree.kind==='number')return number(tree.value);
+  if(tree.kind==='group')return evaluate(tree.child);
+  if(tree.kind==='unary'){const x=evaluate(tree.child);return tree.sign==='-'?rat(-x.n,x.d):x;}
+  if(tree.kind==='percent')return op(evaluate(tree.child),number('100'),'/');
+  const left=evaluate(tree.left);let right=evaluate(tree.right);
+  // Addition/subtraction percentages are relative to the left subtotal.
+  let percent=tree.right;while(['group','unary'].includes(percent.kind))percent=percent.child;
+  if(['+','-'].includes(tree.op)&&percent.kind==='percent')right=op(left,right,'*');
+  return op(left,right,tree.op);
+ }
+ function print(tree){if(tree.kind==='number')return tree.value;if(tree.kind==='rational')return format(tree.value);if(tree.kind==='group')return '('+print(tree.child)+')';if(tree.kind==='unary')return '('+tree.sign+print(tree.child)+')';if(tree.kind==='percent')return print(tree.child)+'%';return '('+print(tree.left)+tree.op+print(tree.right)+')';}
+ const calculate=(source,answer=null)=>evaluate(parse(source,answer));
+ return {parse,evaluate,calculate,format,number,op,numeric,print};
+})();
+
 // ========================================================================
 // ORBIT MESSENGER - CALCULATOR SUITE MODULE (js/calculator.js)
 // ========================================================================
@@ -16,14 +83,15 @@ function updateCalcAnswerPreview(){
  button?.setAttribute('aria-pressed',String(calcPreviewEnabled));
  if(button)button.textContent=calcPreviewEnabled?'Live preview: On':'Live preview: Off';
  if(!output)return;output.textContent='';
- if(!calcPreviewEnabled||isCalcResultShown||!calcExpression||calcCurrentVal==='Error')return;
- try{const expression=calcCurrentVal==='0' && /[%) ]$/.test(calcExpression.trim())?calcExpression.trim():`${calcExpression} ${calcCurrentVal}`;const value=evaluateCalcExpression(expression);if(Number.isFinite(value))output.textContent='= '+String(Math.round(value*100000000)/100000000);}catch(_){}
+ if(calcCurrentVal==='Error'){output.textContent=calcErrorMessage||'Invalid calculation';return;}
+ if(!calcPreviewEnabled||isCalcResultShown||!calcBuffer)return;
+ try{if(calcBuffer)output.textContent='= '+OrbitCalcMath.format(OrbitCalcMath.calculate(calcBuffer,calcCarry?.value));}catch(_){}
 }
 
 let calcHistory = (() => {
     try {
         const stored = localStorage.getItem('orbit_calc_history');
-        if (stored) return JSON.parse(stored);
+        if (stored) {const rows=JSON.parse(stored);if(Array.isArray(rows))return rows.filter(row=>row&&typeof row.expr==='string'&&typeof row.result==='string'&&row.expr.length<=1024&&row.result.length<=64).slice(0,30);}
     } catch(e) {}
     return [];
 })();
@@ -39,6 +107,7 @@ function initCalculator() {
     applyCalcFontSettings();
     applyCalcFitSettings();
     applyCalcKeypadLayout();
+    const angleButton=document.getElementById('calc-angle-mode');if(angleButton){angleButton.textContent=calcAngleMode.toUpperCase();angleButton.setAttribute('aria-label','Angle mode: '+(calcAngleMode==='deg'?'degrees':'radians'));}
     updateCalcDisplay();
     renderCalcHistory();
     initCalcAppearance();
@@ -194,170 +263,110 @@ function applyCalcKeypadLayout() {
 
     if (btnAc) {
         btnAc.innerText = showSeparateAc ? 'AC' : 'C';
+        btnAc.onclick=()=>calcInput(showSeparateAc?'AC':'CE');
     }
 }
 
-function evaluateCalcExpression(rawExpr) {
-    if (!rawExpr || !rawExpr.trim()) return 0;
-    let expr = rawExpr.trim();
-
-    // 1. Handle X + Y% or X - Y% (e.g. "100 + 20%" -> "100 + ((100 * 20) / 100)")
-    expr = expr.replace(/(\d+(?:\.\d+)?)\s*([+\-])\s*(\d+(?:\.\d+)?)%/g, (match, a, op, b) => {
-        return `${a} ${op} ((${a} * ${b}) / 100)`;
-    });
-
-    // 2. Handle X * Y% or X / Y% (e.g. "100 * 20%" -> "100 * (20 / 100)")
-    expr = expr.replace(/(\d+(?:\.\d+)?)\s*([*/])\s*(\d+(?:\.\d+)?)%/g, (match, a, op, b) => {
-        return `${a} ${op} (${b} / 100)`;
-    });
-
-    // 3. Handle binary X % Y (e.g. "80 % 3" -> "((80 / 100) * 3)")
-    expr = expr.replace(/(\d+(?:\.\d+)?)\s*%\s*(\d+(?:\.\d+)?)/g, (match, a, b) => {
-        return `((${a} / 100) * ${b})`;
-    });
-
-    // 4. Handle standalone X% (e.g. "80%" -> "(80 / 100)")
-    expr = expr.replace(/(\d+(?:\.\d+)?)%/g, (match, a) => {
-        return `(${a} / 100)`;
-    });
-
-    // 5. Replace ^ with ** for exponentiation
-    expr = expr.replace(/\^/g, '**');
-
-    // 6. Sanitize remaining characters: only allow 0-9 + - * / . ( )
-    const sanitized = expr.replace(/[^0-9+\-*/().]/g, '');
-    const result = Function(`'use strict'; return (${sanitized})`)();
-    return result;
+function evaluateCalcExpression(rawExpr){return OrbitCalcMath.numeric(OrbitCalcMath.calculate(rawExpr));}
+let calcReplaceEntry=false,calcCarry=null,calcErrorMessage='',calcBuffer='',calcRepeat=null,calcAngleMode=localStorage.getItem('orbit_calc_angle')==='rad'?'rad':'deg';
+function calcTail(){
+ let end=calcBuffer.length,start=end;if(!end)return {start:0,text:'0'};
+ if(calcBuffer[end-1]==='%')start--;
+ if(calcBuffer[start-1]===')'){let depth=1;start-=2;while(start>=0&&depth){if(calcBuffer[start]===')')depth++;if(calcBuffer[start]==='(')depth--;start--;}start++;}
+ else {const m=calcBuffer.slice(0,start).match(/(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?$/i);if(!m)return {start:end,text:'0',missing:true};start-=m[0].length;}
+ if(start>0&&calcBuffer[start-1]==='-'&&(start===1||/[+*/^(\-]/.test(calcBuffer[start-2])))start--;
+ return {start,text:calcBuffer.slice(start)};
 }
-
-function calcInput(val) {
-    if (val === 'AC') {
-        calcCurrentVal = '0';
-        calcExpression = '';
-        isCalcResultShown = false;
-    } else if (val === 'BACKSPACE') {
-        if (isCalcResultShown || calcCurrentVal === 'Error') {
-            calcCurrentVal = '0';
-            isCalcResultShown = false;
-        } else if (calcCurrentVal.length > 1) {
-            calcCurrentVal = calcCurrentVal.slice(0, -1);
-        } else {
-            calcCurrentVal = '0';
-        }
-    } else if (val === '+/-') {
-        if (calcCurrentVal !== '0') {
-            calcCurrentVal = calcCurrentVal.startsWith('-') ? calcCurrentVal.slice(1) : `-${calcCurrentVal}`;
-        }
-    } else if (val === '%') {
-        if (calcExpression && /[+\-*/]\s*$/.test(calcExpression.trim())) {
-            calcCurrentVal = `${calcCurrentVal}%`;
-        } else {
-            calcExpression = `${calcCurrentVal} %`;
-            calcCurrentVal = '0';
-            isCalcResultShown = false;
-        }
-    } else if (['+', '-', '*', '/'].includes(val)) {
-        calcExpression = `${calcExpression} ${calcCurrentVal} ${val}`;
-        calcCurrentVal = '0';
-        isCalcResultShown = false;
-    } else if (val === '(' || val === ')') {
-        if (val === '(') {
-            calcExpression = `${calcExpression} (`;
-        } else {
-            calcExpression = `${calcExpression} ${calcCurrentVal} )`;
-            calcCurrentVal = '0';
-        }
-    } else if (val === '=') {
-        if (!calcExpression && !calcCurrentVal) return;
-        try {
-            let fullExpr = '';
-            if (calcCurrentVal === '0' && calcExpression.trim().endsWith('%')) {
-                fullExpr = calcExpression.trim();
-            } else if (calcExpression) {
-                fullExpr = `${calcExpression} ${calcCurrentVal}`.trim();
-            } else {
-                fullExpr = calcCurrentVal.trim();
-            }
-
-            const result = evaluateCalcExpression(fullExpr);
-            const formattedResult = String(Math.round(result * 100000000) / 100000000);
-
-            calcHistory.unshift({ expr: fullExpr, result: formattedResult, time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) });
-            if (calcHistory.length > 30) calcHistory.pop();
-            try { localStorage.setItem('orbit_calc_history', JSON.stringify(calcHistory)); } catch(e) {}
-            renderCalcHistory();
-
-            calcExpression = '';
-            calcCurrentVal = formattedResult;
-            isCalcResultShown = true;
-        } catch(e) {
-            calcCurrentVal = 'Error';
-            isCalcResultShown = true;
-        }
-    } else if (val === '.') {
-        if (!calcCurrentVal.includes('.')) {
-            calcCurrentVal += '.';
-        }
-    } else {
-        if (calcCurrentVal === '0' || isCalcResultShown) {
-            calcCurrentVal = val;
-            isCalcResultShown = false;
-        } else {
-            if (calcCurrentVal.length < 14) {
-                calcCurrentVal += val;
-            }
-        }
-    }
-    updateCalcDisplay();
+function syncCalcEntry(){
+ calcExpression=calcBuffer.replaceAll('Ans',calcCarry?.display||'Ans');
+ if(!calcBuffer){calcCurrentVal='0';return;}
+ const tail=calcTail();if(tail.missing){if(calcBuffer.endsWith('('))calcCurrentVal='0';return;}
+ if(/^[+-]?(?:\d*\.?\d*)(?:e[+-]?\d+)?$/i.test(tail.text))calcCurrentVal=tail.text;
+ else try{calcCurrentVal=OrbitCalcMath.format(OrbitCalcMath.calculate(tail.text,calcCarry?.value));}catch(_){calcCurrentVal='0';}
 }
-
-function calcSciOp(op) {
-    const num = parseFloat(calcCurrentVal) || 0;
-    let res = 0;
-    switch(op) {
-        case 'mc':
-            calcMemory = 0;
-            showToast('Memory Cleared');
-            return;
-        case 'mr':
-            calcCurrentVal = String(calcMemory);
-            isCalcResultShown = false;
-            updateCalcDisplay();
-            showToast(`MR: ${calcMemory}`);
-            return;
-        case 'm+':
-            calcMemory += num;
-            showToast(`M+: ${calcMemory}`);
-            return;
-        case 'm-':
-            calcMemory -= num;
-            showToast(`M−: ${calcMemory}`);
-            return;
-        case 'pow':
-            calcExpression = `${calcExpression} ${calcCurrentVal} ^`;
-            calcCurrentVal = '0';
-            isCalcResultShown = false;
-            updateCalcDisplay();
-            return;
-        case 'inv':
-            if (num === 0) { calcCurrentVal = 'Error'; }
-            else { calcCurrentVal = String(Math.round((1 / num) * 100000000) / 100000000); }
-            isCalcResultShown = true;
-            updateCalcDisplay();
-            return;
-        case 'sin': res = Math.sin(num); break;
-        case 'cos': res = Math.cos(num); break;
-        case 'tan': res = Math.tan(num); break;
-        case 'pi': res = Math.PI; break;
-        case 'sqrt': res = Math.sqrt(num); break;
-        case 'sq': res = Math.pow(num, 2); break;
-        case 'log': res = Math.log10(num); break;
-        case 'ln': res = Math.log(num); break;
-        default: return;
-    }
-    calcCurrentVal = String(Math.round(res * 100000000) / 100000000);
-    isCalcResultShown = true;
-    updateCalcDisplay();
+function calcFailure(error){calcErrorMessage=error.message;calcCurrentVal='Error';isCalcResultShown=true;calcRepeat=null;const el=document.getElementById('calc-answer-preview');if(el)el.textContent=error.message||'Invalid calculation';}
+function calcInput(value){
+ if(value==='CE'){if(isCalcResultShown){calcInput('AC');return;}calcBuffer=calcBuffer.slice(0,calcTail().start)+'0';calcReplaceEntry=true;calcRepeat=null;syncCalcEntry();updateCalcDisplay();return;}
+ if(value==='AC'){calcBuffer='';calcCarry=null;calcRepeat=null;calcCurrentVal='0';calcExpression='';isCalcResultShown=false;updateCalcDisplay();return;}
+ if(value==='='){
+  try{
+   let source=calcBuffer||calcCurrentVal||'0',tree;
+   if(isCalcResultShown&&calcCurrentVal!=='Error'&&calcRepeat){tree={kind:'binary',op:calcRepeat.op,left:calcCarry?{kind:'rational',value:calcCarry.value}:{kind:'number',value:calcCurrentVal},right:calcRepeat.right};source=calcCurrentVal+' '+calcRepeat.op+' '+calcRepeat.label;}
+   else {tree=OrbitCalcMath.parse(source,calcCarry?.value);calcRepeat=tree.kind==='binary'?{op:tree.op,right:tree.right,label:OrbitCalcMath.print(tree.right)}:null;}
+   const exactResult=OrbitCalcMath.evaluate(tree),result=OrbitCalcMath.format(exactResult);
+   source=source.replaceAll('Ans',calcCarry?.display||'Ans');calcCarry={value:exactResult,display:result};
+   calcHistory.unshift({expr:source,result,time:new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})});calcHistory=calcHistory.slice(0,30);
+   try{localStorage.setItem('orbit_calc_history',JSON.stringify(calcHistory));}catch(_){}
+   calcExpression=source+' =';calcCurrentVal=result;calcBuffer=result;isCalcResultShown=true;renderCalcHistory();updateCalcDisplay();
+  }catch(error){calcFailure(error);updateCalcDisplay();}return;
+ }
+ if(calcCurrentVal==='Error'){calcBuffer='';calcCarry=null;calcRepeat=null;calcCurrentVal='0';calcExpression='';isCalcResultShown=false;}
+ if(value==='BACKSPACE'){
+  calcBuffer=isCalcResultShown?'':calcBuffer.slice(0,-1);
+ }else if(value==='+/-'){
+  const tail=calcTail();if(!tail.missing&&tail.text!=='0')calcBuffer=calcBuffer.slice(0,tail.start)+(/^-?(?:\d*\.?\d+)(?:e[+-]?\d+)?$/i.test(tail.text)?(tail.text.startsWith('-')?tail.text.slice(1):'-'+tail.text):'(-('+tail.text+'))');
+ }else if(value==='%'){
+  if(!calcTail().missing&&calcBuffer&&!calcBuffer.endsWith('%'))calcBuffer+='%';
+ }else if(['+','-','*','/','^'].includes(value)){
+  if(isCalcResultShown&&calcCarry)calcBuffer='Ans';
+  if(!calcBuffer)calcBuffer='0';
+  if(/[+*/^\-]$/.test(calcBuffer)){
+   if(value==='-'&&!calcBuffer.endsWith('-'))calcBuffer+='-';
+   else calcBuffer=calcBuffer.replace(/[+*/^\-]+$/,value);
+  }else if(!calcBuffer.endsWith('('))calcBuffer+=value;
+  else if(value==='-')calcBuffer+='-';
+ }else if(value==='('){
+  if(isCalcResultShown)calcBuffer='';
+  if(/[\d)%]$/.test(calcBuffer))calcBuffer+='*';calcBuffer+='(';
+ }else if(value===')'){
+  if((calcBuffer.match(/\(/g)||[]).length>(calcBuffer.match(/\)/g)||[]).length&&!calcTail().missing)calcBuffer+=')';
+ }else if(value==='.'||/^\d$/.test(value)){
+  if(isCalcResultShown)calcBuffer='';else if(calcReplaceEntry)calcBuffer=calcBuffer.slice(0,calcTail().start);
+  if(/[)%]$/.test(calcBuffer))calcBuffer+='*';
+  let tail=calcTail();
+  if(value==='.'){
+   if(!tail.missing&&/[.e]/i.test(tail.text))return;
+   calcBuffer+=tail.missing||!calcBuffer?'0.':'.';
+  }else{
+   if(!tail.missing&&tail.text.replace(/[^0-9]/g,'').length>=16)return;
+   if(tail.text==='0'&&!tail.missing)calcBuffer=calcBuffer.slice(0,tail.start)+value;else calcBuffer+=value;
+  }
+ }else return;
+ if(calcBuffer.length>512)calcBuffer=calcBuffer.slice(0,512);
+ calcRepeat=null;calcReplaceEntry=false;isCalcResultShown=false;syncCalcEntry();updateCalcDisplay();
+}
+function toggleCalcAngle(){calcAngleMode=calcAngleMode==='deg'?'rad':'deg';try{localStorage.setItem('orbit_calc_angle',calcAngleMode);}catch(_){}const button=document.getElementById('calc-angle-mode');if(button){button.textContent=calcAngleMode.toUpperCase();button.setAttribute('aria-label','Angle mode: '+(calcAngleMode==='deg'?'degrees':'radians'));}}
+function calcSciOp(operation){
+ if(calcCurrentVal==='Error'){calcBuffer='';calcCarry=null;calcCurrentVal='0';isCalcResultShown=false;}
+ if(operation==='pow'){calcInput('^');return;}
+ if(operation==='mc'){calcMemory=0;showToast('Memory cleared');return;}
+ if(operation==='mr'){if(isCalcResultShown)calcBuffer='';const tail=calcTail();calcBuffer=calcBuffer.slice(0,tail.start)+String(calcMemory);calcReplaceEntry=true;isCalcResultShown=false;syncCalcEntry();updateCalcDisplay();return;}
+ try{
+  const tail=calcTail();if(tail.missing&&operation!=='pi')throw Error('Enter a number first');
+  const exact=OrbitCalcMath.calculate(tail.text),num=OrbitCalcMath.numeric(exact);let result;
+  if(operation==='m+'||operation==='m-'){calcMemory=OrbitCalcMath.format(OrbitCalcMath.op(OrbitCalcMath.number(String(calcMemory)),exact,operation==='m+'?'+':'-'));showToast('Memory: '+calcMemory);return;}
+  if(operation==='inv')result=OrbitCalcMath.op(OrbitCalcMath.number('1'),exact,'/');
+  else if(operation==='sq')result=OrbitCalcMath.op(exact,exact,'*');
+  else{
+   const angle=calcAngleMode==='deg'?(num%360)*Math.PI/180:num;
+   let value;
+   switch(operation){
+    case 'pi':value=Math.PI;break;
+    case 'sin':value=Math.sin(angle);break;
+    case 'cos':value=Math.cos(angle);break;
+    case 'tan':if(Math.abs(Math.cos(angle))<1e-14)throw Error('Tangent is undefined at this angle');value=Math.tan(angle);break;
+    case 'sqrt':if(num<0)throw Error('Square root requires a nonnegative number');value=Math.sqrt(num);break;
+    case 'log':case 'ln':if(num<=0)throw Error('Logarithms require a positive number');value=operation==='log'?Math.log10(num):Math.log(num);break;
+    default:return;
+   }
+   if(!Number.isFinite(value))throw Error('Result exceeds calculator range');
+   if(['sin','cos','tan'].includes(operation)&&Math.abs(value)<1e-15)value=0;
+   result=OrbitCalcMath.number(value.toPrecision(15));
+  }
+  if(isCalcResultShown)calcBuffer='';
+  const formatted=OrbitCalcMath.format(result);calcBuffer=calcBuffer.slice(0,calcTail().start)+(formatted.startsWith('-')?'('+formatted+')':formatted);
+  calcRepeat=null;calcReplaceEntry=true;isCalcResultShown=false;syncCalcEntry();updateCalcDisplay();
+ }catch(error){calcFailure(error);updateCalcDisplay();}
 }
 
 function toggleCalcScientific() {
@@ -382,9 +391,11 @@ document.addEventListener('keydown', (e) => {
     const tabCalc = document.getElementById('tab-calculator');
     if (!tabCalc || tabCalc.classList.contains('hide')) return;
     // Don't intercept when user is typing in a real text input/textarea
-    if (['INPUT', 'TEXTAREA'].includes(document.activeElement?.tagName)) return;
+    if(e.ctrlKey||e.metaKey||e.altKey||e.isComposing||['INPUT','TEXTAREA','SELECT'].includes(document.activeElement?.tagName)||document.activeElement?.isContentEditable)return;
+    if(typeof currentCalcSubmode!=='undefined'&&currentCalcSubmode!=='calc')return;
 
     const key = e.key;
+    if((key==='Enter'||key===' ')&&document.activeElement?.tagName==='BUTTON')return;
     const settings = document.getElementById('calc-settings');
     if (settings?.open) {
         if (key === 'Escape') { settings.open = false; settings.querySelector('summary')?.focus(); e.preventDefault(); }
@@ -394,7 +405,7 @@ document.addEventListener('keydown', (e) => {
         e.preventDefault();
         calcInput(key);
         highlightCalcButton(`calc-btn-${key}`);
-    } else if (key === '+' || key === '-' || key === '*' || key === '/') {
+    } else if (key === '+' || key === '-' || key === '*' || key === '/' || key === '^') {
         e.preventDefault();
         calcInput(key);
         const map = { '+': 'add', '-': 'sub', '*': 'mul', '/': 'div' };
