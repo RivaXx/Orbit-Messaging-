@@ -22,7 +22,7 @@ async function initServiceWorker() {
         });
     }
     try{
-        const registration=await navigator.serviceWorker.register('./sw.js?v=calculator-engine-20261023-r1',{scope:'./'});
+        const registration=await navigator.serviceWorker.register('./sw.js?v=security-audit-20261024-r1',{scope:'./'});
         registration.update().catch(()=>{});
     }catch(_){}
 }
@@ -602,6 +602,7 @@ async function signOut() {
         if (typeof allRoomsMap !== 'undefined') allRoomsMap.clear();
         if (typeof userDirectRoomsMap !== 'undefined') userDirectRoomsMap.clear();
         if (typeof messageCache !== 'undefined') messageCache.clear();
+        if(typeof orbitSignedMedia!=='undefined')orbitSignedMedia.clear();
         if (typeof _messageOutbox !== 'undefined') _messageOutbox.clear();
         if (typeof _inflightMessages !== 'undefined') _inflightMessages.clear();
         if (typeof unreadRoomsSet !== 'undefined') unreadRoomsSet.clear();
