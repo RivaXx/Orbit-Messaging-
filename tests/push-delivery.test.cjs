@@ -25,3 +25,8 @@ test('ended calls carry a silent stop event and notes preserve private previews'
  const n=fixture('note');n.rows.orbit_push_subscriptions[0].previews=false;await n.request({eventId:n.id});assert.equal(n.sent[0].body.noteId,'19');assert.equal(n.sent[0].body.title,'Orbit Messenger');assert.ok(!n.sent[0].body.body.includes('Secret'));
  const old=fixture('note');old.rows.secure_notes.reminder_at='2020-01-01';await old.request({eventId:old.id});assert.equal(old.sent.length,0);
 });
+
+test('push rejects mismatched subscription endpoints and non-provider destinations',async()=>{
+ const f=fixture('message');f.rows.orbit_push_subscriptions[0].subscription.endpoint='http://127.0.0.1/internal';await f.request({eventId:f.id});assert.equal(f.sent.length,0);
+ const g=fixture('message');g.rows.orbit_push_subscriptions[0].endpoint=g.rows.orbit_push_subscriptions[0].subscription.endpoint='https://attacker.example/push';await g.request({eventId:g.id});assert.equal(g.sent.length,0);
+});
