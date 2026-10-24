@@ -852,3 +852,19 @@ body #tab-calculator.calc-has-wallpaper #calc-theme-wrapper { background:transpa
 
 /* A focused navigation button must not scroll the full-screen calculator sideways. */
 #app-viewport:has(#tab-calculator.calc-fit-mode:not(.hide)) { overflow:clip; }
+
+/* Calculator input updates never animate dimensions or queue long transitions. */
+#tab-calculator .calc-screen{transition:background-color 120ms ease,border-color 120ms ease}
+#tab-calculator .calc-btn{touch-action:manipulation;transition:transform 80ms ease,background-color 100ms ease}
+#calc-angle-mode{font-variant-numeric:tabular-nums;min-width:44px;min-height:36px}
+#calc-val-display{font-variant-numeric:tabular-nums}
+#calc-answer-preview{overflow-wrap:anywhere}
+
+/* Match full-screen and scientific surfaces to the selected app theme. */
+body.light-mode #tab-calculator.calc-fit-mode:not(.hide){background-color:#f1f4f8}
+body.light-mode #tab-calculator .calc-sci-drawer{background:rgba(226,232,240,.9)}
+body.light-mode #tab-calculator .calc-sci-btn{background:#f8fafc;color:#142033;border-color:#cbd5e1}
+#tab-calculator.calc-fit-mode .calc-sci-btn{height:36px;font-size:12px}
+@media(max-width:480px) and (min-height:601px){#tab-calculator.calc-fit-mode .calc-sci-drawer:is(.active,.open){grid-template-columns:repeat(4,minmax(0,1fr));gap:4px}}
+body.light-mode #tab-calculator .calc-mode-bar button{color:#614500!important}
+#tab-calculator #calc-theme-wrapper:not(.calc-theme-glass) .calc-btn.op{color:#241600}

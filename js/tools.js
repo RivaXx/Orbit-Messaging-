@@ -1491,8 +1491,10 @@ const CONVERTER_UNITS_DATA = {
     }
 };
 
+let currentCalcSubmode='calc';
 function switchCalcSubmode(submode) {
     if (!['calc','converter','date'].includes(submode)) return;
+    currentCalcSubmode=submode;
     const menu = document.getElementById('calc-settings');
     if (menu) menu.open = false;
     const title = document.getElementById('calc-app-title');
@@ -1554,7 +1556,8 @@ function convertUnits() {
 
     if (!fromValEl || !fromUnitEl || !toUnitEl || !toValEl) return;
 
-    const val = parseFloat(fromValEl.value);
+    const val = Number(fromValEl.value);
+    if(!Number.isFinite(val)){toValEl.innerText='—';if(formulaEl)formulaEl.innerText='Enter a finite number';return;}
     if (isNaN(val)) {
         toValEl.innerText = '0';
         return;
@@ -1565,27 +1568,29 @@ function convertUnits() {
     let result = 0;
 
     if (currentConverterCategory === 'temp') {
+        if(!['c','f','k'].includes(fromUnit)||!['c','f','k'].includes(toUnit)){toValEl.innerText='—';return;}
         // Temperature conversion
         let celsius = val;
         if (fromUnit === 'f') celsius = (val - 32) * (5 / 9);
         else if (fromUnit === 'k') celsius = val - 273.15;
 
+        if(celsius < -273.15-1e-10){toValEl.innerText='—';if(formulaEl)formulaEl.innerText='Temperature is below absolute zero';return;}
         if (toUnit === 'c') result = celsius;
         else if (toUnit === 'f') result = (celsius * 9 / 5) + 32;
         else if (toUnit === 'k') result = celsius + 273.15;
     } else {
         const cat = CONVERTER_UNITS_DATA[currentConverterCategory];
+        if(!cat){toValEl.innerText='—';return;}
         const uFrom = cat.units.find(u => u.id === fromUnit);
         const uTo = cat.units.find(u => u.id === toUnit);
         if (uFrom && uTo) {
             const baseVal = val * uFrom.toBase;
             result = baseVal / uTo.toBase;
-        }
+        }else{toValEl.innerText='—';return;}
     }
 
-    const formattedResult = Math.abs(result) < 0.000001 && result !== 0
-        ? result.toExponential(4)
-        : String(Math.round(result * 1000000) / 1000000);
+    if(!Number.isFinite(result)){toValEl.innerText='—';if(formulaEl)formulaEl.innerText='Result exceeds converter range';return;}
+    const formattedResult=String(Number(result.toPrecision(15)));
 
     toValEl.innerText = formattedResult;
 
@@ -1611,12 +1616,13 @@ function initDateCalculator() {
     const endDiff = document.getElementById('date-diff-end');
     const mathStart = document.getElementById('date-math-start');
 
-    const todayStr = new Date().toISOString().split('T')[0];
+    const dateKey=date=>[date.getFullYear(),String(date.getMonth()+1).padStart(2,'0'),String(date.getDate()).padStart(2,'0')].join('-');
+    const todayStr = dateKey(new Date());
     if (startDiff && !startDiff.value) startDiff.value = todayStr;
     if (endDiff && !endDiff.value) {
         const nextMonth = new Date();
         nextMonth.setDate(nextMonth.getDate() + 30);
-        endDiff.value = nextMonth.toISOString().split('T')[0];
+        endDiff.value = dateKey(nextMonth);
     }
     if (mathStart && !mathStart.value) mathStart.value = todayStr;
 
@@ -1659,67 +1665,35 @@ function setDateMathOp(op, btn) {
     calculateDateMath();
 }
 
-function calculateDateDiff() {
-    const startInp = document.getElementById('date-diff-start');
-    const endInp = document.getElementById('date-diff-end');
-    const totalEl = document.getElementById('date-diff-days-total');
-    const breakdownEl = document.getElementById('date-diff-breakdown');
-
-    if (!startInp || !endInp || !startInp.value || !endInp.value || !totalEl || !breakdownEl) return;
-
-    let d1 = new Date(startInp.value);
-    let d2 = new Date(endInp.value);
-
-    let isReversed = false;
-    if (d1 > d2) {
-        const tmp = d1;
-        d1 = d2;
-        d2 = tmp;
-        isReversed = true;
-    }
-
-    const diffTime = Math.abs(d2.getTime() - d1.getTime());
-    const totalDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
-
-    // Calculate years, months, days
-    let years = d2.getFullYear() - d1.getFullYear();
-    let months = d2.getMonth() - d1.getMonth();
-    let days = d2.getDate() - d1.getDate();
-
-    if (days < 0) {
-        months--;
-        const prevMonth = new Date(d2.getFullYear(), d2.getMonth(), 0);
-        days += prevMonth.getDate();
-    }
-    if (months < 0) {
-        years--;
-        months += 12;
-    }
-
-    const weeks = Math.floor(totalDays / 7);
-
-    totalEl.innerText = `${totalDays.toLocaleString()} days`;
-    breakdownEl.innerText = `${years} years, ${months} months, ${days} days (${weeks} weeks)${isReversed ? ' [Reversed]' : ''}`;
+function parseCalcDate(value){
+ const match=String(value).match(/^(\d{4})-(\d{2})-(\d{2})$/);if(!match)throw Error('Choose a valid date');
+ const [year,month,day]=match.slice(1).map(Number),date=new Date(0);date.setUTCHours(0,0,0,0);date.setUTCFullYear(year,month-1,day);
+ if(year<1||year>9999||date.getUTCFullYear()!==year||date.getUTCMonth()!==month-1||date.getUTCDate()!==day)throw Error('Choose a valid date');return date;
 }
-
-function calculateDateMath() {
-    const startInp = document.getElementById('date-math-start');
-    const resultEl = document.getElementById('date-math-result-date');
-
-    const years = parseInt(document.getElementById('date-math-years')?.value || '0', 10);
-    const months = parseInt(document.getElementById('date-math-months')?.value || '0', 10);
-    const weeks = parseInt(document.getElementById('date-math-weeks')?.value || '0', 10);
-    const days = parseInt(document.getElementById('date-math-days')?.value || '0', 10);
-
-    if (!startInp || !startInp.value || !resultEl) return;
-
-    const base = new Date(startInp.value);
-    const factor = currentDateMathOp === 'sub' ? -1 : 1;
-
-    base.setFullYear(base.getFullYear() + (years * factor));
-    base.setMonth(base.getMonth() + (months * factor));
-    base.setDate(base.getDate() + ((weeks * 7 + days) * factor));
-
-    const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-    resultEl.innerText = base.toLocaleDateString(undefined, options);
+function shiftCalcMonths(date,months){
+ const result=new Date(date),day=result.getUTCDate();result.setUTCDate(1);result.setUTCMonth(result.getUTCMonth()+months);
+ const last=new Date(result);last.setUTCMonth(last.getUTCMonth()+1,0);result.setUTCDate(Math.min(day,last.getUTCDate()));return result;
+}
+function calculateDateDiff(){
+ const start=document.getElementById('date-diff-start'),end=document.getElementById('date-diff-end'),total=document.getElementById('date-diff-days-total'),breakdown=document.getElementById('date-diff-breakdown');
+ if(!start||!end||!total||!breakdown)return;
+ try{
+  let a=parseCalcDate(start.value),b=parseCalcDate(end.value),reversed=a>b;if(reversed)[a,b]=[b,a];
+  const days=Math.round((b-a)/86400000);let years=b.getUTCFullYear()-a.getUTCFullYear();
+  if(shiftCalcMonths(a,years*12)>b)years--;
+  let months=0;while(months<11&&shiftCalcMonths(a,years*12+months+1)<=b)months++;
+  const remaining=Math.round((b-shiftCalcMonths(a,years*12+months))/86400000);
+  total.innerText=days.toLocaleString()+' days';breakdown.innerText=`${years} years, ${months} months, ${remaining} days (${Math.floor(days/7)} weeks)${reversed?' [Reversed]':''}`;
+ }catch(error){total.innerText='—';breakdown.innerText=error.message;}
+}
+function calculateDateMath(){
+ const start=document.getElementById('date-math-start'),output=document.getElementById('date-math-result-date');if(!start||!output)return;
+ try{
+  const values=['years','months','weeks','days'].map(key=>{const value=Number(document.getElementById('date-math-'+key)?.value||0);if(!Number.isSafeInteger(value)||value<0||value>3652500)throw Error('Use nonnegative whole numbers');return value;});
+  const [years,months,weeks,days]=values,factor=currentDateMathOp==='sub'?-1:1;
+  if(years*12+months>120000)throw Error('Date exceeds supported range');
+  const date=shiftCalcMonths(parseCalcDate(start.value),factor*(years*12+months));date.setUTCDate(date.getUTCDate()+factor*(weeks*7+days));
+  if(!Number.isFinite(date.getTime())||date.getUTCFullYear()<1||date.getUTCFullYear()>9999)throw Error('Date exceeds supported range');
+  output.innerText=date.toLocaleDateString(undefined,{weekday:'long',year:'numeric',month:'long',day:'numeric',timeZone:'UTC'});
+ }catch(error){output.innerText=error.message;}
 }
