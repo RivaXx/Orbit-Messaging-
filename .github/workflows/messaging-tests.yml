@@ -14,4 +14,4 @@ jobs:
         with:
           node-version: '24'
       - name: Run browser-logic regression tests
-        run: node --test tests/*.test.cjs
+        run: node --test tests/*.test.cjs tests/*.test.mjs
