@@ -23,10 +23,18 @@ declare a uuid:=current_setting('orbit.audit.a')::uuid;b uuid:=current_setting('
  denied boolean; visible integer; result jsonb; fresh uuid:=gen_random_uuid();
 begin
  perform set_config('request.jwt.claims',jsonb_build_object('sub',a,'role','authenticated')::text,true);
+ denied:=false;
+ begin
  insert into public.messages(id,room,sender_id,username,text,type,attachments,reactions) values
  (fresh,current_setting('orbit.audit.room'),a,'Audit actor','Synthetic initial poll','poll',array[
  jsonb_build_object('type','poll','poll',jsonb_build_object('options',jsonb_build_array(jsonb_build_object('text','A','voters',array[b],'votes',999))))::text],jsonb_build_object('fake',array[b]));
- if (select reactions<>'{}'::jsonb or (attachments[1]::jsonb->'poll'->'options'->0->>'votes')::integer<>0 from public.messages where id=fresh) then raise exception 'Initial reactions or votes could be forged';end if;
+ exception when insufficient_privilege then denied:=true;end;
+ if exists(select 1 from information_schema.columns where table_schema='public' and table_name='messages' and column_name='e2ee_version') then
+  if not denied then raise exception 'Plaintext poll accepted after encryption cutover';end if;
+ else
+  if denied then raise exception 'Legacy initial poll unexpectedly rejected';end if;
+  if (select reactions<>'{}'::jsonb or (attachments[1]::jsonb->'poll'->'options'->0->>'votes')::integer<>0 from public.messages where id=fresh) then raise exception 'Initial reactions or votes could be forged';end if;
+ end if;
  denied:=false;
  begin insert into public.messages(room,sender_id,text,type) values(current_setting('orbit.audit.room'),b,'Forged sender','text');exception when insufficient_privilege then denied:=true;end;
  if not denied then raise exception 'Sender impersonation allowed';end if;

@@ -6,7 +6,7 @@ const path=require('node:path');
 const root=path.join(__dirname,'..');
 function mediaContext(){
  const toasts=[],store=new Map(),events=[];
- const context=vm.createContext({window:{addEventListener:()=>{}},document:{getElementById:()=>null,querySelector:()=>null,addEventListener:()=>{}},
+ const context=vm.createContext({OrbitCrypto:{requireUnlocked:async()=>{},clearDraft(){},sealLocalFile:async file=>file,sealQueue:async items=>items,encryptAttachment:async body=>({body,digest:'a'.repeat(64)})},window:{addEventListener:()=>{}},document:{getElementById:()=>null,querySelector:()=>null,addEventListener:()=>{}},
   navigator:{onLine:true},Blob,File,URL:{createObjectURL:()=> 'blob:preview',revokeObjectURL:()=>events.push('revoke')},crypto,
   localStorage:{getItem:k=>store.get(k)??null,setItem:(k,v)=>store.set(k,v)},console:{warn:()=>{},error:()=>{}},
   setTimeout,clearTimeout,setInterval:()=>0,clearInterval:()=>{},
@@ -51,15 +51,15 @@ test('failed disk write retains original bytes and retries use memory',async()=>
  const file=new Blob(['video bytes']);assert.equal(await c._storeOutboxMedia('msg',0,file),false);
  assert.equal(await c._getOutboxMedia('msg',0),file);
 });
-test('single media preview is swapped before its blob URL is revoked',async()=>{
+test('ciphertext storage URLs never replace plaintext previews; previews release only after confirmation',async()=>{
  const {context:c,events}=mediaContext();const file=new Blob(['photo']);
  await c._storeOutboxMedia('msg',0,file);
  c.uploadMediaToStorage=async()=> 'https://example.com/photo.jpg';
  c._persistMessageOutbox=()=>{};
- c._updateOutboxMessage=item=>{assert.equal(item.payload.attachments[0].url,'https://example.com/photo.jpg');events.push('swap');};
+ c._updateOutboxMessage=item=>{assert.equal(item.payload.attachments[0].url,'blob:preview');assert.equal(item.payload.attachments[0].encrypted,true);events.push('swap');};
  const item={payload:{id:'msg',sender_id:'user',attachments:[{url:'blob:preview',size:5,upload_pending:true}]},
   mediaUploadInfo:[{index:0,name:'photo.jpg',mime:'image/jpeg',type:'image',prepared:true}]};
- await c._uploadQueuedMedia(item);assert.deepEqual(events,['swap','revoke']);
+ await c._uploadQueuedMedia(item);assert.deepEqual(events,['swap']);c._releaseOutboxPreviews(item);assert.deepEqual(events,['swap','revoke']);
 });
 function weatherContext({airFailure=false}={}){
  const elements=new Map(),classes=new Set(),requests=[];

@@ -8,7 +8,7 @@ function context(){
  const element=()=>({dataset:{},style:{},classList:{add(){},remove(){},contains(){return false;},toggle(){}},textContent:'',value:'',children:[],
   setAttribute(){},append(...items){this.children.push(...items);},replaceChildren(...items){this.children=items;},before(){},after(){},remove(){},closest(){return null;},querySelector(){return null;},querySelectorAll(){return [];},addEventListener(){},focus(){}});
  const document={hidden:false,body:{append(node){nodes.set(node.id,node);}},getElementById:id=>nodes.get(id)||null,querySelector:()=>null,querySelectorAll:()=>[],createElement:element,addEventListener(){}};
- const c=vm.createContext({document,window:{addEventListener:(name,fn)=>events[name]=fn},navigator:{onLine:true},location:{origin:'https://orbit.example',href:'https://orbit.example/'},AbortController,
+ const c=vm.createContext({OrbitCrypto:{requireUnlocked:async()=>{},clearDraft(){},sealQueue:async items=>items,sealLocalFile:async file=>file,encryptAttachment:async body=>({body,digest:'a'.repeat(64)})},document,window:{addEventListener:(name,fn)=>events[name]=fn},navigator:{onLine:true},location:{origin:'https://orbit.example',href:'https://orbit.example/'},AbortController,
   localStorage:{getItem:k=>store.get(k)??null,setItem:(k,v)=>store.set(k,v)},console,crypto,Blob,File,URL,
   Date,setTimeout:(fn,delay)=>{timers.push({fn,delay});return timers.length;},clearTimeout(){},setInterval:(fn,delay)=>{timers.push({fn,delay});return timers.length;},clearInterval(){},
   currentUser:{id:'me',email:'member@example.com'},currentRoom:'room',globalUsersMap:new Map(),userAlarms:[],messageCache:new Map(),
@@ -41,9 +41,10 @@ test('presence uses peer presence and respects reciprocal privacy',()=>{
 test('forwarding makes an owned copy, parses legacy JSON and rejects inaccessible or pending media',async()=>{
  const {c}=context();c.fetch=async()=>({ok:true,blob:async()=>new Blob(['photo'],{type:'image/jpeg'})});
  let uploads=0;c.uploadMediaToStorage=async()=>{uploads++;return 'https://orbit.example/owned.jpg';};
- const copies=await c.orbitCopyForwardAttachments([JSON.stringify({url:'https://source/photo.jpg',type:'image',name:'photo.jpg'})]);
- assert.equal(uploads,1);assert.equal(copies[0].url,'https://orbit.example/owned.jpg');
- await assert.rejects(c.orbitCopyForwardAttachments([{url:'blob:pending',upload_pending:true}]),/finished uploading/);
+ c.getOrbitStorageObjectPath=()=> 'encrypted/me/owned.bin';
+ const copies=await c.orbitCopyForwardAttachments([JSON.stringify({url:'https://source/photo.jpg',type:'image',name:'photo.jpg'})],'image','destination');
+ assert.equal(uploads,1);assert.equal(copies[0].url,'');assert.equal(copies[0].encrypted,true);assert.equal(copies[0].storage_path,'encrypted/me/owned.bin');
+ await assert.rejects(c.orbitCopyForwardAttachments([{url:'blob:pending',upload_pending:true}]),/before forwarding/);
  c.fetch=async()=>({ok:false});await assert.rejects(c.orbitCopyForwardAttachments([{url:'https://source/gone.jpg'}]),/unavailable/);
 });
 test('original-quality controls support one photo and whole batch without changing videos',()=>{
