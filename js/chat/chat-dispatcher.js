@@ -63,6 +63,7 @@ async function _storeOutboxMedia(messageId, index, file) {
     _mediaOutboxMemory.set(key, file);
     if (_mediaOutboxVolatile.has(key)) return false;
     try {
+        const encryptedFile=await OrbitCrypto.sealLocalFile(file,messageId,index);
         const db = await _openMediaOutboxDb();
         await new Promise((resolve, reject) => {
             const tx = db.transaction('files', 'readwrite');
@@ -71,7 +72,7 @@ async function _storeOutboxMedia(messageId, index, file) {
             tx.oncomplete = () => finish();
             tx.onerror = () => finish(tx.error || new Error('Could not save media for upload.'));
             tx.onabort = () => finish(tx.error || new Error('Could not save media for upload.'));
-            try { tx.objectStore('files').put({ key, messageId, index, file }); }
+            try { tx.objectStore('files').put({ key, messageId, index, file:encryptedFile }); }
             catch (error) { finish(error); }
         });
         _mediaOutboxVolatile.delete(key);
@@ -87,11 +88,12 @@ async function _getOutboxMedia(messageId, index) {
     const memory = _mediaOutboxMemory.get(`${messageId}:${index}`);
     if (memory) return memory;
     const db = await _openMediaOutboxDb();
-    return new Promise((resolve, reject) => {
+    const saved=await new Promise((resolve, reject) => {
         const request = db.transaction('files', 'readonly').objectStore('files').get(`${messageId}:${index}`);
         request.onsuccess = () => resolve(request.result?.file || null);
         request.onerror = () => reject(request.error || new Error('Could not restore queued media.'));
     });
+    return saved?OrbitCrypto.openLocalFile(saved):null;
 }
 
 async function _deleteOutboxMedia(messageId, index = null) {
@@ -130,8 +132,10 @@ function _messageOutboxStorageKey(userId) {
     return `orbit_message_outbox_v1_${userId}`;
 }
 
-function _persistMessageOutbox(userId = currentUser?.id) {
+const _outboxPersistVersions=new Map();
+async function _persistMessageOutbox(userId = currentUser?.id) {
     if (!userId) return;
+    const version=(_outboxPersistVersions.get(userId)||0)+1;_outboxPersistVersions.set(userId,version);
     try {
         const items = Array.from(_messageOutbox.values())
             .filter(item => item.payload?.sender_id === userId)
@@ -148,7 +152,8 @@ function _persistMessageOutbox(userId = currentUser?.id) {
                 delete safeItem.previewObjectUrls;
                 return safeItem;
             });
-        localStorage.setItem(_messageOutboxStorageKey(userId), JSON.stringify(items));
+        const sealed=items.length?await OrbitCrypto.sealQueue(items,userId):[];
+        if(currentUser?.id===userId&&_outboxPersistVersions.get(userId)===version)localStorage.setItem(_messageOutboxStorageKey(userId), JSON.stringify(sealed));
     } catch (error) {
         console.warn('[Orbit] Could not persist message outbox:', error);
     }
@@ -173,7 +178,7 @@ function _updateOutboxMessage(item, status, error = null) {
         document.querySelector(`[data-msg-id="${item.payload.id}"]`);
     if (node) {
         if (['sending', 'sent', 'delivered', 'read'].includes(status) &&
-            cacheMessage.attachments?.length && cacheMessage.attachments.every(a => a?.url && !a.upload_pending) &&
+            cacheMessage.attachments?.length && (cacheMessage._e2ee_media_pending || cacheMessage.attachments.every(a => a?.url && !a.upload_pending)) &&
             node.dataset.mediaDelivered !== 'true' && typeof createMessageDOMNode === 'function') {
             // Reloaded pending media has no blob URL. Rebuild its final bubble
             // and click handlers from the confirmed attachment, not only ticks.
@@ -229,6 +234,10 @@ function _scheduleMessageRetry(item) {
     }, delay);
     _messageRetryTimers.set(item.payload.id, timer);
 }
+function _releaseOutboxPreviews(item){
+    (item.previewObjectUrls||[]).forEach(url=>{try{URL.revokeObjectURL(url);}catch(_){}});
+    item.previewObjectUrls=[];
+}
 
 async function _deliverOutboxMessage(messageId) {
     const item = _messageOutbox.get(messageId);
@@ -283,9 +292,11 @@ async function _deliverOutboxMessage(messageId) {
             return;
         }
         if (item.progressTimer) clearInterval(item.progressTimer);
-        const sentMessage = { ...item.payload, ...(data || {}), status: 'sent' };
+        const encryptedRecord=OrbitCrypto.wireFor(messageId);
+        const sentMessage = { ...item.payload, ...(data || {}), ...(encryptedRecord?await OrbitCrypto.decode(encryptedRecord):{}),status: 'sent' };
         item.payload = { ...sentMessage };
         _updateOutboxMessage(item, 'sent');
+        _releaseOutboxPreviews(item);
         _messageOutbox.delete(messageId);
         await _deleteOutboxMedia(messageId);
         _persistMessageOutbox(sentMessage.sender_id);
@@ -315,12 +326,14 @@ async function _deliverOutboxMessage(messageId) {
     }
 }
 
-function _hydrateAndResumeMessageOutbox(userId = currentUser?.id) {
+async function _hydrateAndResumeMessageOutbox(userId = currentUser?.id) {
     if (!userId) return;
+    if(!window.OrbitCrypto?.isUnlocked())return;
     if (_outboxHydratedForUser !== userId) {
         _outboxHydratedForUser = userId;
         try {
-            const stored = JSON.parse(localStorage.getItem(_messageOutboxStorageKey(userId)) || '[]');
+            const stored = await OrbitCrypto.openQueue(JSON.parse(localStorage.getItem(_messageOutboxStorageKey(userId)) || '[]'));
+            if(currentUser?.id!==userId)return;
             if (Array.isArray(stored)) stored.forEach(item => {
                 if (item?.payload?.id && item.payload.sender_id === userId) {
                     delete item.progressTimer;
@@ -345,6 +358,7 @@ function confirmMessageDeliveredFromRealtime(serverMessage) {
     _deleteOutboxMedia(serverMessage.id).catch(() => {});
     item.payload = { ...item.payload, ...serverMessage };
     _updateOutboxMessage(item, 'sent');
+    _releaseOutboxPreviews(item);
     _messageOutbox.delete(serverMessage.id);
     const timer = _messageRetryTimers.get(serverMessage.id);
     if (timer) clearTimeout(timer);
@@ -418,6 +432,8 @@ async function sendMessage() {
         return;
     }
 
+    try{await OrbitCrypto.requireUnlocked();}catch(error){_isSendingMessage=false;showToast(error.message,'info');return;}
+    OrbitCrypto.clearDraft(sendViewRoom);
     if (input) { input.value = ''; input.style.height = 'auto'; }
     stopTypingBroadcast();
 
@@ -532,6 +548,7 @@ async function sendMessage() {
 // actual message row is inserted only after every attachment has a durable URL.
 async function queueMediaMessage(items, caption = '', messageType = null, targetContext = null) {
     if (!Array.isArray(items) || !items.length || !currentRoom || !currentUser?.id) throw new Error('Open a chat and select media before sending.');
+    await OrbitCrypto.requireUnlocked();
     const roomAtSend = targetContext?.roomId || currentRoom;
     const userAtSend = targetContext?.userId || currentUser.id;
     if (currentRoom !== roomAtSend || currentUser.id !== userAtSend) {
@@ -622,6 +639,7 @@ async function queueMediaMessage(items, caption = '', messageType = null, target
     if (!feed || feed.scrollHeight - feed.scrollTop - feed.clientHeight < 220) scrollFeedToBottom(true);
     const input = document.getElementById('msg-input');
     if (input) { input.value = ''; input.style.height = 'auto'; }
+    OrbitCrypto.clearDraft(roomAtSend);
     if (replyTargetMessage) {
         replyTargetMessage = null;
         document.getElementById('reply-preview-bar')?.classList.add('hide');
@@ -660,7 +678,7 @@ async function _uploadQueuedMedia(item) {
     for (const info of item.mediaUploadInfo) {
         if (item.cancelled) return;
         const saved = item.payload.attachments[info.index];
-        if (saved?.upload_pending === false && (/^https?:\/\//.test(saved.url || '') || saved.storage_bucket==='orbit-view-once')) {
+        if (saved?.upload_pending === false && (saved.encrypted&&saved.storage_path || /^https?:\/\//.test(saved.url || '') || saved.storage_bucket==='orbit-view-once')) {
             completedCount++;
             uploadBytes.set(info.index, uploadTotals.get(info.index));
             reportProgress();
@@ -715,11 +733,22 @@ async function _uploadQueuedMedia(item) {
             _persistMessageOutbox(item.payload.sender_id);
         }
 
+        let encryptedUpload;
+        if(info.encryptedDigest)encryptedUpload={body:uploadBody,digest:info.encryptedDigest,recipientKeyset:info.recipientKeyset};
+        else{
+            encryptedUpload=await OrbitCrypto.encryptAttachment(uploadBody,item.payload.room);
+            info.originalMime=mime;
+            await _storeOutboxMedia(item.payload.id,info.index,encryptedUpload.body);
+            info.encryptedDigest=encryptedUpload.digest;
+            info.recipientKeyset=encryptedUpload.recipientKeyset;
+            await _persistMessageOutbox(item.payload.sender_id);
+        }
+        const originalMime=info.originalMime;uploadBody=encryptedUpload.body;mime='application/octet-stream';
         let url = null, privatePhoto = null;
         try {
             if(attachment?.view_once){
-                privatePhoto=await uploadOrbitPrivatePhoto(uploadBody,info.name,item.payload.id,info.index,progress=>{uploadTotals.set(info.index,progress.total||uploadBody.size);uploadBytes.set(info.index,progress.loaded||0);reportProgress();});url=privatePhoto.url;
-            } else url = await uploadMediaToStorage(uploadBody, info.name, mime, info.subfolder, progress => {
+                privatePhoto=await uploadOrbitPrivatePhoto(uploadBody,'attachment.bin',item.payload.id,info.index,progress=>{uploadTotals.set(info.index,progress.total||uploadBody.size);uploadBytes.set(info.index,progress.loaded||0);reportProgress();});url=privatePhoto.url;
+            } else url = await uploadMediaToStorage(uploadBody, 'attachment.bin', mime, 'encrypted', progress => {
                 updateChatMediaUploadProgress(info.name, progress.percent, completedCount, totalUploads);
                 uploadTotals.set(info.index, progress.total);
                 uploadBytes.set(info.index, progress.loaded);
@@ -746,14 +775,14 @@ async function _uploadQueuedMedia(item) {
         if (attachment?.url?.startsWith('blob:')) {
             completedPreviewUrls.push(attachment.url);
         }
-        item.payload.attachments[info.index] = { name: info.name, url, storage_path: privatePhoto?.storage_path || getOrbitStorageObjectPath(url), storage_bucket: privatePhoto?.storage_bucket, type: info.type, size: attachment?.size || file.size, upload_pending: false, view_once: !!attachment?.view_once };
+        item.payload.attachments[info.index] = { name: info.name, url:attachment?.url||'', encrypted:true,digest:encryptedUpload.digest,recipient_keyset:encryptedUpload.recipientKeyset,mime:originalMime,storage_path: privatePhoto?.storage_path || getOrbitStorageObjectPath(url), storage_bucket: privatePhoto?.storage_bucket||'chat-assets', type: info.type, quality:attachment?.quality,size: attachment?.size || file.size, upload_pending: false, view_once: !!attachment?.view_once };
         
         // Update bubble DOM element directly so the permanent URL is immediately active
         const bubbleNode = document.getElementById(`msg-${item.payload.id}`) ||
             document.querySelector(`[data-client-temp-id="${item.clientTempId}"]`);
         if (bubbleNode) {
             const imgEls = bubbleNode.querySelectorAll('.wa-image-bunch-grid img');
-            if (imgEls && imgEls[info.index]) imgEls[info.index].src = url;
+            // Keep the local plaintext preview. The storage URL now contains ciphertext.
         }
 
         // Persist completed URLs before starting the next file; keep blobs until delivery.
@@ -773,8 +802,7 @@ async function _uploadQueuedMedia(item) {
     _updateOutboxMessage(item, 'sending');
     // Replace image/video bubbles and their click handlers before releasing
     // local previews. Single-photo bubbles need the same update as galleries.
-    completedPreviewUrls.forEach(url => { try { URL.revokeObjectURL(url); } catch (_) {} });
-    completedPreviewUrls.length = 0;
+    // Keep local previews until confirmed ciphertext has replaced the bubble.
     _persistMessageOutbox(item.payload.sender_id);
     hideChatMediaUploadProgress();
 }
@@ -830,8 +858,8 @@ async function executeResilientMessageInsert(payload) {
         // Primary key UUID duplicate mathematically proves this exact message committed to DB
         const isDuplicate = result.error.code === '23505';
         if (isDuplicate) {
-            const confirmed = await client.from('messages').select('id,room,sender_id').eq('id', payload.id).eq('sender_id', payload.sender_id).eq('room', payload.room).abortSignal(controller.signal).maybeSingle();
-            if (!confirmed.error && confirmed.data) return { data: payload, error: null };
+            const confirmed = await client.from('messages').select('*').eq('id', payload.id).eq('sender_id', payload.sender_id).eq('room', payload.room).abortSignal(controller.signal).maybeSingle();
+            if (!confirmed.error && confirmed.data) return { data: confirmed.data, error: null };
             return { data: null, error: confirmed.error || result.error };
         }
 

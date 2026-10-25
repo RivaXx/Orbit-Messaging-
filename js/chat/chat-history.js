@@ -156,7 +156,7 @@ async function openChatRoom(roomId, roomTitle, avatarUrl, isSelf = false, peerUs
         if (statusEl) {
             statusEl.innerHTML = isSelf
                 ? '<i class="fa-solid fa-cloud" style="font-size:10px;"></i> Personal Cloud'
-                : '<i class="fa-solid fa-shield-halved" style="font-size:10px; color:var(--online);"></i> Server-protected chat';
+                : '<i class="fa-solid fa-lock" style="font-size:10px; color:var(--online);"></i> New messages are encrypted';
         }
 
         const av = document.getElementById('chat-header-avatar');
@@ -216,6 +216,8 @@ async function openChatRoom(roomId, roomTitle, avatarUrl, isSelf = false, peerUs
 
         let shownFromCache = false;
         if (cachedPool.length > 0) {
+            if(window.OrbitCrypto)cachedPool=await OrbitCrypto.decodeMany(cachedPool);
+            if(viewEpoch!==_chatViewEpoch||currentRoom!==roomId)return;
             const combined = deduplicateAndSort(filterRoomHistory(cachedPool, possibleKeys, activeChatPeerId));
             possibleKeys.forEach(k => messageCache.set(k, combined));
             renderMessageFeed(combined, true);
@@ -245,7 +247,7 @@ async function openChatRoom(roomId, roomTitle, avatarUrl, isSelf = false, peerUs
         // Restore Draft Message
         const inputEl = document.getElementById('msg-input');
         if (inputEl) {
-            const savedDraft = localStorage.getItem(`orbit_draft_${roomId}`) || '';
+            const savedDraft = window.OrbitCrypto?await OrbitCrypto.readDraft(roomId):localStorage.getItem(`orbit_draft_${roomId}`) || '';
             inputEl.value = savedDraft;
             handleInputResize(inputEl);
         }
@@ -277,9 +279,11 @@ function navBackFromChat() {
     if (currentRoom && inputEl) {
         const currentText = inputEl.value.trim();
         if (currentText) {
-            localStorage.setItem(`orbit_draft_${currentRoom}`, currentText);
+            if(window.OrbitCrypto)OrbitCrypto.saveDraft(currentRoom,currentText).catch(()=>{});
+            else localStorage.setItem(`orbit_draft_${currentRoom}`, currentText);
         } else {
-            localStorage.removeItem(`orbit_draft_${currentRoom}`);
+            if(window.OrbitCrypto)OrbitCrypto.clearDraft(currentRoom);
+            else localStorage.removeItem(`orbit_draft_${currentRoom}`);
         }
         inputEl.value = '';
         inputEl.style.height = 'auto';
@@ -314,6 +318,7 @@ async function markRoomAsRead(roomId) {
     if (typeof isOrbitChatVisible === 'function' && !isOrbitChatVisible(roomId)) return;
     try {
         const msgs = messageCache.get(roomId) || [];
+        if(msgs.some(message=>message._e2ee_locked))return;
         const unreadMsgs = msgs.filter(m => {
             if (m.broadcast_pending) return false;
             if (m.sender_id === currentUser.id) return false;
