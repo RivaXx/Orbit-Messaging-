@@ -1,10 +1,10 @@
 # Orbit security audit
 
-Date: 24 October 2026. Release: `security-audit-20261024-r1`.
+Initial audit: 24 October 2026, `security-audit-20261024-r1`. Encryption follow-up: 25 October 2026, `e2ee-20261025-r1`.
 
 ## Result
 
-The application has server access controls, but it is not end-to-end encrypted. This update addresses confirmed authorization and rendering weaknesses. It does not make Orbit unhackable, certify all dependencies, or replace an independent penetration test.
+The initial audit found readable chat storage despite an E2EE badge, along with authorization/rendering weaknesses. The hardening release corrected those weaknesses and the label. The follow-up implements real client-side signed encryption for new chat content and media, encrypted local queues/drafts and passphrase-protected key recovery. It does not retroactively encrypt old history, provide forward secrecy/device revocation, make Orbit unhackable, or replace an independent cryptographic review or penetration test.
 
 ## Scope and method
 
@@ -16,7 +16,7 @@ A pattern scan covered 400 distinct reachable text blobs across fetched Git refs
 
 | ID | Severity | Finding | Change / remaining status |
 |---|---|---|---|
-| SEC-01 | High requirement gap | Stored message text is readable by the backend despite the former E2EE badge. | Corrected the label. Genuine E2EE remains **open**; see CHAT_ENCRYPTION.md. |
+| SEC-01 | High requirement gap | Stored message text was readable by the backend despite the former E2EE badge. | New chat content now uses signed client-side encryption with immutable public identities and passphrase-encrypted recovery backups. Old history remains Legacy. Independent review, ratcheting forward secrecy and device revocation remain open; see CHAT_ENCRYPTION.md. |
 | SEC-02 | High | `chat-assets`, `voice-notes`, `files` and `uploads` were public. Public downloads bypass SELECT RLS. | Migration makes these buckets private; client resolves authorized short-lived URLs, including legacy media links. Profile photos are preserved. |
 | SEC-03 | High | Existing edit guards did not comprehensively prevent a recipient changing media captions/attachments and other shared content. | New invoker trigger restricts direct recipient updates to receipts; shared reactions and votes use checked RPCs. Initial reactions/votes are reset, and sender forgery remains blocked. |
 | SEC-04 | High | Attachment URLs, reaction strings and handler arguments crossed HTML/JavaScript contexts unsafely. | Encoded unsafe URL delimiters, rejected active schemes/control characters, escaped reaction markup, serialized filename/contact arguments safely and escaped error text in the reviewed paths. Regression payloads remain inert. |
@@ -33,16 +33,18 @@ All 28 inspected public tables had RLS enabled. Restrictive anonymous-denial pol
 
 ## Open priorities
 
-1. Implement and independently review true E2EE before promising server-blind chat privacy.
+1. Independently review the new encryption integration and its deployment; evaluate a reviewed forward-secret ratcheting protocol, identity rotation and device revocation. Do not claim Signal-equivalent protection or certification.
 2. Remove remaining inline event handlers and render untrusted content with DOM APIs throughout the application; move to a nonce/hash-based strict CSP. This audit fixed identified paths, not every possible DOM sink.
 3. Replace/modernize the legacy PDF library and maintain a dependency inventory with regular advisory review. Retest spreadsheet formats in supported browsers after dependency changes.
 4. Add server-enforced per-account abuse/storage/message limits and monitoring. Platform authentication rate limits alone do not prevent a signed-in user exhausting free-plan quotas.
 5. Review directory email/presence exposure and enforce privacy preferences in backend queries/policies. Client-side last-seen hiding is not a confidentiality boundary.
 6. Review account recovery, SMTP delivery, provider redirects, MFA for maintainers, session revocation and backup recovery operationally. No new SMTP provider was configured by this audit.
-7. Plan local-data protection and shared-device behavior. Browser storage contains readable cache/draft/session data; do not confuse it with E2EE.
+7. Retest local-data protection and shared-device behavior. New chat drafts, queues and cache bodies use ciphertext; legacy data, login sessions, notes and historical profile backups remain separate device risks.
 
 ## Verification
 
 Automated coverage includes malicious URL delimiters/schemes, handler filenames, legacy reaction markup, cross-project signing rejection, account-switch signing races, confirmed realtime records and push endpoint mismatch. SQL tests check recipient tampering, sender impersonation, forged initial votes/reactions, authorized receipts/votes/reactions, outsider and anonymous reads, unshared media isolation, private bucket configuration and browser-role least privilege. See SECURITY_OPERATIONS.md for commands, deployment order and limitations.
+
+The follow-up adds real cryptographic and application-boundary tests for recipient exclusion, signatures, message/room/revision binding, altered ciphertext, encrypted attachments, digest substitution, encrypted local files/drafts/outboxes, recovery/wrong passphrases, directory key substitution, signed reactions/votes, membership changes and signed location expiry. Browser verification exercises the actual module worker using disposable local identities. SQL tests separately validate encrypted writes, owner-only backups, immutable key registration, receipts, edit/event revisions, scheduled dispatch and old-message deletion inside a rolled-back transaction. No real users' private keys or recovery passphrases are generated by verification. No independent review is claimed.
 
 Sources: [public versus private storage](https://supabase.com/docs/guides/storage/buckets/fundamentals), [database function security](https://supabase.com/docs/guides/database/functions), [OWASP context-sensitive XSS defenses](https://cheatsheetseries.owasp.org/cheatsheets/Cross_Site_Scripting_Prevention_Cheat_Sheet.html), [Mozilla PDF.js advisory and workaround](https://github.com/mozilla/pdf.js/security/advisories/GHSA-wgrm-67xf-hhpq), [official SheetJS standalone distribution](https://docs.sheetjs.com/docs/getting-started/installation/standalone/).
