@@ -22,7 +22,7 @@ async function initServiceWorker() {
         });
     }
     try{
-        const registration=await navigator.serviceWorker.register('./sw.js?v=security-audit-20261024-r1',{scope:'./'});
+        const registration=await navigator.serviceWorker.register('./sw.js?v=e2ee-20261025-r1',{scope:'./'});
         registration.update().catch(()=>{});
     }catch(_){}
 }
@@ -595,6 +595,7 @@ async function signOut() {
         stopOrbitWeather();closeViewOnceViewer();
         if(typeof disposeOrbitTyping==='function')disposeOrbitTyping();
         await stopOrbitChatServices();
+        window.OrbitCrypto?.lock();
         try {
             await updatePresenceStatus(false);
             await sb.auth.signOut();
