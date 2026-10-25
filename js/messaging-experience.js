@@ -63,7 +63,7 @@ async function orbitSaveEdit() {
     finally{orbitEditSaving=false;}
 }
 
-async function orbitCopyForwardAttachments(attachments, messageType = null) {
+async function orbitCopyForwardAttachments(attachments, messageType = null, targetRoom = null) {
     const copies=[];
     const owner=currentUser?.id;
     if(typeof attachments==='string'){try{attachments=JSON.parse(attachments);}catch(_){throw new Error('Unsupported legacy attachment.');}}
@@ -75,16 +75,18 @@ async function orbitCopyForwardAttachments(attachments, messageType = null) {
         if(typeof attachment==='string'){try{attachment=JSON.parse(attachment);}catch(_){if(/^https?:\/\//.test(attachment))attachment={url:attachment,type:messageType||'file'};else throw new Error('Unsupported legacy attachment. Download and attach it again.');}}
         if(messageType==='contact' && attachment && !attachment.url){copies.push({name:String(attachment.name||'Orbit contact'),username:String(attachment.username||''),phone:String(attachment.phone||''),avatar:String(attachment.avatar||'')});continue;}
         if(messageType==='poll' && attachment?.poll?.options){const poll=attachment.poll;copies.push({type:'poll',poll:{question:String(poll.question||'Poll'),multiple_answers:!!poll.multiple_answers,options:poll.options.map(option=>({text:String(option.text||''),votes:0,voters:[]}))}});continue;}
-        if(!attachment || attachment.view_once || attachment.upload_pending || !attachment.url || /^(blob:|data:)/.test(attachment.url))throw new Error('Wait until the original attachment has finished uploading.');
+        if(!attachment || attachment.view_once || attachment.upload_pending || !attachment.url || /^data:/.test(attachment.url) || (attachment.url.startsWith('blob:')&&!attachment.encrypted))throw new Error('Open the original encrypted attachment before forwarding.');
         const raw=formatMediaUrl(attachment.url);
         const url=typeof resolveMediaUrlForAccess==='function'?await resolveMediaUrlForAccess(raw):raw;
         const response=await fetch(url);if(!response.ok)throw new Error('The original attachment is unavailable.');
         const file=await response.blob();
         if(currentUser?.id!==owner)throw new Error('The signed-in account changed.');
         // Own the forwarded copy so deleting/restricting the original cannot break another chat.
-        const copyUrl=await uploadMediaToStorage(file,attachment.name||'Attachment',file.type,attachment.type==='image'?'images':attachment.type==='video'?'videos':'documents');
+        if(!targetRoom)throw new Error('Choose the destination chat before forwarding.');
+        const encrypted=await OrbitCrypto.encryptAttachment(file,targetRoom);
+        const copyUrl=await uploadMediaToStorage(encrypted.body,'attachment.bin','application/octet-stream','encrypted');
         if(currentUser?.id!==owner)throw new Error('The signed-in account changed.');
-        copies.push({name:attachment.name||'Attachment',type:attachment.type||'file',size:file.size,url:copyUrl});
+        copies.push({name:attachment.name||'Attachment',type:attachment.type||'file',size:file.size,url:'',encrypted:true,digest:encrypted.digest,recipient_keyset:encrypted.recipientKeyset,mime:file.type,storage_path:getOrbitStorageObjectPath(copyUrl),storage_bucket:'chat-assets'});
     }
     return copies;
 }

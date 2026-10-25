@@ -305,7 +305,7 @@
                 username: senderName,
                 text: msg.text || '',
                 type: msg.type || 'text',
-                attachments: await orbitCopyForwardAttachments(msg.attachments?.length ? msg.attachments : (/^(https?:\/\/)/.test(msg.text||'') && ['image','video','file','audio','voice'].includes(msg.type) ? [{url:msg.text,type:msg.type,name:'Forwarded attachment'}] : []), msg.type),
+                attachments: [],
                 reply_to: {forwarded:true},
                 read_by: [currentUser.id],
                 created_at: new Date().toISOString()
@@ -323,7 +323,8 @@
                     if(!targetRoom){failed.push({room:rId,error:{message:'Could not open the destination chat. Please retry.'}});continue;}
                 }
                 if(currentUser?.id!==owner)throw new Error('The signed-in account changed.');
-                const insertPayload = { ...payloadBase, sender_id:owner, id:crypto.randomUUID(), room: targetRoom };
+                const forwardedAttachments=await orbitCopyForwardAttachments(msg.attachments?.length ? msg.attachments : (/^(https?:\/\/)/.test(msg.text||'') && ['image','video','file','audio','voice'].includes(msg.type) ? [{url:msg.text,type:msg.type,name:'Forwarded attachment'}] : []),msg.type,targetRoom);
+                const insertPayload = { ...payloadBase,attachments:forwardedAttachments,sender_id:owner, id:crypto.randomUUID(), room: targetRoom };
                 const result = typeof window.executeResilientMessageInsert === 'function'
                     ? await window.executeResilientMessageInsert(insertPayload)
                     : await client.from('messages').insert(insertPayload);

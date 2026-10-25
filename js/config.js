@@ -85,6 +85,7 @@ function getSupabase() {
                 },
                 realtime: { params: { eventsPerSecond: 30 } }
             });
+            window.OrbitCrypto?.install(sb);
             return sb;
         } catch(e) {
             console.error('Failed to create Supabase client:', e);
