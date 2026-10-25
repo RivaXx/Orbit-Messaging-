@@ -28,6 +28,8 @@ The directory stores public keys only. Registration is immutable through browser
 
 First contact uses trust on first use. A directory service compromised before the first pin could substitute a key. Compare the full fingerprints before sharing sensitive information. A pinned key is not automatically a verified human identity, and a display name alone is not proof of identity. Group members must verify identities individually; groups support up to 100 encryption recipients.
 
+Clients also pin each conversation's recipient roster. Later membership changes block sending until the user reviews the full participant/fingerprint list in Chat security. Direct rooms require exactly two participants. A group creator who is no longer in its participant list is not silently added as an encryption recipient. Initial roster discovery still uses the service; verify it on first use. This is local change detection and user approval, not a signed group-membership transparency protocol.
+
 ## What stays encrypted and what remains visible
 
 New text, media, captions, quotes, contacts, locations, polls, reactions/votes and scheduled bodies cross the backend as ciphertext. Local pending message data, queued media and new drafts are also encrypted before durable browser storage. Persisted chat snapshots retain original ciphertext, and saved recent-chat previews are generic. Plaintext and decrypted blob URLs are held in the unlocked tab for display. Large attachments are limited to 49 MiB each; opening a batch is bounded to protect device memory.
