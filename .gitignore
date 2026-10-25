@@ -1,0 +1,13 @@
+# Credentials and local environment
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+.supabase/
+# Local fixtures and runtime outputs
+_polish-review.html
+node_modules/
+playwright-report/
+test-results/
+*.log

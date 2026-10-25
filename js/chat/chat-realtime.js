@@ -40,32 +40,7 @@ async function setupFastMessageChannel(client, roomId, aliases, setupEpoch, view
         if (setupEpoch !== _realtimeSetupEpoch || viewEpoch !== _chatViewEpoch || currentRoom !== roomId || currentUser?.id !== selfId) return;
         const channel = client.channel(`orbit_fast_${topicRoom}`, { config: { private: true } })
             .on('broadcast', { event: 'new_message' }, event => {
-                const message = event.payload;
-                if(isUserBlocked(message?.sender_id))return;
-                if (currentRoom !== roomId || currentUser?.id !== selfId || !message?.id || message.sender_id === selfId) return;
-                if (!aliases.includes(message.room) || typeof message.text !== 'string' || !message.text || message.text.length > 32768) return;
-                if (!/^[0-9a-f-]{36}$/i.test(message.id) || (message.attachments?.length || 0) > 0 || message.type !== 'text') return;
-                if (peerId && message.sender_id !== peerId) return;
-                if (!peerId) {
-                    const room = allRoomsMap.get(roomId);
-                    if (!room || !(room.participants || []).includes(message.sender_id) && room.created_by !== message.sender_id) return;
-                }
-                const messages = messageCache.get(roomId) || [];
-                const existing = messages.find(m => m.id === message.id);
-                if (existing) {
-                    if (existing.broadcast_pending) expireFastPreviewLater(message.id, roomId, aliases);
-                    return;
-                }
-                // Preview is temporary. Only a database INSERT confirms it,
-                // persists it, or produces a read receipt.
-                const preview = { ...message, status: 'sending', broadcast_pending: true };
-                const sorted = deduplicateAndSort([...messages, preview]);
-                aliases.forEach(alias => messageCache.set(alias, sorted));
-                expireFastPreviewLater(message.id, roomId, aliases);
-                const feed = document.getElementById('chat-feed');
-                const nearBottom = !feed || feed.scrollHeight - feed.scrollTop - feed.clientHeight < 220;
-                appendSingleMessageNode(preview);
-                if (nearBottom) scrollFeedToBottom(false);
+                orbitRefreshConfirmedMessage(event.payload?.id,roomId,aliases);
             });
         _fastMessageChannel = channel;
         channel.subscribe();
@@ -98,7 +73,7 @@ async function setupRealtimeChatSubscription(roomId, viewEpoch = _chatViewEpoch)
 
         // Deterministic channel name (NO random Date.now()) so both users join the exact same broadcast room!
         const channelName = `chat_stream_${roomId}`;
-        activeRealtimeChannel = client.channel(channelName)
+        activeRealtimeChannel = client.channel(channelName,{config:{private:true}})
             .on('postgres_changes', {
                 event: 'INSERT',
                 schema: 'public',
@@ -125,11 +100,11 @@ async function setupRealtimeChatSubscription(roomId, viewEpoch = _chatViewEpoch)
             })
             .on('broadcast', { event: 'poll_vote' }, payload => {
                 const voteData = payload.payload;
-                if (voteData && voteData.msgId) handleRemotePollVote(voteData, roomId, aliases);
+                if(voteData?.msgId)orbitRefreshConfirmedMessage(voteData.msgId,roomId,aliases);
             })
             .on('broadcast', { event: 'message_reaction' }, payload => {
                 const d = payload.payload;
-                if (d && d.msgId && d.reactions) handleRemoteReaction(d.msgId, d.reactions, roomId, aliases);
+                if(d?.msgId)orbitRefreshConfirmedMessage(d.msgId,roomId,aliases);
             })
             .on('broadcast', { event: 'pin_message' }, payload => {
                 const d = payload.payload;
@@ -579,3 +554,14 @@ window.handleRealtimeDelete = handleRealtimeDelete;
 window.handleMessageDeleted = handleMessageDeleted;
 window.broadcastTypingStatus = broadcastTypingStatus;
 window.stopTypingBroadcast = stopTypingBroadcast;
+
+// Peer broadcasts are hints, never authenticated message content or vote records.
+const orbitConfirmedRefreshes=new Map();
+async function orbitRefreshConfirmedMessage(id,room,aliases){
+ if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id||'')||!currentUser?.id)return;
+ const owner=currentUser.id,key=owner+':'+id;if(orbitConfirmedRefreshes.has(key))return orbitConfirmedRefreshes.get(key);
+ const work=(async()=>{try{const client=await ensureSupabase();const {data,error}=await client.from('messages').select('*').eq('id',id).maybeSingle();
+  if(error||!data||currentUser?.id!==owner||!aliases.includes(data.room))return;
+  if((messageCache.get(room)||[]).some(m=>m.id===id))handleRealtimeUpdate({new:data},room,aliases);else handleRealtimeInsert({new:data},room,aliases);
+ }catch(_){}})();orbitConfirmedRefreshes.set(key,work);try{await work;}finally{orbitConfirmedRefreshes.delete(key);}
+}

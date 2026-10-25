@@ -57,6 +57,7 @@ Deno.serve(async req=>{
    if(delivered.has(device.endpoint))return;
    if(room&&(device.muted_rooms||[]).includes(room))return;
    let url;try{url=new URL(device.endpoint);}catch{return;}
+   if(device.subscription?.endpoint!==device.endpoint)return;
    if(url.protocol!=='https:'||url.username||url.password||url.port||!allowedPushHost(url.hostname))return;
    const body=JSON.stringify({...alert,title:device.previews?alert.title:'Orbit Messenger',body:device.previews?alert.body:alert.noteId?'Your note reminder is due':isCall?alert.body:'You have a new message.'});
    for(let attempt=0;attempt<2;attempt++){

@@ -14,9 +14,9 @@ const _orbitLibraryPromises = new Map();
 function ensureOrbitLibrary(name) {
     const libraries = {
         tus: ['tus', 'assets/vendor/tus.min.js'],
-        cropper: ['Cropper', 'https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js'],
-        pdf: ['pdfjsLib', 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js'],
-        xlsx: ['XLSX', 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js']
+        cropper: ['Cropper', 'https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js', 'sha384-r+ljwOAhwY4/kdyzMnuBg7MEVoWpTMp5EYUDntB/E9qzNwL9dAEcNrb2XaV+mJc2'],
+        pdf: ['pdfjsLib', 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js', 'sha384-/1qUCSGwTur9vjf/z9lmu/eCUYbpOTgSjmpbMQZ1/CtX2v/WcAIKqRv+U1DUCG6e'],
+        xlsx: ['XLSX', 'https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js', 'sha384-EnyY0/GSHQGSxSgMwaIPzSESbqoOLSexfnSMN2AP+39Ckmn92stwABZynq1JyzdT']
     };
     const spec = libraries[name];
     if (!spec) return Promise.reject(new Error('Unknown media tool.'));
@@ -25,6 +25,7 @@ function ensureOrbitLibrary(name) {
     const promise = new Promise((resolve, reject) => {
         const script = document.createElement('script');
         script.src = spec[1];
+        if(spec[2]){script.integrity=spec[2];script.crossOrigin='anonymous';}
         script.async = true;
         const timer = setTimeout(() => fail(), 30000);
         const fail = () => {
@@ -109,7 +110,7 @@ async function ensureSupabase() {
     if (!window.supabase) {
         await new Promise(resolve => {
             const script = document.createElement('script');
-            script.src = 'https://unpkg.com/@supabase/supabase-js@2';
+            script.src = 'assets/vendor/supabase.min.js';
             script.onload = () => resolve(true);
             script.onerror = () => resolve(false);
             document.head.appendChild(script);
@@ -232,11 +233,14 @@ let adminInactiveBlacklist = new Set(JSON.parse(localStorage.getItem('orbit_admi
 function formatMediaUrl(urlOrPath) {
     if (!urlOrPath) return '';
     if (typeof urlOrPath !== 'string') urlOrPath = urlOrPath.url || '';
-    if (/^(data:|blob:|https?:\/\/)/i.test(urlOrPath)) return urlOrPath;
-    if (/^\/?storage\/v1\/object\//i.test(urlOrPath)) return `${SB_URL}/${urlOrPath.replace(/^\/+/, '')}`;
+    if (/[\x00-\x1f\x7f]/.test(urlOrPath)) return '';
+    const safe=value=>value.replace(/[<>"'\\`]/g,c=>'%'+c.charCodeAt(0).toString(16).toUpperCase());
+    if (/^(data:(?:image|video|audio)\/|blob:|https?:\/\/)/i.test(urlOrPath)) return safe(urlOrPath);
+    if (/^[a-z][a-z0-9+.-]*:/i.test(urlOrPath)) return '';
+    if (/^\/?storage\/v1\/object\//i.test(urlOrPath)) return safe(`${SB_URL}/${urlOrPath.replace(/^\/+/, '')}`);
     const clean = urlOrPath.replace(/^\/+/, '').replace(/^\.\//, '').replace(/^chat-assets\//i, '');
     const encoded = clean.split('/').map(encodeURIComponent).join('/');
-    return `${SB_URL}/storage/v1/object/public/chat-assets/${encoded}`;
+    return safe(`${SB_URL}/storage/v1/object/public/chat-assets/${encoded}`);
 }
 
 function getOrbitStorageObjectPath(urlOrPath) {
@@ -246,7 +250,7 @@ function getOrbitStorageObjectPath(urlOrPath) {
     let pathname = urlOrPath;
     try {
         const parsed = new URL(urlOrPath, window.location.href);
-        if (/^https?:$/i.test(parsed.protocol) && parsed.hostname !== new URL(SB_URL).hostname && !parsed.pathname.includes('/storage/v1/object/')) return '';
+        if (/^https?:$/i.test(parsed.protocol) && parsed.origin !== new URL(SB_URL).origin) return '';
         pathname = parsed.pathname;
     } catch(e) {}
     const objectMatch = pathname.match(/\/storage\/v1\/object\/(?:public|sign|authenticated)\/chat-assets\/(.+)$/i);
@@ -256,20 +260,48 @@ function getOrbitStorageObjectPath(urlOrPath) {
     return objectPath;
 }
 
-async function getSignedOrbitMediaUrl(urlOrPath, expiresIn = 3600) {
-    const objectPath = getOrbitStorageObjectPath(urlOrPath);
-    if (!objectPath || objectPath.startsWith('storage/v1/')) return null;
-    try {
-        const client = await ensureSupabase();
-        if (!client?.storage) return null;
-        const { data, error } = await client.storage.from('chat-assets').createSignedUrl(objectPath, expiresIn);
-        if (error) throw error;
-        return data?.signedUrl || null;
-    } catch(error) {
-        console.warn('[Orbit] Could not create an attachment preview URL:', error?.message || error);
-        return null;
-    }
+// Signed media capabilities stay in memory, expire quickly and are scoped to the account.
+const orbitSignedMedia=new Map();
+function orbitStorageRef(value){
+ if(typeof value!=='string')value=value?.url||value?.path||'';
+ if(!value||/^(data:|blob:)/i.test(value))return null;
+ try{const u=new URL(value,window.location.href),base=new URL(SB_URL);
+  if(/^https?:/i.test(value)&&u.origin!==base.origin)return null;
+  const m=u.pathname.match(/\/storage\/v1\/object\/(public|sign|authenticated)\/(chat-assets|voice-notes|files|uploads|avatars)\/(.+)$/i);
+  if(m){const path=decodeURIComponent(m[3]);if(path.split('/').some(p=>p==='..'||p==='.')||/[\x00-\x1f]/.test(path))return null;return {bucket:m[2],path,access:m[1]};}
+  if(/^https?:/i.test(value))return null;
+  const path=getOrbitStorageObjectPath(value);return path?{bucket:'chat-assets',path,access:'public'}:null;
+ }catch{return null;}
 }
+async function getSignedOrbitMediaUrl(urlOrPath, expiresIn = 300) {
+ const ref=orbitStorageRef(urlOrPath);if(!ref)return null;
+ const owner=typeof currentUser!=='undefined'?currentUser?.id:null;if(!owner)return null;
+ const key=owner+':'+ref.bucket+':'+ref.path,now=Date.now(),saved=orbitSignedMedia.get(key);
+ if(saved&&saved.until>now)return saved.promise;
+ const promise=(async()=>{try{
+  const client=await ensureSupabase();if(!client?.storage)return null;
+  const {data,error}=await client.storage.from(ref.bucket).createSignedUrl(ref.path,Math.min(300,Math.max(30,Number(expiresIn)||300)));
+  if(error||currentUser?.id!==owner)return null;return formatMediaUrl(data?.signedUrl||'')||null;
+ }catch{return null;}})();
+ if(orbitSignedMedia.size>200)orbitSignedMedia.clear();orbitSignedMedia.set(key,{until:now+240000,promise});
+ const result=await promise;if(!result)orbitSignedMedia.delete(key);return result;
+}
+// Covers private images, avatars, video and audio, including old stored public URLs.
+function hydrateOrbitPrivateMedia(root){
+ const nodes=root.matches?.('img[src],video[src],audio[src]')?[root]:[];
+ nodes.push(...(root.querySelectorAll?.('img[src],video[src],audio[src]')||[]));
+ for(const media of nodes){const original=media.getAttribute('src'),ref=orbitStorageRef(original);
+  if(!ref||ref.access==='sign'||ref.bucket==='avatars')continue;
+  getSignedOrbitMediaUrl(original).then(url=>{if(url&&media.isConnected&&media.getAttribute('src')===original){media.src=url;if(media.tagName!=='IMG')media.load();}});
+ }
+}
+document.addEventListener('DOMContentLoaded',()=>{
+ hydrateOrbitPrivateMedia(document);
+ new MutationObserver(records=>{for(const record of records){if(record.type==='attributes')hydrateOrbitPrivateMedia(record.target);else for(const node of record.addedNodes)if(node.nodeType===1)hydrateOrbitPrivateMedia(node);}}).observe(document.body,{subtree:true,childList:true,attributes:true,attributeFilter:['src']});
+ document.addEventListener('error',event=>{const media=event.target;if(!media?.getAttribute)return;const ref=orbitStorageRef(media.getAttribute('src'));if(!ref||media.dataset.orbitAccessRetry==='1')return;
+  media.dataset.orbitAccessRetry='1';if(media.tagName==='IMG'){if(!media.onerror)retryMediaPreview(media);}else if(['VIDEO','AUDIO'].includes(media.tagName)){getSignedOrbitMediaUrl(media.src).then(url=>{if(url){media.src=url;media.load();}});}
+ },true);
+});
 
 async function resolveMediaUrlForAccess(urlOrPath) {
     const formatted = formatMediaUrl(urlOrPath);

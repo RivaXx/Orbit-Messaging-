@@ -258,7 +258,7 @@ async function openPdfViewer(url, fileName) {
     if (typeof pdfjsLib !== 'undefined') {
         try {
             showToast('Loading PDF preview...', 'info');
-            const loadingTask = pdfjsLib.getDocument(url);
+            const loadingTask = pdfjsLib.getDocument({url,isEvalSupported:false,enableXfa:false});
             const pdf = await loadingTask.promise;
             activePdfDocument = pdf;
             const page = await pdf.getPage(1);
