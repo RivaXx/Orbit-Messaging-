@@ -892,8 +892,8 @@ function clearDashboardWallpaper() {
 window.handleDashboardWallpaperUpload = handleDashboardWallpaperUpload;
 window.clearDashboardWallpaper = clearDashboardWallpaper;
 
-function openChatSecurityModal() { document.getElementById('modal-security').classList.add('active'); }
-function closeChatSecurityModal() { document.getElementById('modal-security').classList.remove('active'); }
+function openChatSecurityModal() { return window.OrbitCrypto?.open(); }
+function closeChatSecurityModal() { document.getElementById('orbit-security-modal')?.close(); }
 
 // ══════════════════════════════════════════════════════════════════════════
 // ADMIN INACTIVE SCAN & BULLETPROOF PURGE

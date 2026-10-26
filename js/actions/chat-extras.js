@@ -57,6 +57,7 @@ function filterShareContacts(query) {
 }
 
 async function sendContactCard(name, username, phone, avatar) {
+    try{await OrbitCrypto.requireUnlocked();}catch(error){showToast(error.message,'info');return;}
     closeShareContactModal();
     if (!currentRoom || !currentUser) {
         showToast('Open a chat first', 'error');
@@ -89,9 +90,15 @@ async function sendContactCard(name, username, phone, avatar) {
 
     try {
         const client = await ensureSupabase();
-        await client.from('messages').insert([payload]);
+        const {data,error}=await client.from('messages').insert([payload]).select();
+        if(error)throw error;
+        const confirmed=data?.[0];if(confirmed){
+            const node=document.getElementById(`msg-${optId}`);if(node)node.replaceWith(createMessageDOMNode(confirmed));
+            const messages=messageCache.get(sendRoomId)||[];messageCache.set(sendRoomId,deduplicateAndSort([...messages,confirmed]));
+        }
     } catch(err) {
         console.warn('Contact send err:', err);
+        document.getElementById(`msg-${optId}`)?.remove();showToast(err.message||'Contact was not sent.','error');
     }
 }
 
@@ -214,7 +221,8 @@ function prevChatSearchResult() {
 
 // GPS LIVE LOCATION SHARING (Strict currentRoom preservation)
 // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-function shareCurrentLocation() {
+async function shareCurrentLocation() {
+    try{await OrbitCrypto.requireUnlocked();}catch(error){showToast(error.message,'info');return;}
     if (!currentRoom || !currentUser) {
         showToast('Open a chat to share location');
         return;
@@ -376,6 +384,7 @@ async function submitPollToChat() {
         return;
     }
 
+    try{await OrbitCrypto.requireUnlocked();}catch(error){showToast(error.message,'info');return;}
     const multiAnswerInp = document.getElementById('poll-allow-multiple');
     const allowMultiple = multiAnswerInp ? multiAnswerInp.checked : false;
 

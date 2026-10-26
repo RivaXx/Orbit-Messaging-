@@ -331,12 +331,14 @@ window.toggleStarMessage = toggleStarMessage;
 
 function createMessageDOMNode(msg, isConsecutive = false) {
     if (typeof orbitNormalizeMessage === 'function') msg = orbitNormalizeMessage(msg);
+    if(msg?._e2ee_media_pending&&!msg.is_deleted)return OrbitCrypto.mediaNode(msg,isConsecutive);
     try {
         const isOwn = (!msg.sender_id && !msg.from_user) || (currentUser && msg.sender_id === currentUser.id);
         const row = document.createElement('div');
         row.className = `msg-bubble-row ${isOwn ? 'own' : 'other'} ${isConsecutive ? 'grouped-consecutive' : ''}`;
         row.id = `msg-${msg.id}`;
         row.dataset.msgId = msg.id;
+        if(msg.e2ee_version===1)row.dataset.e2eeMessage='true';
         row.dataset.createdAt = msg.created_at || new Date().toISOString();
         row.dataset.senderId = msg.sender_id || '';
         // Persist client_temp_id for realtime dedup — lets handleRealtimeInsert find this
@@ -900,6 +902,7 @@ function createMessageDOMNode(msg, isConsecutive = false) {
                     ${extraCardHtml}
                     ${formattedTextHtml}
                     <div class="msg-meta-row">
+                        ${msg.e2ee_version===1&&!msg._e2ee_locked?'<span class="msg-encryption-mark" title="End-to-end encrypted. Compare identity fingerprints in Chat security.">🔒</span>':msg.e2ee_version!==1&&msg.type!=='call'&&!['sending','queued','failed','error'].includes(msg.status)?'<span class="msg-encryption-mark" title="Legacy history: stored before chat encryption was enabled.">Legacy</span>':''}
                         ${starBadgeHtml}
                         ${msg.edited_at ? '<span class="msg-edited-label">edited</span>' : ''}
                         <span>${timeFormatted}</span>
@@ -911,6 +914,7 @@ function createMessageDOMNode(msg, isConsecutive = false) {
         `;
 
         // ── Slide to Reply & Long-Press Reaction Gesture ────────────────
+        if(msg._e2ee_locked&&!msg._e2ee_error){const unlock=document.createElement('button');unlock.type='button';unlock.className='glass-btn-primary';unlock.textContent='Unlock encrypted chat';unlock.onclick=()=>OrbitCrypto.open();row.querySelector('.msg-bubble-card')?.append(unlock);}
         if (!isMsgDeleted) {
             attachSlideToReplyAndReactionGesture(row, msg);
         }
@@ -1888,9 +1892,11 @@ function handleChatInputText(textarea) {
     // 1. Auto-save Draft
     try { if (currentRoom) {
         if (text.trim()) {
-            localStorage.setItem(`orbit_draft_${currentRoom}`, text);
+            if(window.OrbitCrypto)OrbitCrypto.saveDraft(currentRoom,text).catch(()=>{});
+            else localStorage.setItem(`orbit_draft_${currentRoom}`, text);
         } else {
-            localStorage.removeItem(`orbit_draft_${currentRoom}`);
+            if(window.OrbitCrypto)OrbitCrypto.clearDraft(currentRoom);
+            else localStorage.removeItem(`orbit_draft_${currentRoom}`);
         }
     }
 

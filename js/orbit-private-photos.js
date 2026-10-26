@@ -55,6 +55,7 @@ window.openViewOnceMedia=async function(id){
         }else{
             throw new Error('This older photo is being secured. Reload the chat shortly.');
         }
+        if(attachment.encrypted)blob=await OrbitCrypto.decryptAttachment(blob,attachment,message.sender_id);
         if(currentUser?.id!==owner||epoch!==orbitPrivateViewerEpoch)return;
         orbitMarkViewOnceOpened(id);
         orbitPrivateViewerUrl=URL.createObjectURL(blob);orbitPrivateViewerOwner=owner;

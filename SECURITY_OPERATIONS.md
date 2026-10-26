@@ -2,6 +2,18 @@
 
 ## Release order
 
+For `e2ee-20261025-r1`, first retain/verify the hardening prerequisites below, then:
+
+1. Run `20261025_e2ee.sql` and `tests/encryption-authorization-regression.sql` together in a **single rolled-back staging transaction**. Remove their inner transaction boundaries when composing that outer transaction. Do not accept a partial or failed run.
+2. Apply `supabase/migrations/20261025_e2ee.sql` to production after review. It adds the immutable public-key directory, owner-only encrypted backups, encrypted-message headers and checked event/edit/schedule RPCs. It preserves existing data. Old browser clients are deliberately unable to send plaintext after this cutover.
+3. Publish the matching frontend immediately, including the module worker, core module, unmodified vendored OpenPGP bundle, license, `encryption.css`, updated release-tagged assets and service worker. Confirm marker `e2ee-20261025-r1` and exact production asset contents. Reload older clients.
+4. Run both authorization regression files as complete transactions. Verify key/backup/event RLS and grants, immutable identities, receipt updates, encrypted schedule dispatch and deletion of old encrypted messages. Synthetic accounts/events are rolled back; no real user's encryption identity is created or replaced by these checks.
+5. Test new-key setup, correct/wrong recovery passphrases, text and media between disposable accounts, altered ciphertext, key changes, encrypted drafts/queues, groups, captions, forwarded copies, votes/reactions, signed location expiry and refresh. Verify API/storage records contain ciphertext and generic file references, never private-key armor, passphrases, captions or original filenames.
+
+Users must set up Chat security and retain their separate recovery passphrase. Do not register identities or choose real recovery credentials for users. Legacy messages/media remain readable legacy data; do not silently relabel them encrypted. Plaintext schedules queued before cutover must be reviewed/rescheduled. A frontend rollback alone does not bypass the encryption guard; keep sending blocked while repairing an incompatible deployment rather than disabling protection.
+
+### Hardening prerequisites
+
 1. Review SECURITY_AUDIT.md and CHAT_ENCRYPTION.md. Back up the database configuration through your normal trusted process. Never commit a database dump or secrets.
 2. Publish the application changes, `vercel.json` and updated service worker. Confirm the production release marker `security-audit-20261024-r1` and updated file contents before changing bucket visibility.
 3. For an existing Orbit installation that lacks the older production security guards, review/apply `supabase/migrations/20261024_security_baseline.sql` after the existing schema is installed. It records previously deployed helpers, policies and triggers; it is not a complete empty-project schema. Existing audited production does not need the baseline reapplied.
@@ -16,7 +28,7 @@ Do not rerun legacy `FIX_ORBIT_*` / setup SQL indiscriminately: some older scrip
 From the repository root:
 
 ```sh
-node --test tests/*.test.cjs
+node --test tests/*.test.cjs tests/*.test.mjs
 ```
 
 Run `tests/security-authorization-regression.sql` in the project's SQL editor. It selects two existing account IDs only as actors, creates synthetic messages and notification events, uses authenticated/anonymous roles, then rolls everything back. It reads no real message contents. Keep the entire transaction together. Any error means the test did not pass; do not publish a success based only on the last SELECT.
@@ -24,6 +36,8 @@ Run `tests/security-authorization-regression.sql` in the project's SQL editor. I
 For staging a migration without committing it, wrap the migration body and regression checks in one outer transaction, remove their inner BEGIN/COMMIT, and end with ROLLBACK. Existing message-control, receipt, typing and note-ownership SQL regressions should also remain passing.
 
 Manual browser checks should use disposable accounts: direct/group messages, attachment and album previews/downloads, audio/video playback, account switching, receipt updates, reactions/polls and expired media links. Verify malicious names/reactions show literal text and cannot create elements or execute handlers. Do not send test pushes or calls to real users.
+
+`tests/encryption-core.test.mjs` runs real-library cryptographic cases. `tests/encryption-boundary.test.cjs` exercises the application's actual encryption boundary, setup/recovery logic and storage format using synthetic SDK/worker transport. Also verify the real module worker in a supported browser; Node transport mocks alone do not prove browser compatibility. The SQL encryption tests use synthetic format-valid envelopes for authorization and do not substitute for signature tests.
 
 ## Configuration checks
 
@@ -42,4 +56,4 @@ For a suspected leak: contain the affected endpoint, preserve sanitized timestam
 
 ## Known limits
 
-Short-lived signed URLs do not prevent recipients saving files. Private storage does not hide data from service-role holders. Cached browser data and installed extensions remain device risks. Rate limits, SMTP/recovery delivery, strict CSP, full dependency modernization and true E2EE require further work. Recheck this document after schema, authentication, storage, dependency or hosting changes.
+Short-lived signed URLs do not prevent recipients saving files. Private storage alone does not hide legacy data from service-role holders. New chat content is encrypted, with the static-key, first-contact, trusted-browser and recovery limits in CHAT_ENCRYPTION.md. Legacy caches and browser-profile backups may retain readable old data. Rate limits, SMTP/login recovery delivery, strict CSP, dependency modernization, key rotation/device revocation and a reviewed forward-secret messaging protocol require further work. Recheck this document after schema, authentication, storage, dependency or hosting changes.

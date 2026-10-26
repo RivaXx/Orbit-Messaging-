@@ -11,6 +11,7 @@
  Storage.prototype.setItem=function(key,value){
   key=String(key);value=String(value);
   if(this!==window.localStorage)return nativeSet.call(this,key,value);
+  if(window.OrbitCrypto)value=window.OrbitCrypto.safeStorage(key,value);
   // Re-downloadable directory/history snapshots must not monopolize localStorage.
   if(cacheKey(key)&&value.length>256*1024&&disposable(key,value))return;
   try{return nativeSet.call(this,key,value);}catch(error){
