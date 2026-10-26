@@ -130,10 +130,23 @@ test('fresh device decrypts persisted drafts and detects a replaced contact key'
  try{const freshBob=account(B,database,b.storage);assert.equal(await freshBob.unlock(),true);const received=(await freshBob.client.from('messages').select('*').eq('id',id).single()).data;assert.equal(received._e2ee_locked,true);freshBob.crypto.lock();}
  finally{database.tables.orbit_encryption_keys.set(A,old);}
 });
+test('the actual dispatcher preserves encrypted pending sends while locked and restores them after recovery',async()=>{
+ const storage=new Map(),device=account(A,database,storage);assert.equal(await device.unlock(),true);
+ device.sandbox.navigator={onLine:false};device.sandbox.deduplicateAndSort=rows=>rows;
+ const code=fs.readFileSync(require('node:path').join(__dirname,'../js/chat/chat-dispatcher.js'),'utf8');vm.runInContext(code,device.sandbox);
+ const id=crypto.randomUUID(),room='self_'+A,body='private pending send survives locking';
+ vm.runInContext(`_outboxHydratedForUser=${JSON.stringify(A)};_messageOutbox.set(${JSON.stringify(id)},${JSON.stringify({payload:{...message(id,body),room},aliases:[room],status:'queued'})});`,device.sandbox);
+ await device.sandbox._persistMessageOutbox(A);const key='orbit_message_outbox_v1_'+A,saved=storage.get(key);assert.ok(saved);assert.ok(!saved.includes(body));
+ device.crypto.lock();await device.sandbox._persistMessageOutbox(A);assert.equal(storage.get(key),saved);
+ const delivered=[];device.sandbox._deliverOutboxMessage=async id=>delivered.push(id);
+ assert.equal(await device.unlock(),true);assert.ok(delivered.includes(id));assert.equal(vm.runInContext(`_messageOutbox.get(${JSON.stringify(id)}).payload.text`,device.sandbox),body);
+ device.crypto.lock();
+});
 test('lock removes access and a separate recovery passphrase unlocks the same history on another device',async()=>{
  const id=crypto.randomUUID();await a.client.from('messages').insert(message(id,'recoverable history'));
  const another=account(B,database);assert.equal(await another.unlock('wrong synthetic recovery passphrase'),false);assert.equal(another.crypto.isUnlocked(),false);
  assert.equal(await another.unlock(pass),true);assert.equal((await another.client.from('messages').select('*').eq('id',id).single()).data.text,'recoverable history');
  another.crypto.lock();assert.equal((await another.client.from('messages').select('*').eq('id',id).single()).data._e2ee_locked,true);
- a.crypto.lock();b.crypto.lock();c.crypto.lock();
+ const pendingItem={payload:{id:'pending'}};a.sandbox._messageOutbox=new Map([['pending',pendingItem]]);a.sandbox._outboxHydratedForUser=A;a.sandbox._inflightMessages=new Map([['pending',{text:'private inflight draft'}]]);
+ a.crypto.lock();assert.equal(pendingItem.cancelled,true);assert.equal(a.sandbox._outboxHydratedForUser,null);assert.equal(a.sandbox._inflightMessages.size,0);b.crypto.lock();c.crypto.lock();
 });

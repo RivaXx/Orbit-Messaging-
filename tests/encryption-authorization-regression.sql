@@ -62,6 +62,10 @@ begin
  end;
  perform set_config('request.jwt.claims',jsonb_build_object('sub',current_setting('orbit.e2ee.b'),'role','authenticated')::text,true);
  begin
+  perform public.orbit_validate_encrypted_envelope(m.text,m.sender_id,m.e2ee_sender_fingerprint,m.e2ee_recipients,m.room);
+  raise exception 'Cross-account validation unexpectedly accepted';
+ exception when insufficient_privilege then null;end;
+ begin
   update public.messages set text=m.text||'recipient mutation',e2ee_revision=3 where id=m.id;
   raise exception 'Recipient edit unexpectedly accepted';
  exception when insufficient_privilege then null;end;
