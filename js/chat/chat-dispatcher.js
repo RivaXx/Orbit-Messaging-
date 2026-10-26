@@ -135,6 +135,7 @@ function _messageOutboxStorageKey(userId) {
 const _outboxPersistVersions=new Map();
 async function _persistMessageOutbox(userId = currentUser?.id) {
     if (!userId) return;
+    if(!window.OrbitCrypto?.isUnlocked())return;
     const version=(_outboxPersistVersions.get(userId)||0)+1;_outboxPersistVersions.set(userId,version);
     try {
         const items = Array.from(_messageOutbox.values())
@@ -153,7 +154,7 @@ async function _persistMessageOutbox(userId = currentUser?.id) {
                 return safeItem;
             });
         const sealed=items.length?await OrbitCrypto.sealQueue(items,userId):[];
-        if(currentUser?.id===userId&&_outboxPersistVersions.get(userId)===version)localStorage.setItem(_messageOutboxStorageKey(userId), JSON.stringify(sealed));
+        if(window.OrbitCrypto?.isUnlocked()&&currentUser?.id===userId&&_outboxPersistVersions.get(userId)===version)localStorage.setItem(_messageOutboxStorageKey(userId), JSON.stringify(sealed));
     } catch (error) {
         console.warn('[Orbit] Could not persist message outbox:', error);
     }
