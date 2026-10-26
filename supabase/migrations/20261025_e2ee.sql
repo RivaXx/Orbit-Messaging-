@@ -76,6 +76,7 @@ create or replace function public.orbit_validate_encrypted_envelope(body text,se
 returns void language plpgsql stable security definer set search_path='' as $$
 declare expected uuid[];
 begin
+ if auth.role()='authenticated' and auth.uid() is distinct from sender then raise exception 'Validate only your own encrypted sends' using errcode='42501';end if;
  if body is null or length(body) not between 100 and 250000 or body not like '-----BEGIN PGP MESSAGE-----%'
   or not exists(select 1 from public.orbit_encryption_keys k where k.user_id=sender and k.fingerprint=orbit_validate_encrypted_envelope.fingerprint)
   or cardinality(recipients) not between 1 and 100 then raise exception 'Invalid encrypted message';end if;
