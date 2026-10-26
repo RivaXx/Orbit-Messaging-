@@ -24,7 +24,9 @@
   const composer=document.getElementById('msg-input');if(composer)composer.value='';
   for(const close of ['closeMediaLightbox','closeChatMediaGallery','closePdfViewer','closeXlsxViewer','closeViewOnceViewer'])try{if(typeof window[close]==='function')window[close]();}catch(_){/* Some viewers are not mounted yet. */}
   drafts.clear();
-  if(typeof _messageOutbox!=='undefined')_messageOutbox.clear();
+  if(typeof _messageOutbox!=='undefined'){_messageOutbox.forEach(item=>{item.cancelled=true;});_messageOutbox.clear();}
+  if(typeof _outboxHydratedForUser!=='undefined')_outboxHydratedForUser=null;
+  if(typeof _inflightMessages!=='undefined')_inflightMessages.clear();
   if(typeof _mediaOutboxMemory!=='undefined')_mediaOutboxMemory.clear();
   document.dispatchEvent(new CustomEvent('orbit-encryption-locked'));
  }
