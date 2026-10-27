@@ -4,6 +4,7 @@
 
 let chatFeedRenderGeneration = 0;
 function renderMessageFeed(msgs, shouldScrollBottom = true) {
+    msgs=msgs.filter(message=>!window.orbitMessageWasCleared?.(message));
     const generation = ++chatFeedRenderGeneration;
     const renderRoom = currentRoom;
     const renderEpoch = _chatViewEpoch;
@@ -150,6 +151,7 @@ function renderMessageFeed(msgs, shouldScrollBottom = true) {
 }
 
 function appendSingleMessageNode(msg) {
+    if(window.orbitMessageWasCleared?.(msg))return;
     if (typeof orbitIsMessageHidden === 'function' && orbitIsMessageHidden(msg?.id)) return;
     if (!currentRoom || !resolveRoomAliases(currentRoom, activeChatPeerId).includes(msg?.room)) return;
     const feed = document.getElementById('chat-feed');
