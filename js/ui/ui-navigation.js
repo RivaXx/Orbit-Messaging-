@@ -47,6 +47,7 @@ async function launchApp({introduction=false,forceIntroduction=false}={}) {
     const launchOwner=currentUser.id;
     setTimeout(()=>{
         if(currentUser?.id!==launchOwner)return;
+        window.OrbitChatData?.receiveShare();
         initOrbitWeather().catch(()=>{});
         if(typeof OrbitNotes!=='undefined'){OrbitNotes.load();if(window.orbitPendingNote)orbitOpenNoteLink(window.orbitPendingNote);}
         initOrbitChatServices().catch(error=>console.warn('[Orbit Services]',error.message));

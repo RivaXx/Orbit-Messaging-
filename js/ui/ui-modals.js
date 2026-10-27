@@ -1305,7 +1305,7 @@ async function loadOrbitCleanupSettings() {
     const input = document.getElementById('chk-auto-storage-clean');
     if (!input || !isPrimaryAdmin()) return;
     input.disabled = true;
-    try { const result = await orbitCleanupRequest({action:'settings'}); input.checked = result.enabled === true; }
+    try { const result = await orbitCleanupRequest({action:'settings'}); input.checked = result.enabled === true; orbitCleanupJob=result.job?.complete?null:result.job?.job_id; if(result.job)orbitCleanupProgress(result.job); }
     catch (error) { input.checked = false; showToast(error.message, 'error'); }
     finally { input.disabled = false; }
 }
@@ -1323,9 +1323,19 @@ async function toggleAutoStorageClean(checked) {
 
 let orbitCleanupBusy = false;
 let orbitCleanupSync = null;
+let orbitCleanupJob = null;
+let orbitCleanupCutoff = 0;
+window.orbitMessageWasCleared = message => Date.parse(message?.created_at) < orbitCleanupCutoff;
+function orbitCleanupProgress(result) {
+    const node=document.getElementById('orbit-cleanup-status');
+    if(node)node.textContent=`${result.messages || 0} messages and ${result.schedules || 0} schedules cleared · ${result.files || 0}/${result.total_files || 0} media objects removed${result.pending ? ` · ${result.pending} pending` : ' · complete'}. Accounts and profile pictures preserved.`;
+    const button=document.getElementById('orbit-admin-clean-button');
+    if(button&&!orbitCleanupBusy)button.textContent=result.pending?'Resume media cleanup':'Clear all messages & media';
+}
 function applyOrbitCleanupCutoff(cutoff) {
     const timestamp = Date.parse(cutoff);
     if (!Number.isFinite(timestamp) || timestamp <= 0) return;
+    if(timestamp>orbitCleanupCutoff){orbitCleanupCutoff=timestamp;window.OrbitCrypto?.forgetBefore?.(timestamp);}
     const keep = message => ['sending', 'queued', 'failed'].includes(message?.status) || Date.parse(message?.created_at) >= timestamp;
     for (const [room, messages] of messageCache) messageCache.set(room, messages.filter(keep));
     for (const key of Object.keys(localStorage)) {
@@ -1356,16 +1366,23 @@ document.addEventListener('visibilitychange', () => {
 });
 async function adminCleanOldNonAdminMedia() {
     if (!isPrimaryAdmin()) { showToast('Only the primary admin can clear messages.', 'error'); return; }
-    if (orbitCleanupBusy || !confirm('Permanently clear ALL existing text messages and media for every account, including admin messages? Profile pictures will be kept.')) return;
+    if (orbitCleanupBusy || !confirm(orbitCleanupJob ? 'Resume the unfinished media cleanup? This keeps its original cutoff; newer chats are preserved.' : 'Permanently delete ALL existing chat messages, scheduled messages and chat media for EVERY account, including yours? Accounts, names and profile pictures are preserved. Download any chat backups first. This cannot be undone.')) return;
     orbitCleanupBusy = true;
+    const button=document.getElementById('orbit-admin-clean-button');if(button){button.disabled=true;button.textContent='Clearing…';}
     try {
-        const result = await orbitCleanupRequest({action:'clear', confirm:'CLEAR_ALL_MESSAGES'});
-        applyOrbitCleanupCutoff(result.cutoff);
+        let result=await orbitCleanupRequest(orbitCleanupJob?{action:'continue',job_id:orbitCleanupJob}:{action:'clear',confirm:'CLEAR_ALL_MESSAGES'});
+        for(let batch=0;;batch++){
+            orbitCleanupJob=result.complete?null:result.job_id;
+            applyOrbitCleanupCutoff(result.cutoff);orbitCleanupProgress(result);
+            if(result.complete||result.retry||batch>=100)break;
+            result=await orbitCleanupRequest({action:'continue',job_id:result.job_id});
+        }
         if (typeof loadMainChats === 'function') loadMainChats(true);
-        showToast(`${result.messages} messages cleared. ${result.pending ? `${result.pending} media batches await retry; run cleanup again.` : 'Media cleanup complete.'} Profile pictures preserved.`, result.pending ? 'info' : 'success');
+        showToast(result.complete?'Chat messages and media cleared. Accounts and profile pictures preserved.':'Progress saved. Tap Resume media cleanup to retry pending storage objects.',result.complete?'success':'info');
     } catch (error) { showToast(error.message, 'error'); }
-    finally { orbitCleanupBusy = false; }
+    finally { orbitCleanupBusy = false;if(button){button.disabled=false;button.textContent=orbitCleanupJob?'Resume media cleanup':'Clear all messages & media';} }
 }
+setInterval(()=>{if(!document.hidden&&currentUser)syncOrbitCleanupWatermark().catch(()=>{});},30000);
 
 // ══════════════════════════════════════════════════════════════════════════
 // DISPLAY SETTINGS SUITE (media_1789891353182.jpg)
