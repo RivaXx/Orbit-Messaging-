@@ -89,6 +89,7 @@ test('cleanup drops old cached messages but preserves newer and unsent messages'
 async function edgeContext({email='rivaldo.a.rodrigues@gmail.com',authError=false,secret,enabled=false,queue=[],photos=[],removeError=false,ready=true}={}) {
     const helpers=await import('../supabase/functions/orbit-admin-cleanup/cleanup.ts');
     const calls={enqueue:0,removed:[],deleted:[],updates:[]};
+    const remaining=[...queue],jobId='11111111-1111-4111-8111-111111111111';
     function query(table) {
         const q={select:(_s,opts)=>{q.head=opts?.head;return q;},eq:()=>q,order:()=>q,limit:()=>q,
             update:val=>{calls.updates.push(val);return q;},delete:()=>{calls.deleted.push(table);return q;},
@@ -97,13 +98,16 @@ async function edgeContext({email='rivaldo.a.rodrigues@gmail.com',authError=fals
     }
     const db={auth:{getUser:async()=>({data:{user:authError?null:{email}},error:authError})},from:query,
         storage:{from:bucket=>({remove:async paths=>{calls.removed.push({bucket,paths});return {error:removeError?{message:'retry'}:null};}})},
-        rpc:(name)=>{
-            if(name==='orbit_enqueue_cleanup'){calls.enqueue++;return Promise.resolve({data:3,error:null});}
+        rpc:(name,args)=>{
+            if(name==='orbit_begin_cleanup'){calls.enqueue++;return Promise.resolve({data:[{id:jobId}],error:null});}
+            if(name==='orbit_cleanup_batch')return Promise.resolve({data:remaining.slice(0,100),error:null});
+            if(name==='orbit_finish_cleanup_batch'){for(const id of args.removed_keys){const i=remaining.findIndex(r=>r.id===id);if(i>=0)remaining.splice(i,1);calls.deleted.push(id);}return Promise.resolve({error:null});}
+            if(name==='orbit_cleanup_job_status')return Promise.resolve({data:{job_id:jobId,messages:3,files:queue.length-remaining.length,total_files:queue.length,pending:remaining.length,complete:!remaining.length},error:null});
             if(name==='orbit_cleanup_schedule_ready')return Promise.resolve({data:ready,error:null});
             return {range:async(offset)=>({data:offset?[]:name==='orbit_cleanup_protected_urls'?photos:[],error:null})};
         }};
     let handler;
-    const context=vm.createContext({...helpers,createClient:()=>db,URL,Response,Date,Set,Map,console:{error:()=>{}},
+    const context=vm.createContext({...helpers,createClient:()=>db,URL,Response,Date,Set,Map,crypto,console:{error:()=>{}},
         Deno:{env:{get:key=>key==='SUPABASE_URL'?'https://project.supabase.co':key==='ORBIT_CLEANUP_SECRET'?secret:'server-key'},serve:fn=>handler=fn}});
     let source=fs.readFileSync(path.join(root,'supabase/functions/orbit-admin-cleanup/index.ts'),'utf8').replace(/^import .*;\r?\n/gm,'');
     vm.runInContext(stripTypeScriptTypes(source),context);
@@ -131,22 +135,19 @@ test('scheduled cleanup cannot be enabled without a cron job',async()=>{
     const edge=await edgeContext({ready:false}); assert.equal((await edge.request({action:'schedule',enabled:true})).status,409);
     assert.equal(edge.calls.updates.length,0);
 });
-test('clear deletes chat and private media, protects profile pictures and forged paths',async()=>{
-    const base='https://project.supabase.co/storage/v1/object/public/chat-assets/';
-    const queue=[{id:1,sender_id:'owner',attachments:JSON.stringify([
-        JSON.stringify({url:base+'images/owner/keep.jpg'}),{url:base+'images/owner/chat.jpg'},
-        {storage_bucket:'orbit-view-once',storage_path:'owner/private.jpg'},
-        {storage_path:'images/other/forged.jpg'},{storage_path:'avatars/owner/photo.jpg'}
-    ])}];
-    const edge=await edgeContext({queue,photos:[{url:base+'images/owner/keep.jpg'}]});
-    const result=await edge.request({action:'clear',confirm:'CLEAR_ALL_MESSAGES'});
+test('clear drains more than one page across all five buckets, using only server paths',async()=>{
+    const buckets=['chat-assets','orbit-view-once','voice-notes','files','uploads'];
+    const queue=Array.from({length:325},(_,i)=>({id:i+1,bucket:buckets[i%5],path:'owner/media-'+i}));
+    const edge=await edgeContext({queue});
+    const result=await edge.request({action:'clear',confirm:'CLEAR_ALL_MESSAGES',bucket:'avatars',path:'forged'});
     assert.equal(result.status,200); assert.equal(result.data.messages,3);
-    assert.deepEqual(JSON.parse(JSON.stringify(edge.calls.removed)),[
-        {bucket:'chat-assets',paths:['images/owner/chat.jpg']},{bucket:'orbit-view-once',paths:['owner/private.jpg']}
-    ]);
+    assert.equal(result.data.files,325);assert.equal(result.data.complete,true);assert.equal(edge.calls.deleted.length,325);
+    assert.ok(edge.calls.removed.every(r=>r.bucket!=='avatars'&&!r.paths.includes('forged')));
 });
 test('failed storage deletion remains queued and is reported pending',async()=>{
-    const edge=await edgeContext({removeError:true,queue:[{id:1,sender_id:'owner',attachments:[{storage_path:'images/owner/chat.jpg'}]}]});
+    const edge=await edgeContext({removeError:true,queue:[{id:1,bucket:'files',path:'owner/chat.jpg'}]});
     const result=await edge.request({action:'clear',confirm:'CLEAR_ALL_MESSAGES'});
     assert.equal(result.data.pending,1); assert.equal(edge.calls.deleted.length,0);
+    assert.equal(result.data.complete,false);assert.equal(result.data.retry,true);
+    await edge.request({action:'continue',job_id:result.data.job_id});assert.equal(edge.calls.enqueue,1);
 });
