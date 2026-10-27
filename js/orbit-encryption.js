@@ -411,7 +411,8 @@
  function setupUI(){
   for(const [id,cls]of [['user-dropdown','dropdown-item'],['chat-options-dropdown','chat-option-item']]){const menu=document.getElementById(id);if(menu){const button=document.createElement('button');button.type='button';button.className=cls;button.textContent='🔒 Chat security';button.onclick=()=>{menu.classList.add('hide');void open();};menu.append(button);}}
  }
- window.OrbitCrypto={install,open,lock:reset,requireUnlocked:mustUnlock,seal,decode,decodeMany:mapData,encryptAttachment,decryptAttachment,materialize,mediaNode,selfSeal,selfOpen,saveDraft,readDraft,clearDraft,sealQueue,openQueue,sealLocalFile,openLocalFile,safeStorage,wireFor:id=>wires.get(id),isUnlocked:()=>unlocked&&owner===uid()};
+ function forgetBefore(cutoff){for(const [id,row]of wires)if(Date.parse(row.created_at)<cutoff)wires.delete(id);for(const [key,row]of decoded)if(Date.parse(row.created_at)<cutoff)decoded.delete(key);for(const url of blobs.values())URL.revokeObjectURL(url);blobs.clear();}
+ window.OrbitCrypto={install,open,lock:reset,requireUnlocked:mustUnlock,seal,decode,decodeMany:mapData,encryptAttachment,decryptAttachment,materialize,mediaNode,selfSeal,selfOpen,saveDraft,readDraft,clearDraft,sealQueue,openQueue,sealLocalFile,openLocalFile,safeStorage,forgetBefore,wireFor:id=>wires.get(id),isUnlocked:()=>unlocked&&owner===uid()};
  install(typeof getSupabase==='function'?getSupabase():null);
  document.addEventListener('DOMContentLoaded',setupUI);
  window.addEventListener('pagehide',reset);
