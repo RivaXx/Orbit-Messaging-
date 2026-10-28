@@ -45,6 +45,45 @@ begin
  return convert_from(bytes,'UTF8');
 exception when others then return null;
 end $$;
+-- Keep live references indexed. Cleanup must not scan every message for every
+-- storage object (especially when resuming a large batch).
+create table if not exists public.orbit_chat_object_refs(
+ message_id uuid not null references public.messages(id) on delete cascade,
+ bucket text not null,path text not null,primary key(message_id,bucket,path)
+);
+create index if not exists orbit_chat_object_ref_lookup on public.orbit_chat_object_refs(bucket,path);
+alter table public.orbit_chat_object_refs enable row level security;
+revoke all on public.orbit_chat_object_refs from public,anon,authenticated;
+grant all on public.orbit_chat_object_refs to service_role;
+create or replace function public.orbit_cleanup_attachment_refs(items text[])
+returns table(bucket text,path text) language plpgsql immutable set search_path='' as $$
+declare item text; value jsonb;
+begin
+ foreach item in array coalesce(items,ARRAY[]::text[]) loop
+  value:=public.orbit_cleanup_attachment(to_jsonb(item));
+  bucket:=coalesce(value->>'storage_bucket','chat-assets');path:=value->>'storage_path';
+  if bucket in('chat-assets','voice-notes','files','uploads','orbit-view-once') and path is not null and path<>'' then return next;end if;
+  foreach bucket in array array['chat-assets','voice-notes','files','uploads','orbit-view-once'] loop
+   path:=public.orbit_cleanup_url_path(value->>'url',bucket);
+   if path is not null and path<>'' then return next;end if;
+  end loop;
+ end loop;
+end $$;
+create or replace function public.orbit_sync_chat_object_refs()
+returns trigger language plpgsql security definer set search_path='' as $$
+begin
+ delete from public.orbit_chat_object_refs where message_id=new.id;
+ insert into public.orbit_chat_object_refs(message_id,bucket,path)
+ select new.id,r.bucket,r.path from public.orbit_cleanup_attachment_refs(new.attachments) r on conflict do nothing;
+ return new;
+end $$;
+drop trigger if exists orbit_chat_object_refs_sync on public.messages;
+create trigger orbit_chat_object_refs_sync after insert or update of attachments on public.messages
+for each row execute function public.orbit_sync_chat_object_refs();
+insert into public.orbit_chat_object_refs(message_id,bucket,path)
+select m.id,r.bucket,r.path from public.messages m cross join lateral public.orbit_cleanup_attachment_refs(m.attachments) r on conflict do nothing;
+revoke all on function public.orbit_cleanup_attachment_refs(text[]),public.orbit_sync_chat_object_refs() from public,anon,authenticated;
+grant execute on function public.orbit_cleanup_attachment_refs(text[]) to service_role;
 -- Preserve dedicated avatar buckets, all avatar/profile directories, and every
 -- canonical/legacy profile URL even if somebody stored it in a chat directory.
 create or replace function public.orbit_cleanup_object_protected(bucket text,path text,cutoff timestamptz)
@@ -55,12 +94,9 @@ begin
  if exists(select 1 from public.orbit_cleanup_protected_urls() p
   where public.orbit_cleanup_url_path(p.url,bucket)=path) then return true;end if;
  -- An old orphan may have been reused by a message that survives this job.
- if exists(select 1 from public.messages m cross join lateral
-  jsonb_array_elements(coalesce(to_jsonb(m.attachments),'[]'::jsonb)) a
-  where m.created_at>=cutoff and
-   ((coalesce(public.orbit_cleanup_attachment(a)->>'storage_bucket','chat-assets')=bucket
-    and public.orbit_cleanup_attachment(a)->>'storage_path'=path)
-    or public.orbit_cleanup_url_path(public.orbit_cleanup_attachment(a)->>'url',bucket)=path)) then return true;end if;
+ if exists(select 1 from public.orbit_chat_object_refs r join public.messages m on m.id=r.message_id
+  where m.created_at>=orbit_cleanup_object_protected.cutoff
+  and r.bucket=orbit_cleanup_object_protected.bucket and r.path=orbit_cleanup_object_protected.path) then return true;end if;
  return false;
 end $$;
 
