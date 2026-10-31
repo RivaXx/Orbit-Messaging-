@@ -917,6 +917,7 @@ function createMessageDOMNode(msg, isConsecutive = false) {
 
         // ── Slide to Reply & Long-Press Reaction Gesture ────────────────
         if(msg._e2ee_locked&&!msg._e2ee_error){const unlock=document.createElement('button');unlock.type='button';unlock.className='glass-btn-primary';unlock.textContent='Unlock encrypted chat';unlock.onclick=()=>OrbitCrypto.open();row.querySelector('.msg-bubble-card')?.append(unlock);}
+        syncMediaSendError(row, msg);
         if (!isMsgDeleted) {
             attachSlideToReplyAndReactionGesture(row, msg);
         }
@@ -2053,6 +2054,16 @@ function contextReplyMsg() {
     closeMsgContextModal();
 }
 
+
+function syncMediaSendError(node, message) {
+    node.querySelector('.orbit-media-send-error')?.remove();
+    if (message.status !== 'failed' || !message.send_error || !message.attachments?.length || message.sender_id !== currentUser?.id) return;
+    const box = document.createElement('div');box.className = 'orbit-media-send-error';box.setAttribute('role', 'status');
+    const text = document.createElement('p');text.textContent = message.send_error;box.append(text);
+    const retry = document.createElement('button');retry.type = 'button';retry.textContent = 'Retry album';retry.onclick = event => { event.stopPropagation(); retrySendMessage(message.id); };box.append(retry);
+    const choose = document.createElement('button');choose.type = 'button';choose.textContent = 'Choose photos again';choose.onclick = event => { event.stopPropagation(); triggerAttachmentAction('gallery'); };box.append(choose);
+    node.querySelector('.msg-bubble-card')?.append(box);
+}
 
 window.renderMessageFeed = renderMessageFeed;
 window.appendSingleMessageNode = appendSingleMessageNode;

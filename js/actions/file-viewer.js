@@ -1,24 +1,27 @@
-// ORBIT CHAT ACTIONS - FILE VIEWER & ATTACHMENT HANDLERS (js/actions/file-viewer.js)
-// File input handlers, formatFileSize, PDF.js viewer, SheetJS/XLSX viewer, rename & download modals.
-// ── File Selection Handlers ──
+// File input handlers. Capture provider bytes before resetting an Android picker.
 async function handleMediaSelection(input) {
-    if (!input.files || input.files.length === 0) return;
-    if(!currentRoom || !currentUser?.id){input.value='';showToast('Open a chat before selecting photos.','info');return;}
-    const files = Array.from(input.files);
-    const queuedItems = files.map(file => {
-        const isImg = file.type.startsWith('image/');
-        const isVid = file.type.startsWith('video/');
-        const type = isImg ? 'image' : (isVid ? 'video' : 'file');
-        return { file, name: file.name, type, size: file.size };
-    });
-    input.value = '';
-    openMediaPreviewScreen(queuedItems.map(item=>({...item,url:URL.createObjectURL(item.file)})));
-
+    if (!input.files?.length || input.disabled) return;
+    if (!currentRoom || !currentUser?.id) { showToast('Open a chat before selecting photos.', 'info'); return; }
+    const room = currentRoom, owner = currentUser.id;
+    input.disabled = true;
+    const progress = document.createElement('div');progress.className = 'orbit-selection-progress';progress.setAttribute('role', 'status');
+    document.body?.append(progress);
+    try {
+        const files = await OrbitMediaSource.capture(input.files, (index, count) => {
+            progress.textContent = 'Reading photo ' + index + ' of ' + count + ' from Gallery…';
+        }, () => currentRoom === room && currentUser?.id === owner);
+        const items = files.map(file => ({ file, name: file.name, type: file.type.startsWith('image/') ? 'image' : file.type.startsWith('video/') ? 'video' : 'file', size: file.size }));
+        const previews = await prepareMediaPreviewItems(items, (index, count) => { progress.textContent = 'Preparing preview ' + index + ' of ' + count + '…'; });
+        if (currentRoom !== room || currentUser?.id !== owner) { previews.forEach(releaseMediaPreviewItem); return; }
+        input.value = '';
+        openMediaPreviewScreen(previews);
+    } catch (error) { showToast(error.message, 'error'); }
+    finally { input.disabled = false;progress.remove(); }
 }
 
 async function handleDocSelection(input) {
     if (!input.files || input.files.length === 0) return;
-    const files = Array.from(input.files);
+    let files;
     const selectionRoomId = currentRoom;
     const selectionUserId = currentUser?.id;
     if (!selectionRoomId || !selectionUserId || currentRoom !== selectionRoomId || currentUser?.id !== selectionUserId) {
@@ -26,6 +29,8 @@ async function handleDocSelection(input) {
         input.value = '';
         return;
     }
+    try { files = await OrbitMediaSource.capture(input.files, undefined, () => currentRoom === selectionRoomId && currentUser?.id === selectionUserId); }
+    catch (error) { showToast(error.message, 'error'); return; }
     const queuedItems = files.map(file => {
         const isXlsx = file.name.match(/\.(xlsx|xls|csv)$/i);
         const type = isXlsx ? 'xlsx' : file.type.startsWith('image/') ? 'image' : file.type.startsWith('video/') ? 'video' : file.type.startsWith('audio/') ? 'audio' : 'document';
@@ -43,8 +48,8 @@ async function handleDocSelection(input) {
 
 async function handleAudioSelection(input) {
     if (!input.files || input.files.length === 0) return;
-    const file = input.files[0];
     try {
+        const file = await OrbitMediaSource.snapshot(input.files[0]);
         if (typeof queueMediaMessage !== 'function') throw new Error('Background media queue is unavailable.');
         await queueMediaMessage([{ file, name: file.name || 'Voice message', type: 'audio', size: file.size }], document.getElementById('msg-input')?.value||'');
     } catch (error) {

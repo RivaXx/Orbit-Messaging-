@@ -81,6 +81,7 @@ function _openMediaOutboxDb() {
 
 async function _storeOutboxMedia(messageId, index, file) {
     const key = `${messageId}:${index}`;
+    file = await OrbitMediaSource.snapshot(file);
     _mediaOutboxMemory.set(key, file);
     if (_mediaOutboxVolatile.has(key)) return false;
     try {
@@ -231,7 +232,7 @@ async function _persistMessageOutbox(userId = currentUser?.id) {
 function _updateOutboxMessage(item, status, error = null) {
     item.status = status;
     item.lastError = error?.message || null;
-    const cacheMessage = { ...item.payload, client_temp_id: item.clientTempId, status };
+    const cacheMessage = { ...item.payload, client_temp_id: item.clientTempId, status, send_error: status === 'failed' ? item.lastError : null };
     (item.aliases || [item.payload.room]).forEach(alias => {
         const messages = messageCache.get(alias) || [];
         const index = messages.findIndex(message => message.id === item.payload.id || message.client_temp_id === item.clientTempId);
@@ -246,6 +247,7 @@ function _updateOutboxMessage(item, status, error = null) {
         document.querySelector(`[data-client-temp-id="${item.clientTempId}"]`) ||
         document.querySelector(`[data-msg-id="${item.payload.id}"]`);
     if (node) {
+        if (typeof syncMediaSendError === 'function') syncMediaSendError(node, cacheMessage);
         if (['sending', 'sent', 'delivered', 'read'].includes(status) &&
             cacheMessage.attachments?.length && (cacheMessage._e2ee_media_pending || cacheMessage.attachments.every(a => a?.url && !a.upload_pending)) &&
             node.dataset.mediaDelivered !== 'true' && typeof createMessageDOMNode === 'function') {
@@ -623,6 +625,12 @@ async function queueMediaMessage(items, caption = '', messageType = null, target
     if (currentRoom !== roomAtSend || currentUser.id !== userAtSend) {
         throw new Error('Chat changed before the media was queued. Reopen the original chat and try again.');
     }
+    // Snapshot before accepting the queue or letting the preview/picker close.
+    // This also covers paste/drop and OS-share entry points.
+    if (items.every(item => item.file)) {
+        const files = await OrbitMediaSource.capture(items.map(item => item.file), undefined, () => currentRoom === roomAtSend && currentUser?.id === userAtSend);
+        items = items.map((item, index) => ({ ...item, file: files[index] }));
+    }
     const peerAtSend = activeChatPeerId;
     if (peerAtSend && typeof isUserBlocked === 'function' && isUserBlocked(peerAtSend)) {
         throw new Error('You have blocked this user. Unblock to send messages.');
@@ -674,7 +682,7 @@ async function queueMediaMessage(items, caption = '', messageType = null, target
         if (!file) throw new Error(`Could not queue ${item.name || 'media'}: the original file is no longer available.`);
         const type = item.type || (file.type?.startsWith('image/') ? 'image' : file.type?.startsWith('video/') ? 'video' : 'file');
         const name = item.name || file.name || `media-${index + 1}`;
-        const previewUrl = (file instanceof Blob || file instanceof File) ? URL.createObjectURL(file) : (item.url || '');
+        const previewUrl = (file instanceof Blob || file instanceof File) ? URL.createObjectURL(item.previewFile || file) : (item.url || '');
         item.file = file;
         mediaUploadInfo.push({ index, name, type, mime: file.type || 'application/octet-stream', rotation: Number(item.rotation || 0), hdQuality: !!isPreviewHdQuality, originalQuality: !!item.originalQuality, subfolder: type === 'image' ? 'images' : type === 'video' ? 'videos' : 'documents' });
         return { name, url: previewUrl, type, quality: type === 'image' ? (item.originalQuality ? 'original' : isPreviewHdQuality ? 'hd' : 'sd') : undefined, size: file.size, upload_pending: true, view_once: !!item.viewOnce };
@@ -791,7 +799,10 @@ async function _uploadQueuedMedia(item) {
             const targetDim = isHd ? 2560 : slowLink ? 720 : 1080;
             const targetQuality = isHd ? 0.92 : slowLink ? 0.58 : 0.70;
             const compressed = await compressImageForUpload(uploadBody, targetDim, targetQuality);
-            if (compressed?.startsWith('data:image/')) {
+            if (compressed instanceof Blob) {
+                uploadBody = compressed;
+                mime = compressed.type || 'image/jpeg';
+            } else if (typeof compressed === 'string' && compressed.startsWith('data:image/')) {
                 uploadBody = compressed;
                 mime = compressed.match(/^data:([^;,]+)/)?.[1] || 'image/jpeg';
 

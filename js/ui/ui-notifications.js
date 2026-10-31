@@ -152,12 +152,14 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 
+let orbitToastTimer = null;
 function showToast(msg, type = '') {
     const toast = document.getElementById('simple-toast');
     if (!toast) return;
     toast.innerText = msg;
     toast.className = `simple-toast active ${type}`;
-    setTimeout(() => toast.classList.remove('active'), 2500);
+    clearTimeout(orbitToastTimer);
+    orbitToastTimer = setTimeout(() => toast.classList.remove('active'), type === 'error' ? 10000 : 4500);
 }
 
 

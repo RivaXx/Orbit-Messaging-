@@ -48,5 +48,7 @@
       "type": "image/svg+xml",
       "purpose": "any"
     }
-  ]
+  ],
+  "id": "./index.html",
+  "description": "Private messaging with photo albums, files and incoming Gallery shares."
 }

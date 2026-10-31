@@ -133,6 +133,7 @@ test('fresh device decrypts persisted drafts and detects a replaced contact key'
 test('the actual dispatcher preserves encrypted pending sends while locked and restores them after recovery',async()=>{
  const storage=new Map(),device=account(A,database,storage);assert.equal(await device.unlock(),true);
  device.sandbox.navigator={onLine:false};device.sandbox.deduplicateAndSort=rows=>rows;
+ vm.runInContext(fs.readFileSync(require('node:path').join(__dirname,'../js/media-source.js'),'utf8'),device.sandbox);
  const code=fs.readFileSync(require('node:path').join(__dirname,'../js/chat/chat-dispatcher.js'),'utf8');vm.runInContext(code,device.sandbox);
  const id=crypto.randomUUID(),room='self_'+A,body='private pending send survives locking';
  vm.runInContext(`_outboxHydratedForUser=${JSON.stringify(A)};_messageOutbox.set(${JSON.stringify(id)},${JSON.stringify({payload:{...message(id,body),room},aliases:[room],status:'queued'})});`,device.sandbox);

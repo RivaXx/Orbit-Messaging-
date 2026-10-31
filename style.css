@@ -2663,8 +2663,11 @@
             pointer-events: none;
             opacity: 0;
             visibility: hidden;
-            white-space: nowrap;
+            white-space: normal;
+            overflow-wrap: anywhere;
+            width: max-content;
             max-width: 90vw;
+            box-sizing: border-box;
             text-align: center;
         }
         .simple-toast.active {

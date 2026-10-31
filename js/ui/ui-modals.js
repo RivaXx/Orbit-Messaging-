@@ -105,7 +105,6 @@ async function submitEditField() {
 let orbitProfilePhotoUploading = false;
 async function handleProfileAvatarUpload(e) {
     const file = e.target.files?.[0];
-    e.target.value = '';
     if (!file || !currentUser?.id) return;
     if (orbitProfilePhotoUploading) { showToast('Please wait for the current photo to finish.'); return; }
     if (!file.type.startsWith('image/')) { showToast('Choose an image file.', 'error'); return; }
@@ -114,10 +113,10 @@ async function handleProfileAvatarUpload(e) {
     showToast('Uploading profile photo…', 'info');
     try {
         const resized = await compressImageForUpload(file, 512, 0.85);
-        if (!resized?.startsWith('data:image/')) throw new Error('This photo could not be read. Try a JPG or PNG image.');
-        const mime = resized.match(/^data:([^;,]+)/)?.[1] || 'image/jpeg';
-        const bytes = Uint8Array.from(atob(resized.split(',')[1]), char => char.charCodeAt(0));
-        const photo = new Blob([bytes], {type:mime});
+        if (!(resized instanceof Blob) && !(typeof resized === 'string' && resized.startsWith('data:image/'))) throw new Error('This photo could not be read. Try a JPG or PNG image.');
+        const mime = resized instanceof Blob ? resized.type : resized.match(/^data:([^;,]+)/)?.[1] || 'image/jpeg';
+        const photo = resized instanceof Blob ? resized : new Blob([Uint8Array.from(atob(resized.split(',')[1]), char => char.charCodeAt(0))], {type:mime});
+        e.target.value = '';
         const url = await uploadMediaToStorage(photo, 'profile-photo.jpg', mime, 'avatars');
         if (currentUser?.id !== owner) return;
         const client = await ensureSupabase();

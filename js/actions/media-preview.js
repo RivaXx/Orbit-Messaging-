@@ -153,16 +153,33 @@ let currentPreviewIndex = 0;
 let mediaPreviewTargetRoom = null;
 let mediaPreviewTargetUser = null;
 
+function releaseMediaPreviewItem(item) {
+    for (const url of [item?.url, item?.thumbUrl]) if (url?.startsWith('blob:')) URL.revokeObjectURL(url);
+}
+
+async function prepareMediaPreviewItems(items, onProgress = () => {}) {
+    const prepared = [];
+    for (const item of items) {
+        onProgress(prepared.length + 1, items.length);
+        let previewFile = null;
+        if (item.type === 'image' && typeof Image !== 'undefined') {
+            try { previewFile = await compressImageForUpload(item.file, 160, 0.65); } catch (_) { /* Sending reports unsupported image formats. */ }
+        }
+        prepared.push({ ...item, url: URL.createObjectURL(item.file), previewFile, thumbUrl: previewFile ? URL.createObjectURL(previewFile) : '' });
+    }
+    return prepared;
+}
+
 function openMediaPreviewScreen(items) {
     if (!items || items.length === 0) return;
     const modal = document.getElementById('modal-media-preview');
     if (!modal || !currentRoom || !currentUser?.id) return;
     const append = modal.classList.contains('active') && mediaPreviewTargetRoom===currentRoom && mediaPreviewTargetUser===currentUser.id;
     if(append && mediaPreviewList[currentPreviewIndex])mediaPreviewList[currentPreviewIndex].caption=document.getElementById('media-preview-caption-input')?.value || '';
-    const additions = items.map(item=>({file:item.file||null,url:item.url||'',name:item.name||'media',type:item.type||'image',rotation:0,caption:item.caption||'',originalQuality:!!item.originalQuality,viewOnce:!!item.viewOnce}));
+    const additions = items.map(item=>({file:item.file||null,url:item.url||'',thumbUrl:item.thumbUrl||'',previewFile:item.previewFile||null,name:item.name||'media',type:item.type||'image',rotation:0,caption:item.caption||'',originalQuality:!!item.originalQuality,viewOnce:!!item.viewOnce}));
     if(append){currentPreviewIndex=mediaPreviewList.length;mediaPreviewList.push(...additions);}
     else {
-        mediaPreviewList.forEach(item=>{if(item.url?.startsWith('blob:'))URL.revokeObjectURL(item.url);});
+        mediaPreviewList.forEach(releaseMediaPreviewItem);
         mediaPreviewTargetRoom=currentRoom;mediaPreviewTargetUser=currentUser.id;
         mediaPreviewList=additions;currentPreviewIndex=0;
         // Keep the draft in the composer until a queue entry is accepted. Cancel
@@ -189,7 +206,7 @@ function closeMediaPreviewScreen() {
     }
     if (!isSendingPreviewMediaBatch) {
         mediaPreviewList.forEach(item => {
-            if (item?.url?.startsWith('blob:')) URL.revokeObjectURL(item.url);
+            releaseMediaPreviewItem(item);
         });
     }
     mediaPreviewList = [];
@@ -281,7 +298,7 @@ function deleteCurrentPreviewMedia() {
         return;
     }
     const removed=mediaPreviewList.splice(currentPreviewIndex, 1)[0];
-    if(removed?.url?.startsWith('blob:'))URL.revokeObjectURL(removed.url);
+    releaseMediaPreviewItem(removed);
     if (currentPreviewIndex >= mediaPreviewList.length) {
         currentPreviewIndex = mediaPreviewList.length - 1;
     }
@@ -305,7 +322,7 @@ function renderPreviewThumbStrip() {
     strip.style.display = 'flex';
     strip.innerHTML = mediaPreviewList.map((item, idx) => `
         <div class="preview-thumb-item ${idx === currentPreviewIndex ? 'active' : ''}" onclick="selectPreviewThumb(${idx})">
-            ${item.type === 'video' ? `<video src="${item.url}" muted preload="metadata"></video>` : item.type === 'image' ? `<img src="${item.url}" alt="thumb" decoding="async">` : '<i class="fa-solid fa-file"></i>'}
+            ${item.type === 'video' ? `<video src="${item.url}" muted preload="metadata"></video>` : item.type === 'image' ? `<img src="${item.thumbUrl || item.url}" alt="thumb" loading="lazy" decoding="async">` : '<i class="fa-solid fa-file"></i>'}
             <button class="btn-reset touch-fix preview-thumb-del" onclick="event.stopPropagation(); deletePreviewThumb(${idx})" title="Remove"><i class="fa-solid fa-xmark"></i></button>
         </div>
     `).join('');
@@ -325,7 +342,7 @@ function deletePreviewThumb(idx) {
         return;
     }
     const removed=mediaPreviewList.splice(idx, 1)[0];
-    if(removed?.url?.startsWith('blob:'))URL.revokeObjectURL(removed.url);
+    releaseMediaPreviewItem(removed);
     if (currentPreviewIndex >= mediaPreviewList.length) {
         currentPreviewIndex = mediaPreviewList.length - 1;
     }
@@ -351,51 +368,46 @@ async function compressImageForUpload(fileOrDataUrl, maxDim = null, quality = nu
         else if (isSlowConn) targetQuality = 0.65;
         else targetQuality = 0.72;
     }
-    return new Promise((resolve) => {
-        try {
-            const img = new Image();
-            let sourceObjectUrl = null;
-            img.onload = () => {
+    return new Promise((resolve, reject) => {
+        const img = new Image();
+        let sourceObjectUrl = null, canvas = null, settled = false;
+        const timer = setTimeout(() => finish(new Error('This photo took too long to decode. Download it locally and select it again.')), 45000);
+        const finish = (error, blob) => {
+            if (settled) return;
+            settled = true;
+            clearTimeout(timer);
+            img.onload = img.onerror = null;
+            img.src = '';
+            if (sourceObjectUrl) URL.revokeObjectURL(sourceObjectUrl);
+            if (canvas) { canvas.width = 0; canvas.height = 0; }
+            error ? reject(error) : resolve(blob);
+        };
+        img.onload = () => {
+            try {
                 let { width, height } = img;
-                if (width > targetDim || height > targetDim) {
-                    if (width > height) {
-                        height = Math.round((height * targetDim) / width);
-                        width = targetDim;
-                    } else {
-                        width = Math.round((width * targetDim) / height);
-                        height = targetDim;
-                    }
-                }
-                const canvas = document.createElement('canvas');
-                canvas.width = width;
-                canvas.height = height;
+                if (!width || !height) throw new Error('This image has no readable pixels.');
+                const scale = Math.min(1, targetDim / Math.max(width, height));
+                width = Math.max(1, Math.round(width * scale));
+                height = Math.max(1, Math.round(height * scale));
+                canvas = document.createElement('canvas');
+                canvas.width = width; canvas.height = height;
                 const ctx = canvas.getContext('2d');
-                ctx.imageSmoothingEnabled = true;
-                ctx.imageSmoothingQuality = 'high';
+                if (!ctx) throw new Error('Photo processing memory is unavailable. Try a smaller batch.');
+                ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
                 ctx.drawImage(img, 0, 0, width, height);
-                const compressedUrl = canvas.toDataURL('image/jpeg', targetQuality);
-                if (sourceObjectUrl) URL.revokeObjectURL(sourceObjectUrl);
-                resolve(compressedUrl);
-            };
-            img.onerror = () => {
-                if (sourceObjectUrl) URL.revokeObjectURL(sourceObjectUrl);
-                if (typeof fileOrDataUrl === 'string') resolve(fileOrDataUrl);
-                else {
-                    readFileAsDataUrl(fileOrDataUrl).then(resolve).catch(() => resolve(''));
-                }
-            };
-            if (typeof fileOrDataUrl === 'string') {
-                img.src = fileOrDataUrl;
-            } else if (fileOrDataUrl instanceof Blob || fileOrDataUrl instanceof File) {
+                // Keep binary bytes throughout the SD/HD pipeline. Base64 adds
+                // multiple full-size strings and buffers for every photo.
+                canvas.toBlob(blob => finish(blob ? null : new Error('Could not encode this photo. Try a JPG or PNG image.'), blob), 'image/jpeg', targetQuality);
+            } catch (error) { finish(error); }
+        };
+        img.onerror = () => finish(new Error('This photo could not be decoded. Download a JPG or PNG copy to this phone and select it again.'));
+        try {
+            if (typeof fileOrDataUrl === 'string') img.src = fileOrDataUrl;
+            else if (fileOrDataUrl instanceof Blob) {
                 sourceObjectUrl = URL.createObjectURL(fileOrDataUrl);
                 img.src = sourceObjectUrl;
-            } else {
-                resolve('');
-            }
-        } catch(e) {
-            console.warn('[Orbit] compressImageForUpload error:', e);
-            resolve(typeof fileOrDataUrl === 'string' ? fileOrDataUrl : '');
-        }
+            } else finish(new Error('The selected photo is unavailable. Select it again.'));
+        } catch (error) { finish(error); }
     });
 }
 window.compressImageForUpload = compressImageForUpload;
@@ -569,7 +581,7 @@ async function sendPreviewMediaBatch() {
         if (typeof queueMediaMessage !== 'function') throw new Error('Background media queue is unavailable.');
         await queueMediaMessage(itemsToSend, combinedCaption, null, {roomId:uploadRoomId,userId:uploadUserId});
         // The queue holds its own blob URLs now; release the editor previews.
-        itemsToSend.forEach(item=>{if(item.url?.startsWith('blob:'))URL.revokeObjectURL(item.url);});
+        itemsToSend.forEach(releaseMediaPreviewItem);
         closeMediaPreviewScreen();
         if(typeof orbitLoadOriginalAllowance==='function')orbitLoadOriginalAllowance();
     } catch (error) {

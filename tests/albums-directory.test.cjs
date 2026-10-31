@@ -11,13 +11,13 @@ function setup(){
  const node=id=>{if(!nodes.has(id))nodes.set(id,element());return nodes.get(id);};
  const c=vm.createContext({document:{readyState:'loading',getElementById:node,querySelectorAll:()=>[],querySelector:()=>null,createElement:element,createDocumentFragment:()=>Object.assign(element(),{fragment:true}),addEventListener:(name,fn)=>events['document:'+name]=fn},
   window:{location:{search:'',pathname:'/'},addEventListener:(name,fn)=>events[name]=fn},console,Date,File,Blob,crypto,URLSearchParams,AbortController,
-  URL:{createObjectURL:()=>`blob:${Math.random()}`,revokeObjectURL(){}},setTimeout:()=>0,clearTimeout(){},setInterval:()=>0,
+  URL:{createObjectURL:()=>`blob:${Math.random()}`,revokeObjectURL(){}},setTimeout,clearTimeout,setInterval:()=>0,
   localStorage:{getItem:()=>null,setItem(){}},currentRoom:'room',currentUser:{id:'me'},userProfile:{},myFriendsSet:new Set(),myOutgoingRequestsSet:new Set(),ADMIN_EMAIL:'rivaldo.a.rodrigues@gmail.com',
   escapeHtml:s=>String(s).replaceAll('<','&lt;'),formatMediaUrl:s=>s,formatSmartActivity:()=> 'Last seen yesterday',getVerifiedBadgeHtml:()=>'<b>Verified</b>',
   showToast:message=>toasts.push(message),queueMediaMessage:async(...args)=>queued.push(args),formatFileSize:()=> '4 B'});
  // Match the actual page: the editor used to override these handlers and split
  // albums after the isolated preview tests had already passed.
- for(const file of ['js/actions/media-lightbox.js','js/actions/media-preview.js','js/actions/file-viewer.js','js/orbit-media-editor.js'])vm.runInContext(read(file),c);
+ for(const file of ['js/media-source.js','js/actions/media-lightbox.js','js/actions/media-preview.js','js/actions/file-viewer.js','js/orbit-media-editor.js'])vm.runInContext(read(file),c);
  return {c,node,queued,toasts,events};
 }
 const photo=n=>new File(['photo bytes'],`${n}.png`,{type:'image/png'});
@@ -86,7 +86,7 @@ test('Gallery stages four original files, then sends exactly one album',async()=
  assert.equal(queued.length,0);assert.equal(input.value,'');assert.equal(node('media-preview-counter').textContent,'1 of 4 · Album');
  assert.equal(node('preview-send-button').attributes['aria-label'],'Send album of 4 items');
  await c.sendPreviewMediaBatch();assert.equal(queued.length,1);assert.equal(queued[0][0].length,4);
- queued[0][0].forEach((item,i)=>assert.equal(item.file,files[i]));assert.equal(queued[0][3].roomId,'room');
+ for(const [i,item] of queued[0][0].entries()){assert.notEqual(item.file,files[i]);assert.equal(await item.file.text(),await files[i].text());}assert.equal(queued[0][3].roomId,'room');
  assert.equal(node('modal-media-preview').classList.contains('active'),false);
 });
 test('Add photos appends to the same album and retains caption, edits and quality',async()=>{
@@ -123,4 +123,24 @@ test('directory separates identity, presence and actions, deduplicates and prior
  assert.equal(identity.children[1].textContent,'@b');assert.equal(identity.children[2].textContent,'Online');assert.equal(action.textContent,'Add friend');
  assert.equal(rows.find(x=>x.dataset.userId==='admin').children[1].children[0].children.length,2);
  assert.equal(rows.find(x=>x.dataset.userId==='other').children[1].children[0].children.length,1);
+});
+
+test('18 Gallery file handles are copied before clearing the Android picker',async()=>{
+ for(const hd of [false,true]){
+  const {c,queued}=setup();let cleared=false;
+  const files=Array.from({length:18},(_,index)=>{const file=photo(index),read=file.arrayBuffer.bind(file);file.arrayBuffer=async()=>{if(cleared)throw new DOMException('The requested file could not be read','NotReadableError');return read();};return file;});
+  const input={files,get value(){return cleared?'':'selected';},set value(value){if(value==='')cleared=true;}};
+  await c.handleMediaSelection(input);assert.equal(cleared,true);
+  vm.runInContext(`isPreviewHdQuality=${hd}`,c);await c.sendPreviewMediaBatch();
+  assert.equal(queued.length,1);assert.equal(queued[0][0].length,18);
+  for(const item of queued[0][0])assert.equal(await item.file.text(),'photo bytes');
+  await assert.rejects(files[0].arrayBuffer(),/requested file/);
+ }
+});
+
+test('an unreadable Gallery member never clears the picker or accepts a partial album',async()=>{
+ const {c,queued,toasts}=setup();const good=photo(1),bad=photo(2);bad.arrayBuffer=async()=>{throw new DOMException('provider denied access','NotReadableError');};
+ const input={files:[good,bad,photo(3)],value:'selected'};await c.handleMediaSelection(input);
+ assert.equal(input.value,'selected');assert.equal(queued.length,0);assert.equal(vm.runInContext('mediaPreviewList.length',c),0);
+ assert.match(toasts.at(-1),/Could not read 2.png from Gallery/);
 });

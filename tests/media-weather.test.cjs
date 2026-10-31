@@ -15,6 +15,7 @@ function mediaContext(){
   showToast:message=>toasts.push(message),appendSingleMessageNode:()=>{},scrollFeedToBottom:()=>{},
   updateBubbleSendingProgress:()=>{},updateChatMediaUploadProgress:()=>{},hideChatMediaUploadProgress:()=>{},
   getOrbitStorageObjectPath:()=> 'images/user/file.jpg'});
+ vm.runInContext(fs.readFileSync(path.join(root,'js/media-source.js'),'utf8'),context);
  vm.runInContext(fs.readFileSync(path.join(root,'js/chat/chat-dispatcher.js'),'utf8'),context);
  return {context,toasts,events};
 }
@@ -49,7 +50,7 @@ test('failed disk write retains original bytes and retries use memory',async()=>
  const {context:c}=mediaContext();
  c._openMediaOutboxDb=async()=>({transaction:()=>{throw new Error('DataCloneError');}});
  const file=new Blob(['video bytes']);assert.equal(await c._storeOutboxMedia('msg',0,file),false);
- assert.equal(await c._getOutboxMedia('msg',0),file);
+ assert.equal(await (await c._getOutboxMedia('msg',0)).text(),await file.text());
 });
 test('ciphertext storage URLs never replace plaintext previews; previews release only after confirmation',async()=>{
  const {context:c,events}=mediaContext();const file=new Blob(['photo']);

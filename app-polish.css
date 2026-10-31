@@ -88,3 +88,9 @@ body #screen-chat[data-bubble-style] .quoted-reply-sender {color:var(--bubble-li
 #chat-standard-input-row .pill-inner-icon-btn{flex:0 0 28px;width:28px;height:28px;margin:0;padding:0;align-self:flex-end}
 .msg-bubble-card,.msg-bubble-card .msg-text-content{min-width:0;max-width:100%;box-sizing:border-box;overflow-wrap:anywhere;word-break:normal}
 .msg-bubble-card pre{white-space:pre-wrap;overflow-wrap:anywhere;max-width:100%}
+
+/* Keep the photo entry point and failure explanation usable on phone screens. */
+@media(max-width:600px){#tab-main-chats>.orbit-section-heading{flex-wrap:wrap;gap:12px}.orbit-chat-list-actions{width:100%;flex-wrap:wrap}.orbit-chat-list-actions .orbit-section-action{flex:1;justify-content:center}}
+.orbit-media-send-error{margin:10px 0 4px;padding:10px;border:1px solid currentColor;border-radius:12px;font-size:12px;line-height:1.4;overflow-wrap:anywhere}
+.orbit-media-send-error p{margin:0 0 8px;white-space:normal}.orbit-media-send-error button{font:inherit;color:inherit;background:transparent;border:1px solid currentColor;border-radius:8px;padding:8px;margin:3px;min-height:40px;cursor:pointer}
+.orbit-selection-progress{position:fixed;left:50%;bottom:110px;transform:translateX(-50%);z-index:999998;max-width:90vw;box-sizing:border-box;padding:14px 20px;border-radius:16px;border:1px solid var(--glass-border);background:var(--bg-secondary,#171c26);color:var(--text-primary,#fff);box-shadow:0 10px 30px #0005;overflow-wrap:anywhere;font-size:14px;text-align:center}

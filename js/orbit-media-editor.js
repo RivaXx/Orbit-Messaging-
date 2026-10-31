@@ -4,6 +4,7 @@ function orbitBlobFromData(url){const [head,data]=url.split(',');return new Blob
 function orbitImage(url){return new Promise((resolve,reject)=>{const img=new Image();img.onload=()=>resolve(img);img.onerror=()=>reject(new Error('Could not load this image.'));img.src=url;});}
 function orbitSaveCaption(){const item=mediaPreviewList[currentPreviewIndex];if(item)item.caption=document.getElementById('media-preview-caption-input')?.value||'';}
 function orbitUpdateEditedImage(item,canvas){
+    if(item.thumbUrl?.startsWith('blob:'))URL.revokeObjectURL(item.thumbUrl);item.thumbUrl='';item.previewFile=null;
     if(item.url?.startsWith('blob:'))URL.revokeObjectURL(item.url);
     item.file=orbitBlobFromData(canvas.toDataURL('image/jpeg',.94));item.url=URL.createObjectURL(item.file);item.rotation=0;item.name=item.name.replace(/\.[^.]+$/,'')+'.jpg';
 }

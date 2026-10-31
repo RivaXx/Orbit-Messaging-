@@ -26,6 +26,7 @@ function uploadContext({diskFailure=false}={}){
  const c=vm.createContext({currentUser:{id:'u'},window:{addEventListener(){}},document:{getElementById:()=>null,querySelector:()=>null},navigator:{onLine:true},Blob,File,URL,console:{warn(){}},setTimeout,clearTimeout,
   OrbitCrypto:{selfSeal:async(id,room,value)=>({signed:value}),selfOpen:async record=>record.signed,encryptAttachment:async body=>{assert.equal(await body.text(),'exact original photo');encryptions++;return {body:new Blob(['ciphertext '+encryptions]),digest:String(encryptions).repeat(64),recipientKeyset:'keys'};}},
   updateBubbleSendingProgress(){},updateChatMediaUploadProgress(){},hideChatMediaUploadProgress(){},showToast(){},getOrbitStorageObjectPath:url=>url.split('/').pop()});
+ vm.runInContext(fs.readFileSync(path.join(root,'js/media-source.js'),'utf8'),c);
  vm.runInContext(fs.readFileSync(path.join(root,'js/chat/chat-dispatcher.js'),'utf8'),c);
  c._getOutboxMedia=async()=>original;c._storeOutboxMedia=async(id,index,body)=>{assert.equal(body,original);prepareWrites++;};c._persistMessageOutbox=async()=>{};c._updateOutboxMessage=()=>{};
  c._openMediaOutboxDb=async()=>({transaction:()=>{if(diskFailure)throw Error('disk full');const tx={objectStore:()=>({put:saved=>{disk.set(saved.key,saved);queueMicrotask(()=>tx.oncomplete());},get:key=>{const req={};queueMicrotask(()=>{req.result=disk.get(key);req.onsuccess();});return req;}})};return tx;}});

@@ -1,12 +1,12 @@
 // Chat archives and OS share reception. Nothing restores deleted server history.
 (()=>{
  'use strict';
- let active=null,archive=null,urls=[],busy=false,shareOpened=false;
+ let active=null,archive=null,urls=[],busy=false,shareOpened=false,selectionEpoch=0;
  const account=()=>typeof currentUser!=='undefined'?currentUser?.id:null;
  const check=id=>{if(account()!==id)throw Error('The signed-in account changed. Please start again.');};
  const el=(tag,text,cls)=>{const node=document.createElement(tag);if(text!==undefined)node.textContent=text;if(cls)node.className=cls;return node;};
  const button=(label,fn)=>{const node=el('button',label);node.type='button';node.onclick=fn;return node;};
- function close(){active?.remove();active=null;archive=null;urls.forEach(URL.revokeObjectURL);urls=[];}
+ function close(){selectionEpoch++;active?.remove();active=null;archive=null;urls.forEach(URL.revokeObjectURL);urls=[];}
  function panel(title){
   if(busy)return null;close();
   const overlay=el('div',undefined,'orbit-data-overlay'),dialog=el('section',undefined,'orbit-data-dialog');
@@ -27,6 +27,7 @@
    const user=globalUsersMap.get(id);if(!user||[...rows.values()].some(r=>r.peer===id))return;
    rows.set('dm_'+id,{id:'dm_'+id,title:user.display_name||'Contact',peer:id});
   });
+  if(account())rows.set('self_'+account(),{id:'self_'+account(),title:'Note to Self',isSelf:true});
   return [...rows.values()].sort((a,b)=>a.title.localeCompare(b.title));
  }
  function saveBlob(blob,name){
@@ -149,35 +150,70 @@
   }
   search.oninput=scope.onchange=()=>{page=0;render();};render();
  }
- async function receiveShare(){
-  const id=new URL(location.href).searchParams.get('orbitShare');if(!id||!account()||shareOpened||busy)return;
-  const owner=account();shareOpened=true;
-  try{
-   const payload=await OrbitShareInbox.receive(id,owner);check(owner);
-   const box=panel('Share into Orbit');if(!box){shareOpened=false;return;}
-   box.append(el('p',payload.files.length?payload.files.length+' shared attachment(s). Choose a chat, then review before sending.':'Choose a chat for the shared text.'));
+ function clearShareUrl(){const url=new URL(location.href);url.searchParams.delete('orbitShare');history.replaceState({},'',url.pathname+url.search+url.hash);}
+ async function composeShare(payload,id,owner){
+   check(owner);
+   const box=panel('Send photos and files');if(!box){shareOpened=false;return;}
+   const epoch=selectionEpoch,checkSelection=()=>{check(owner);if(epoch!==selectionEpoch)throw Error('This selection was closed. Choose the files again.');};
+   box.append(el('p',payload.files.length?payload.files.length+' attachment(s) ready. Choose a chat, then review before sending.':'Choose a chat for the shared text.'));
    const text=[payload.title,payload.text,payload.url].filter(Boolean).join('\n').slice(0,20000);if(text)box.append(el('p',text.slice(0,300),'orbit-data-muted'));
    const search=el('input');search.type='search';search.placeholder='Search chats';search.setAttribute('aria-label','Find a recipient');box.append(search);
    const list=el('div',undefined,'orbit-share-targets');box.append(list);
    const select=async target=>{
     if(busy)return;busy=true;
     try{
-     check(owner);
+     checkSelection();
      if(document.getElementById('modal-media-preview')?.classList.contains('active'))throw Error('Finish or cancel the current attachment preview first.');
-     let room=target.id;if(target.peer)room=await resolveCanonicalRoomId(target.peer,target.title);check(owner);
+     let room=target.id;if(target.peer)room=await resolveCanonicalRoomId(target.peer,target.title);checkSelection();
      if(!room)throw Error('Could not open that conversation.');
-     await openChatRoom(room,target.title,null,false,target.peer);check(owner);
+     await openChatRoom(room,target.title,null,!!target.isSelf,target.peer);checkSelection();
      if(currentRoom!==room)throw Error('The selected chat could not open.');
      const composer=document.getElementById('msg-input');if(composer&&text){composer.value=[composer.value,text].filter(Boolean).join('\n');composer.dispatchEvent(new Event('input',{bubbles:true}));}
-     if(payload.files.length)openMediaPreviewScreen(payload.files.map(file=>({file,url:URL.createObjectURL(file),name:file.name,type:file.type.startsWith('image/')?'image':file.type.startsWith('video/')?'video':file.type.startsWith('audio/')?'audio':'file'})));
-     await OrbitShareInbox.remove(id);const url=new URL(location.href);url.searchParams.delete('orbitShare');history.replaceState({},'',url.pathname+url.search+url.hash);close();
+     if(payload.files.length){
+      const previews=await prepareMediaPreviewItems(payload.files.map(file=>({file,name:file.name,type:file.type.startsWith('image/')?'image':file.type.startsWith('video/')?'video':file.type.startsWith('audio/')?'audio':'file'})));
+      try{checkSelection();}catch(e){previews.forEach(releaseMediaPreviewItem);throw e;}
+      openMediaPreviewScreen(previews);
+     }
+     if(id){await OrbitShareInbox.remove(id);clearShareUrl();}close();
     }catch(e){showToast(e.message,'error');}finally{busy=false;}
    };
-   const render=()=>{list.replaceChildren();const rows=targets().filter(t=>t.title.toLowerCase().includes(search.value.toLowerCase()));rows.forEach(t=>list.append(button(t.title,()=>select(t))));if(!rows.length)list.append(el('p','No matching chats. Open or add your contact in Orbit, then share again.'));};
-   search.oninput=render;render();box.append(button('Discard this share',async()=>{await OrbitShareInbox.remove(id);const url=new URL(location.href);url.searchParams.delete('orbitShare');history.replaceState({},'',url.pathname+url.search+url.hash);close();}));
-  }catch(e){shareOpened=false;showToast(e.message,'error');}
+   const render=()=>{list.replaceChildren();const rows=targets().filter(t=>t.title.toLowerCase().includes(search.value.toLowerCase()));rows.forEach(t=>list.append(button(t.title,()=>select(t))));if(!rows.length)list.append(el('p','No matching chats. Open or add your contact in Orbit, then try again.'));};
+   search.oninput=render;render();box.append(button('Discard selection',async()=>{if(id){await OrbitShareInbox.remove(id);clearShareUrl();}close();}));
  }
- window.OrbitChatData={openBackup,receiveShare,close};
+ async function receiveShare(){
+  const id=new URL(location.href).searchParams.get('orbitShare');if(!id||!account()||shareOpened||busy)return;
+  const owner=account();shareOpened=true;
+  try{const payload=await OrbitShareInbox.receive(id,owner);check(owner);await composeShare(payload,id,owner);}
+  catch(e){shareOpened=false;showToast(e.message,'error');}
+ }
+ function openPhotoPicker(){
+  if(!account()){showToast('Sign in before choosing photos.','info');return;}
+  if(busy){showToast('Wait for the current operation to finish.','info');return;}
+  if(document.getElementById('modal-media-preview')?.classList.contains('active')){showToast('Finish or cancel the current attachment preview first.','info');return;}
+  document.getElementById('inp-orbit-share-photos')?.click();
+ }
+ async function photosPicked(input){
+  if(!input.files?.length||busy)return;
+  const owner=account(),box=panel('Reading Gallery selection');if(!box)return;
+  const epoch=selectionEpoch;
+  const progress=el('p','Reading selected photos…');progress.setAttribute('role','status');box.append(progress);
+  busy=true;input.disabled=true;
+  try{
+   const files=await OrbitMediaSource.capture(input.files,(index,count)=>{progress.textContent='Reading '+index+' of '+count+'…';},()=>account()===owner&&selectionEpoch===epoch);
+   check(owner);input.value='';busy=false;await composeShare({files},null,owner);
+  }catch(e){if(selectionEpoch===epoch){progress.textContent=e.message;showToast(e.message,'error');}input.value='';}
+  finally{busy=false;input.disabled=false;}
+ }
+ function openGalleryHelp(){
+  const box=panel('Gallery sharing');if(!box)return;
+  box.append(el('p','Use Chats → Send photos to pick Gallery photos, choose a chat, and review the album. This works without an Android Share menu entry.'));
+  box.append(button('Choose photos now',openPhotoPicker));
+  box.append(el('p','For Gallery → Share → Orbit, Chrome must register the installed app with Android. Orbit cannot add itself to that system menu from a web page. Updating the web code alone does not confirm that Android refreshed the installed share target.'));
+  box.append(el('p','If Orbit is already installed through Chrome: update Chrome and Google Play services. In Chrome, open chrome://webapks, find Orbit, and use its Update control if available. Finish pending sends before closing or reinstalling Orbit.'));
+  const progress=el('p','', 'orbit-data-status');box.append(progress);
+  box.append(button('Check Orbit web update',async()=>{try{const registration=await navigator.serviceWorker?.getRegistration();if(!registration)throw Error('Open Orbit online in Chrome, then check again.');await registration.update();progress.textContent='Web update checked. Finish pending sends, close Orbit, then reopen it. Android share registration is updated separately by Chrome.';}catch(e){progress.textContent=e.message;}}));
+ }
+ window.OrbitChatData={openBackup,receiveShare,openPhotoPicker,photosPicked,openGalleryHelp,close};
  document.addEventListener('orbit-encryption-locked',()=>{close();shareOpened=false;});
  document.addEventListener('keydown',e=>{if(e.key==='Escape')close();});
 })();
