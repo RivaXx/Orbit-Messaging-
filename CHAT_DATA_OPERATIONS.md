@@ -10,6 +10,8 @@ One fixed server cutoff defines a job. It clears older chat message rows, associ
 
 Storage object bytes are removed with Supabase Storage API. Deleting SQL storage metadata is deliberately forbidden. A durable queue, short batches and leases survive failures and browser closure. A retry resumes the same cutoff rather than deleting newly arrived chats. Completion appears only when no eligible object remains pending. A file changed or made into a profile picture before its batch is protected. Upload paths are immutable in Orbit; administrators should not concurrently overwrite an old object path while cleanup runs.
 
+A server-only attachment-reference index is backfilled once and maintained by message triggers. It prevents a full chat-history scan for each storage object, and is automatically cleared for deleted messages. Browser roles cannot read or modify it.
+
 Scheduled cleanup uses the same queue with the existing ten-day retention rule. Keep the existing authenticated cron/secret configuration. A large job may need further scheduled invocations or the admin's Resume button. New messages and uploads after a job's cutoff are preserved. Devices check the cleanup watermark when opening history, reconnecting, returning to the app and periodically while visible; stale cached content is filtered. Offline devices learn about a purge on reconnect. Downloaded archives and recipient screenshots cannot be remotely erased.
 
 ## Personal encrypted archives
