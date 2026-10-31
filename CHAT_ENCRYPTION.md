@@ -4,6 +4,8 @@ Release: `e2ee-20261025-r1`. Reviewed: 25 October 2026.
 
 ## User setup and recovery
 
+For downloadable conversation archives and local restore, see [Chat data operations](CHAT_DATA_OPERATIONS.md). Encryption-key recovery below is separate from a chat-history backup.
+
 Open **Chat security** in the profile or chat menu. Each account creates an encryption identity locally and chooses a separate recovery passphrase of 20–256 characters. Prefer several randomly selected words; do not reuse the login password. Every member of a conversation must finish setup before new messages can send.
 
 The client encrypts its private-key backup before uploading it. Signing into another device and entering the recovery passphrase restores the same account identity and access to its encrypted history. Orbit cannot recover that history if the passphrase and unlocked keys are lost. There is deliberately no administrator decryption key or password-reset bypass.

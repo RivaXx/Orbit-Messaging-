@@ -1,65 +1,70 @@
 // Orbit Messenger — messaging delivery and storage policy repair
-const CACHE_NAME = 'orbit-e2ee-20261025-r1';
+importScripts('./js/share-inbox.js');
+const CACHE_NAME = 'orbit-chat-data-20261027-r1';
 const PRECACHE_URLS = [
-    "./js/orbit-encryption.js?v=e2ee-20261025-r1",
-    "./encryption.css?v=e2ee-20261025-r1",
+    "./js/share-inbox.js",
+    "./js/chat-data.js?v=chat-data-20261027-r1",
+    "./js/chat-backup-core.mjs",
+    "./chat-data.css?v=chat-data-20261027-r1",
+    "./js/orbit-encryption.js?v=chat-data-20261027-r1",
+    "./encryption.css?v=chat-data-20261027-r1",
     "./js/e2ee-core.mjs",
     "./js/e2ee-worker.mjs",
     "./assets/vendor/openpgp.min.mjs",
-    "./js/storage-recovery.js?v=e2ee-20261025-r1",
-    "./notes.css?v=e2ee-20261025-r1",
-    "./js/orbit-notes.js?v=e2ee-20261025-r1",
+    "./js/storage-recovery.js?v=chat-data-20261027-r1",
+    "./notes.css?v=chat-data-20261027-r1",
+    "./js/orbit-notes.js?v=chat-data-20261027-r1",
     "./",
     "./index.html",
-    "./intro.css?v=e2ee-20261025-r1",
-    "./js/orbit-introduction.js?v=e2ee-20261025-r1",
-    "./js/orbit-intro-scene.js?v=e2ee-20261025-r1",
+    "./intro.css?v=chat-data-20261027-r1",
+    "./js/orbit-introduction.js?v=chat-data-20261027-r1",
+    "./js/orbit-intro-scene.js?v=chat-data-20261027-r1",
     "./manifest.json",
     "./orbit-icon.svg",
     "./orbit-icon.svg?v=brand-20261015",
     "./assets/vendor/tus.min.js",
-    "./js/logger.js?v=e2ee-20261025-r1",
-    "./assets/vendor/supabase.min.js?v=e2ee-20261025-r1",
-    "./style.css?v=e2ee-20261025-r1",
-    "./tools.css?v=e2ee-20261025-r1",
-    "./chat-upgrades.css?v=e2ee-20261025-r1",
-    "./photo-weather.css?v=e2ee-20261025-r1",
-    "./messaging-experience.css?v=e2ee-20261025-r1",
-    "./app-polish.css?v=e2ee-20261025-r1",
-    "./js/config.js?v=e2ee-20261025-r1",
-    "./js/rooms.js?v=e2ee-20261025-r1",
-    "./js/chat-actions.js?v=e2ee-20261025-r1",
-    "./js/actions/media-lightbox.js?v=e2ee-20261025-r1",
-    "./js/actions/media-preview.js?v=e2ee-20261025-r1",
-    "./js/actions/file-viewer.js?v=e2ee-20261025-r1",
-    "./js/actions/voice-recorder.js?v=e2ee-20261025-r1",
-    "./js/actions/chat-extras.js?v=e2ee-20261025-r1",
-    "./js/messaging-notifications.js?v=e2ee-20261025-r1",
-    "./js/chat-gestures.js?v=e2ee-20261025-r1",
-    "./js/chat-select.js?v=e2ee-20261025-r1",
-    "./js/chat-share.js?v=e2ee-20261025-r1",
-    "./js/chat/message-controls.js?v=e2ee-20261025-r1",
-    "./js/chat/chat-history.js?v=e2ee-20261025-r1",
-    "./js/chat/chat-feed.js?v=e2ee-20261025-r1",
-    "./js/chat/chat-dispatcher.js?v=e2ee-20261025-r1",
-    "./js/chat/chat-realtime.js?v=e2ee-20261025-r1",
-    "./js/chat.js?v=e2ee-20261025-r1",
-    "./js/calculator.js?v=e2ee-20261025-r1",
-    "./js/tools.js?v=e2ee-20261025-r1",
-    "./js/celestial.js?v=e2ee-20261025-r1",
-    "./js/ui/ui-auth.js?v=e2ee-20261025-r1",
-    "./js/ui/ui-navigation.js?v=e2ee-20261025-r1",
-    "./js/ui/ui-modals.js?v=e2ee-20261025-r1",
-    "./js/ui/ui-notifications.js?v=e2ee-20261025-r1",
-    "./js/ui.js?v=e2ee-20261025-r1",
-    "./js/orbit-chat-services.js?v=e2ee-20261025-r1",
-    "./js/orbit-media-editor.js?v=e2ee-20261025-r1",
-    "./js/orbit-private-photos.js?v=e2ee-20261025-r1",
-    "./js/orbit-banner-weather.js?v=e2ee-20261025-r1",
-    "./js/liquid-glass.js?v=e2ee-20261025-r1",
-    "./js/messaging-experience.js?v=e2ee-20261025-r1",
-    "./js/call-experience.js?v=e2ee-20261025-r1",
-    "./js/orbit-interface.js?v=e2ee-20261025-r1"
+    "./js/logger.js?v=chat-data-20261027-r1",
+    "./assets/vendor/supabase.min.js?v=chat-data-20261027-r1",
+    "./style.css?v=chat-data-20261027-r1",
+    "./tools.css?v=chat-data-20261027-r1",
+    "./chat-upgrades.css?v=chat-data-20261027-r1",
+    "./photo-weather.css?v=chat-data-20261027-r1",
+    "./messaging-experience.css?v=chat-data-20261027-r1",
+    "./app-polish.css?v=chat-data-20261027-r1",
+    "./js/config.js?v=chat-data-20261027-r1",
+    "./js/rooms.js?v=chat-data-20261027-r1",
+    "./js/chat-actions.js?v=chat-data-20261027-r1",
+    "./js/actions/media-lightbox.js?v=chat-data-20261027-r1",
+    "./js/actions/media-preview.js?v=chat-data-20261027-r1",
+    "./js/actions/file-viewer.js?v=chat-data-20261027-r1",
+    "./js/actions/voice-recorder.js?v=chat-data-20261027-r1",
+    "./js/actions/chat-extras.js?v=chat-data-20261027-r1",
+    "./js/messaging-notifications.js?v=chat-data-20261027-r1",
+    "./js/chat-gestures.js?v=chat-data-20261027-r1",
+    "./js/chat-select.js?v=chat-data-20261027-r1",
+    "./js/chat-share.js?v=chat-data-20261027-r1",
+    "./js/chat/message-controls.js?v=chat-data-20261027-r1",
+    "./js/chat/chat-history.js?v=chat-data-20261027-r1",
+    "./js/chat/chat-feed.js?v=chat-data-20261027-r1",
+    "./js/chat/chat-dispatcher.js?v=chat-data-20261027-r1",
+    "./js/chat/chat-realtime.js?v=chat-data-20261027-r1",
+    "./js/chat.js?v=chat-data-20261027-r1",
+    "./js/calculator.js?v=chat-data-20261027-r1",
+    "./js/tools.js?v=chat-data-20261027-r1",
+    "./js/celestial.js?v=chat-data-20261027-r1",
+    "./js/ui/ui-auth.js?v=chat-data-20261027-r1",
+    "./js/ui/ui-navigation.js?v=chat-data-20261027-r1",
+    "./js/ui/ui-modals.js?v=chat-data-20261027-r1",
+    "./js/ui/ui-notifications.js?v=chat-data-20261027-r1",
+    "./js/ui.js?v=chat-data-20261027-r1",
+    "./js/orbit-chat-services.js?v=chat-data-20261027-r1",
+    "./js/orbit-media-editor.js?v=chat-data-20261027-r1",
+    "./js/orbit-private-photos.js?v=chat-data-20261027-r1",
+    "./js/orbit-banner-weather.js?v=chat-data-20261027-r1",
+    "./js/liquid-glass.js?v=chat-data-20261027-r1",
+    "./js/messaging-experience.js?v=chat-data-20261027-r1",
+    "./js/call-experience.js?v=chat-data-20261027-r1",
+    "./js/orbit-interface.js?v=chat-data-20261027-r1"
 ];
 
 self.addEventListener('install', event => {
@@ -83,6 +88,20 @@ self.addEventListener('activate', event => {
 // requests and private chat media always go directly to the network.
 self.addEventListener('fetch', event => {
     const request = event.request;
+    const shareUrl=new URL(request.url);
+    if(request.method==='POST'&&shareUrl.origin===self.location.origin&&shareUrl.pathname===new URL('_orbit-share',self.registration.scope).pathname){
+        event.respondWith((async()=>{
+            try{
+                if(Number(request.headers.get('content-length'))>110*1024*1024)throw Error('Shared files are too large. Open Orbit and attach smaller batches.');
+                const id=await OrbitShareInbox.save(await request.formData());
+                const target=new URL('index.html',self.registration.scope);target.searchParams.set('orbitShare',id);
+                return Response.redirect(target.href,303);
+            }catch(error){
+                const message=String(error.message||'Could not receive this share.').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+                return new Response('<!doctype html><html><meta name="viewport" content="width=device-width"><title>Orbit share</title><body><h1>Could not receive shared items</h1><p>'+message+'</p><a href="./index.html">Open Orbit</a></body></html>',{status:400,headers:{'Content-Type':'text/html;charset=utf-8','Cache-Control':'no-store','Content-Security-Policy':"default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'"}});
+            }
+        })());return;
+    }
     if (request.method !== 'GET') return;
     const url = new URL(request.url);
     const local = url.origin === self.location.origin;

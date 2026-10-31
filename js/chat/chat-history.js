@@ -356,7 +356,7 @@ let chatHistoryRetryTimer = null;
 const olderPageCache = new Map();
 const ROOM_HISTORY_PAGE_SIZE = 25;
 function filterRoomHistory(messages, aliases, peerId = null, selfId = currentUser?.id) {
-    return (messages || []).filter(message => message && (typeof orbitIsMessageHidden !== 'function' || !orbitIsMessageHidden(message.id)) && aliases.includes(message.room) &&
+    return (messages || []).filter(message => message && !window.orbitMessageWasCleared?.(message) && (typeof orbitIsMessageHidden !== 'function' || !orbitIsMessageHidden(message.id)) && aliases.includes(message.room) &&
         (!peerId || message.sender_id === selfId || message.sender_id === peerId));
 }
 async function queryRoomHistoryPage(client, aliases, cursor = null, signal = null) {

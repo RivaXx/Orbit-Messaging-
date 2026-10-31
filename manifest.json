@@ -6,6 +6,29 @@
   "background_color": "#08080A",
   "theme_color": "#08080A",
   "orientation": "portrait",
+  "scope": "./",
+  "share_target": {
+    "action": "./_orbit-share",
+    "method": "POST",
+    "enctype": "multipart/form-data",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url",
+      "files": [
+        {
+          "name": "files",
+          "accept": [
+            "image/*",
+            "video/*",
+            "audio/*",
+            "application/*",
+            "text/*"
+          ]
+        }
+      ]
+    }
+  },
   "icons": [
     {
       "src": "./orbit-icon.svg?v=brand-20261015",
