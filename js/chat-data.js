@@ -186,11 +186,18 @@
   try{const payload=await OrbitShareInbox.receive(id,owner);check(owner);await composeShare(payload,id,owner);}
   catch(e){shareOpened=false;showToast(e.message,'error');}
  }
- function openPhotoPicker(){
+ function canPickPhotos(){
   if(!account()){showToast('Sign in before choosing photos.','info');return;}
   if(busy){showToast('Wait for the current operation to finish.','info');return;}
   if(document.getElementById('modal-media-preview')?.classList.contains('active')){showToast('Finish or cancel the current attachment preview first.','info');return;}
-  document.getElementById('inp-orbit-share-photos')?.click();
+  return true;
+ }
+ function openPhotoPicker(){
+  if(!canPickPhotos())return;
+  const input=document.getElementById('inp-orbit-share-photos');
+  if(!input){showToast('The Gallery picker did not load. Close and reopen Orbit to finish its update.','error');return;}
+  try{if(typeof input.showPicker==='function')input.showPicker();else input.click();}
+  catch(e){try{input.click();}catch(_){showToast('Tap Send photos in Chats to open the native Gallery picker.','error');}}
  }
  async function photosPicked(input){
   if(!input.files?.length||busy)return;
@@ -213,7 +220,7 @@
   const progress=el('p','', 'orbit-data-status');box.append(progress);
   box.append(button('Check Orbit web update',async()=>{try{const registration=await navigator.serviceWorker?.getRegistration();if(!registration)throw Error('Open Orbit online in Chrome, then check again.');await registration.update();progress.textContent='Web update checked. Finish pending sends, close Orbit, then reopen it. Android share registration is updated separately by Chrome.';}catch(e){progress.textContent=e.message;}}));
  }
- window.OrbitChatData={openBackup,receiveShare,openPhotoPicker,photosPicked,openGalleryHelp,close};
+ window.OrbitChatData={openBackup,receiveShare,canPickPhotos,openPhotoPicker,photosPicked,openGalleryHelp,close};
  document.addEventListener('orbit-encryption-locked',()=>{close();shareOpened=false;});
  document.addEventListener('keydown',e=>{if(e.key==='Escape')close();});
 })();

@@ -351,7 +351,7 @@ function deletePreviewThumb(idx) {
 }
 
 // ── Client-Side Image Compression & Optimization (WhatsApp/iMessage standard) ──
-async function compressImageForUpload(fileOrDataUrl, maxDim = null, quality = null) {
+async function compressImageForUpload(fileOrDataUrl, maxDim = null, quality = null, targetBytes = null) {
     const isHd = typeof isPreviewHdQuality !== 'undefined' && isPreviewHdQuality;
     const effectiveType = navigator.connection?.effectiveType || '';
     const isSlowConn = ['slow-2g', '2g', '3g'].includes(effectiveType) || navigator.connection?.saveData === true;
@@ -397,7 +397,13 @@ async function compressImageForUpload(fileOrDataUrl, maxDim = null, quality = nu
                 ctx.drawImage(img, 0, 0, width, height);
                 // Keep binary bytes throughout the SD/HD pipeline. Base64 adds
                 // multiple full-size strings and buffers for every photo.
-                canvas.toBlob(blob => finish(blob ? null : new Error('Could not encode this photo. Try a JPG or PNG image.'), blob), 'image/jpeg', targetQuality);
+                const encode = quality => canvas.toBlob(blob => {
+                    if (settled) return;
+                    if (!blob) { finish(new Error('Could not encode this photo. Try a JPG or PNG image.')); return; }
+                    if (targetBytes && blob.size > targetBytes && quality > 0.46) encode(Math.max(0.46, quality - 0.12));
+                    else finish(null, blob);
+                }, 'image/jpeg', quality);
+                encode(targetQuality);
             } catch (error) { finish(error); }
         };
         img.onerror = () => finish(new Error('This photo could not be decoded. Download a JPG or PNG copy to this phone and select it again.'));

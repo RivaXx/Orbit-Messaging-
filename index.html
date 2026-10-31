@@ -34,23 +34,23 @@
     <!-- Font Awesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" media="print" onload="this.media='all'">
 
-    <script defer src="js/storage-recovery.js?v=albums-20261101-r2"></script>
+    <script defer src="js/storage-recovery.js?v=album-repair-20261101-r3"></script>
     <!-- Standalone Client-Side Error Logger (Captures all uncaught errors & rejections) -->
-    <script defer src="js/logger.js?v=albums-20261101-r2"></script>
+    <script defer src="js/logger.js?v=album-repair-20261101-r3"></script>
 
     <!-- Core Supabase Client -->
-    <script defer src="assets/vendor/supabase.min.js?v=albums-20261101-r2"></script>
+    <script defer src="assets/vendor/supabase.min.js?v=album-repair-20261101-r3"></script>
     <!-- Document, crop and resumable upload tools load only when needed. -->
 
-    <link rel="stylesheet" href="intro.css?v=albums-20261101-r2">
-    <script defer src="js/orbit-introduction.js?v=albums-20261101-r2"></script>
-    <link rel="stylesheet" href="style.css?v=albums-20261101-r2">
-    <link rel="stylesheet" href="tools.css?v=albums-20261101-r2">
-<link rel="stylesheet" href="chat-upgrades.css?v=albums-20261101-r2">
-<link rel="stylesheet" href="photo-weather.css?v=albums-20261101-r2">
-    <link rel="stylesheet" href="messaging-experience.css?v=albums-20261101-r2">
-    <link rel="stylesheet" href="app-polish.css?v=albums-20261101-r2">
-<link rel="stylesheet" href="notes.css?v=albums-20261101-r2">
+    <link rel="stylesheet" href="intro.css?v=album-repair-20261101-r3">
+    <script defer src="js/orbit-introduction.js?v=album-repair-20261101-r3"></script>
+    <link rel="stylesheet" href="style.css?v=album-repair-20261101-r3">
+    <link rel="stylesheet" href="tools.css?v=album-repair-20261101-r3">
+<link rel="stylesheet" href="chat-upgrades.css?v=album-repair-20261101-r3">
+<link rel="stylesheet" href="photo-weather.css?v=album-repair-20261101-r3">
+    <link rel="stylesheet" href="messaging-experience.css?v=album-repair-20261101-r3">
+    <link rel="stylesheet" href="app-polish.css?v=album-repair-20261101-r3">
+<link rel="stylesheet" href="notes.css?v=album-repair-20261101-r3">
 </head>
 <body>
 <script>try{document.body.classList.toggle('light-mode',localStorage.getItem('orbit_theme')==='light');}catch(_){}</script>
@@ -414,7 +414,7 @@
 
         <!-- Tab 1: MAIN CHATS (Includes Self Chat & All Recents) -->
         <div id="tab-main-chats" class="contact-feed">
-            <div class="orbit-section-heading"><div><span class="orbit-section-eyebrow">YOUR SPACE</span><h2>Chats</h2><p>Your recent conversations</p></div><div class="orbit-chat-list-actions"><button type="button" class="glass-icon-btn orbit-section-action" onclick="OrbitChatData.openPhotoPicker()" aria-label="Send photos from Gallery"><i class="fa-regular fa-images"></i><span>Send photos</span></button><button type="button" class="glass-icon-btn orbit-section-action" onclick="beginChatSelection()" aria-label="Select multiple chats"><i class="fa-regular fa-square-check"></i><span>Select</span></button><button type="button" class="glass-icon-btn orbit-section-action" onclick="switchTab('global')"><i class="fa-solid fa-pen-to-square"></i><span>New chat</span></button></div></div>
+            <div class="orbit-section-heading"><div><span class="orbit-section-eyebrow">YOUR SPACE</span><h2>Chats</h2><p>Your recent conversations</p></div><div class="orbit-chat-list-actions"><label class="glass-icon-btn orbit-section-action orbit-native-gallery-trigger"><i class="fa-regular fa-images" aria-hidden="true"></i><span>Send photos</span><input type="file" id="inp-orbit-share-photos" accept="image/*,video/*" multiple aria-label="Send photos from Gallery" onclick="if(!OrbitChatData.canPickPhotos())event.preventDefault()" onchange="OrbitChatData.photosPicked(this)"></label><button type="button" class="glass-icon-btn orbit-section-action" onclick="beginChatSelection()" aria-label="Select multiple chats"><i class="fa-regular fa-square-check"></i><span>Select</span></button><button type="button" class="glass-icon-btn orbit-section-action" onclick="switchTab('global')"><i class="fa-solid fa-pen-to-square"></i><span>New chat</span></button></div></div>
 <!-- Pinned Self Chat (Note to Self) -->
             <div id="self-chat-pill" class="contact-glass-card self-chat-card touch-fix" onclick="openSelfChat()">
                 <div class="c-av-wrap" style="border-color:var(--self-chat-blue); background:rgba(10,132,255,0.15);">
@@ -2530,7 +2530,6 @@
     </div>
 
     <!-- Hidden Attachment Inputs with Explicit Type Filters -->
-    <input type="file" id="inp-orbit-share-photos" accept="image/*,video/*" multiple style="display:none;" onchange="OrbitChatData.photosPicked(this)">
     <input type="file" id="inp-gallery" accept="image/*,video/*" multiple style="display:none;" onchange="handleFileSelect(event, 'image')">
     <input type="file" id="inp-video" accept="video/*" style="display:none;" onchange="handleFileSelect(event, 'video')">
     <input type="file" id="inp-camera" accept="image/*" capture="environment" style="display:none;" onchange="handleFileSelect(event, 'image')">
@@ -2575,35 +2574,35 @@
     <div id="simple-toast" class="simple-toast">Notification</div>
 </div>
 
-<script defer src="js/config.js?v=albums-20261101-r2"></script>
-<script defer src="js/orbit-encryption.js?v=albums-20261101-r2"></script>
-<link rel="stylesheet" href="encryption.css?v=albums-20261101-r2">
-<script defer src="js/rooms.js?v=albums-20261101-r2"></script>
-    <script defer src="js/chat-actions.js?v=albums-20261101-r2"></script>
-    <script defer src="js/actions/media-lightbox.js?v=albums-20261101-r2"></script>
-    <script defer src="js/media-source.js?v=albums-20261101-r2"></script>
-    <script defer src="js/actions/media-preview.js?v=albums-20261101-r2"></script>
-    <script defer src="js/actions/file-viewer.js?v=albums-20261101-r2"></script>
-    <script defer src="js/actions/voice-recorder.js?v=albums-20261101-r2"></script>
-    <script defer src="js/actions/chat-extras.js?v=albums-20261101-r2"></script>
-    <script defer src="js/messaging-notifications.js?v=albums-20261101-r2"></script>
-    <script defer src="js/chat-gestures.js?v=albums-20261101-r2"></script>
-    <script defer src="js/chat-select.js?v=albums-20261101-r2"></script>
-    <script defer src="js/chat-share.js?v=albums-20261101-r2"></script>
-    <script defer src="js/chat/message-controls.js?v=albums-20261101-r2"></script>
-<script defer src="js/chat/chat-history.js?v=albums-20261101-r2"></script>
-    <script defer src="js/chat/chat-feed.js?v=albums-20261101-r2"></script>
-    <script defer src="js/chat/chat-dispatcher.js?v=albums-20261101-r2"></script>
-    <script defer src="js/chat/chat-realtime.js?v=albums-20261101-r2"></script>
-    <script defer src="js/chat.js?v=albums-20261101-r2"></script>
-<script defer src="js/calculator.js?v=albums-20261101-r2"></script>
-    <script defer src="js/tools.js?v=albums-20261101-r2"></script>
-    <script defer src="js/celestial.js?v=albums-20261101-r2"></script>
-    <script defer src="js/ui/ui-auth.js?v=albums-20261101-r2"></script>
-    <script defer src="js/ui/ui-navigation.js?v=albums-20261101-r2"></script>
-    <script defer src="js/ui/ui-modals.js?v=albums-20261101-r2"></script>
-    <script defer src="js/ui/ui-notifications.js?v=albums-20261101-r2"></script>
-<script defer src="js/ui.js?v=albums-20261101-r2"></script>
+<script defer src="js/config.js?v=album-repair-20261101-r3"></script>
+<script defer src="js/orbit-encryption.js?v=album-repair-20261101-r3"></script>
+<link rel="stylesheet" href="encryption.css?v=album-repair-20261101-r3">
+<script defer src="js/rooms.js?v=album-repair-20261101-r3"></script>
+    <script defer src="js/chat-actions.js?v=album-repair-20261101-r3"></script>
+    <script defer src="js/actions/media-lightbox.js?v=album-repair-20261101-r3"></script>
+    <script defer src="js/media-source.js?v=album-repair-20261101-r3"></script>
+    <script defer src="js/actions/media-preview.js?v=album-repair-20261101-r3"></script>
+    <script defer src="js/actions/file-viewer.js?v=album-repair-20261101-r3"></script>
+    <script defer src="js/actions/voice-recorder.js?v=album-repair-20261101-r3"></script>
+    <script defer src="js/actions/chat-extras.js?v=album-repair-20261101-r3"></script>
+    <script defer src="js/messaging-notifications.js?v=album-repair-20261101-r3"></script>
+    <script defer src="js/chat-gestures.js?v=album-repair-20261101-r3"></script>
+    <script defer src="js/chat-select.js?v=album-repair-20261101-r3"></script>
+    <script defer src="js/chat-share.js?v=album-repair-20261101-r3"></script>
+    <script defer src="js/chat/message-controls.js?v=album-repair-20261101-r3"></script>
+<script defer src="js/chat/chat-history.js?v=album-repair-20261101-r3"></script>
+    <script defer src="js/chat/chat-feed.js?v=album-repair-20261101-r3"></script>
+    <script defer src="js/chat/chat-dispatcher.js?v=album-repair-20261101-r3"></script>
+    <script defer src="js/chat/chat-realtime.js?v=album-repair-20261101-r3"></script>
+    <script defer src="js/chat.js?v=album-repair-20261101-r3"></script>
+<script defer src="js/calculator.js?v=album-repair-20261101-r3"></script>
+    <script defer src="js/tools.js?v=album-repair-20261101-r3"></script>
+    <script defer src="js/celestial.js?v=album-repair-20261101-r3"></script>
+    <script defer src="js/ui/ui-auth.js?v=album-repair-20261101-r3"></script>
+    <script defer src="js/ui/ui-navigation.js?v=album-repair-20261101-r3"></script>
+    <script defer src="js/ui/ui-modals.js?v=album-repair-20261101-r3"></script>
+    <script defer src="js/ui/ui-notifications.js?v=album-repair-20261101-r3"></script>
+<script defer src="js/ui.js?v=album-repair-20261101-r3"></script>
 
     <!-- WhatsApp View Once Fullscreen Viewer Modal -->
     <div id="modal-view-once-viewer" class="glass-modal-overlay view-once-modal-overlay hide" aria-hidden="true" onclick="closeViewOnceViewer()">
@@ -2636,8 +2635,8 @@
  <div id="orbit-editor-filters" class="hide"><button type="button" onclick="applyOrbitMediaFilter('vivid')">Vivid</button><button type="button" onclick="applyOrbitMediaFilter('mono')">Mono</button><button type="button" onclick="applyOrbitMediaFilter('warm')">Warm</button><button type="button" onclick="applyOrbitMediaFilter('bright')">Bright</button></div>
  <div class="orbit-editor-stage"><canvas id="orbit-editor-canvas"></canvas></div>
 </div>
-<script defer src="js/orbit-chat-services.js?v=albums-20261101-r2"></script>
-<script defer src="js/orbit-media-editor.js?v=albums-20261101-r2"></script>
+<script defer src="js/orbit-chat-services.js?v=album-repair-20261101-r3"></script>
+<script defer src="js/orbit-media-editor.js?v=album-repair-20261101-r3"></script>
 <div id="modal-orbit-weather" class="glass-modal-overlay orbit-weather-page" data-weather="idle" data-motion="calm"><div class="orbit-weather-scene" aria-hidden="true"><div class="orbit-weather-orb"></div><div class="orbit-weather-cloud cloud-a"></div><div class="orbit-weather-cloud cloud-b"></div><span class="orbit-weather-particle" style="--i:0"></span><span class="orbit-weather-particle" style="--i:1"></span><span class="orbit-weather-particle" style="--i:2"></span><span class="orbit-weather-particle" style="--i:3"></span><span class="orbit-weather-particle" style="--i:4"></span><span class="orbit-weather-particle" style="--i:5"></span><span class="orbit-weather-particle" style="--i:6"></span><span class="orbit-weather-particle" style="--i:7"></span><span class="orbit-weather-particle" style="--i:8"></span><span class="orbit-weather-particle" style="--i:9"></span><span class="orbit-weather-particle" style="--i:10"></span><span class="orbit-weather-particle" style="--i:11"></span><span class="orbit-weather-particle" style="--i:12"></span><span class="orbit-weather-particle" style="--i:13"></span></div><div class="glass-modal-box">
  <div class="modal-header-row"><strong>Weather near you</strong><button type="button" class="btn-reset" onclick="closeOrbitWeatherConsent()" aria-label="Close weather settings">✕</button></div>
  <div class="orbit-weather-hero"><span id="orbit-weather-place">Your local forecast</span><strong id="orbit-weather-temperature">—°</strong><span id="orbit-weather-condition">Enable location to see current conditions</span></div><label class="orbit-weather-motion-label" for="orbit-weather-motion">Weather animation <select id="orbit-weather-motion" onchange="setOrbitWeatherMotion(this.value)"><option value="calm">Calm</option><option value="live">Live</option><option value="still">Still</option></select></label><p>Allow device location to show nearby weather below the Orbit logo. Orbit requests a fresh, high-accuracy location and shows the accuracy your device reports.</p>
@@ -2646,15 +2645,15 @@
  <button type="button" id="orbit-weather-disable" class="glass-btn-secondary hide" onclick="disableOrbitWeather()">Turn off local weather</button>
  <p class="orbit-weather-attribution">Weather by <a href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer">Open-Meteo</a> · Air quality: <a href="https://atmosphere.copernicus.eu/" target="_blank" rel="noopener noreferrer">CAMS</a> · Places by <a href="https://www.bigdatacloud.com/" target="_blank" rel="noopener noreferrer">BigDataCloud</a></p>
 </div></div>
-<script defer src="js/orbit-private-photos.js?v=albums-20261101-r2"></script>
-<script defer src="js/orbit-banner-weather.js?v=albums-20261101-r2"></script>
-<script defer src="js/liquid-glass.js?v=albums-20261101-r2"></script>
-    <script defer src="js/messaging-experience.js?v=albums-20261101-r2"></script>
-<script defer src="js/call-experience.js?v=albums-20261101-r2"></script>
-<script defer src="js/orbit-interface.js?v=albums-20261101-r2"></script>
-<script defer src="js/orbit-notes.js?v=albums-20261101-r2"></script>
-<link rel="stylesheet" href="chat-data.css?v=albums-20261101-r2">
+<script defer src="js/orbit-private-photos.js?v=album-repair-20261101-r3"></script>
+<script defer src="js/orbit-banner-weather.js?v=album-repair-20261101-r3"></script>
+<script defer src="js/liquid-glass.js?v=album-repair-20261101-r3"></script>
+    <script defer src="js/messaging-experience.js?v=album-repair-20261101-r3"></script>
+<script defer src="js/call-experience.js?v=album-repair-20261101-r3"></script>
+<script defer src="js/orbit-interface.js?v=album-repair-20261101-r3"></script>
+<script defer src="js/orbit-notes.js?v=album-repair-20261101-r3"></script>
+<link rel="stylesheet" href="chat-data.css?v=album-repair-20261101-r3">
 <script defer src="js/share-inbox.js"></script>
-<script defer src="js/chat-data.js?v=albums-20261101-r2"></script>
+<script defer src="js/chat-data.js?v=album-repair-20261101-r3"></script>
 </body>
 </html>

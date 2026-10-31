@@ -201,7 +201,42 @@ function _messageOutboxStorageKey(userId) {
     return `orbit_message_outbox_v1_${userId}`;
 }
 
+async function _writeOutboxRecord(userId, record) {
+    const db = await _openMediaOutboxDb();
+    await new Promise((resolve, reject) => {
+        const tx = db.transaction('files', 'readwrite');
+        const timer = setTimeout(() => { try { tx.abort(); } catch (_) {} reject(new Error('Queue storage timed out.')); }, 10000);
+        const finish = error => { clearTimeout(timer); error ? reject(error) : resolve(); };
+        tx.oncomplete = () => finish();
+        tx.onerror = tx.onabort = () => finish(tx.error || new Error('Queue storage failed.'));
+        try { tx.objectStore('files').put({ key: `outbox:${userId}`, owner: userId, queue: record }); }
+        catch (error) { clearTimeout(timer); reject(error); }
+    });
+}
+
+async function _readOutboxRecord(userId) {
+    let disk = null, legacy = null;
+    try {
+        const db = await _openMediaOutboxDb();
+        disk = await new Promise((resolve, reject) => {
+            const request = db.transaction('files', 'readonly').objectStore('files').get(`outbox:${userId}`);
+            const timer = setTimeout(() => reject(new Error('Queue restore timed out.')), 10000);
+            request.onsuccess = () => { clearTimeout(timer);resolve(request.result?.owner === userId ? request.result.queue : null); };
+            request.onerror = () => { clearTimeout(timer);reject(request.error); };
+        });
+    } catch (_) {}
+    try {
+        const value = JSON.parse(localStorage.getItem(_messageOutboxStorageKey(userId)) || 'null');
+        legacy = Array.isArray(value) ? { updatedAt: 0, items: value } : value;
+    } catch (_) {}
+    if (disk && (!Array.isArray(disk.items) || !Number.isFinite(disk.updatedAt))) disk = null;
+    if (legacy && !Array.isArray(legacy.items)) legacy = null;
+    const record = disk && (!legacy || disk.updatedAt >= legacy.updatedAt) ? disk : legacy;
+    return Array.isArray(record?.items) ? record.items : [];
+}
+
 const _outboxPersistVersions=new Map();
+const _outboxStorageWarningAt=new Map();
 async function _persistMessageOutbox(userId = currentUser?.id) {
     if (!userId) return;
     if(!window.OrbitCrypto?.isUnlocked())return;
@@ -223,9 +258,22 @@ async function _persistMessageOutbox(userId = currentUser?.id) {
                 return safeItem;
             });
         const sealed=items.length?await OrbitCrypto.sealQueue(items,userId):[];
-        if(window.OrbitCrypto?.isUnlocked()&&currentUser?.id===userId&&_outboxPersistVersions.get(userId)===version)localStorage.setItem(_messageOutboxStorageKey(userId), JSON.stringify(sealed));
+        if(!window.OrbitCrypto?.isUnlocked()||currentUser?.id!==userId||_outboxPersistVersions.get(userId)!==version)return;
+        const record = { version: 2, updatedAt: Date.now(), items: sealed };
+        try {
+            await _writeOutboxRecord(userId, record);
+            // Move only after the encrypted IndexedDB record commits. Browser
+            // localStorage's small quota must not be the main message queue.
+            if(currentUser?.id===userId&&_outboxPersistVersions.get(userId)===version)localStorage.removeItem?.(_messageOutboxStorageKey(userId));
+        } catch (_) {
+            if(currentUser?.id===userId&&_outboxPersistVersions.get(userId)===version)localStorage.setItem(_messageOutboxStorageKey(userId), JSON.stringify(record));
+        }
     } catch (error) {
         console.warn('[Orbit] Could not persist message outbox:', error);
+        if (Date.now()-(_outboxStorageWarningAt.get(userId)||0)>10000 && typeof showToast==='function') {
+            _outboxStorageWarningAt.set(userId,Date.now());
+            showToast('This device could not save the pending message. Keep Orbit open until it finishes sending.', 'error');
+        }
     }
 }
 
@@ -285,8 +333,10 @@ function _updateOutboxMessage(item, status, error = null) {
 }
 
 function _isTransientMessageError(error) {
-    if (!error || !navigator.onLine) return true;
+    if (!error) return true;
     const code = String(error.code || '');
+    if (code === '54000' || /idx_messages_feed_covering|exceeds btree.*maximum/i.test(error.message || '')) return false;
+    if (!navigator.onLine) return true;
     if (['42501', '22P02', '23503', '23505', '23514', '42703', '42804', '42P01', 'PGRST204', 'PGRST205'].includes(code)) return false;
     const message = String(error.message || error.error_description || '');
     const parsedHttpStatus = Number(message.match(/HTTP\s+(\d{3})/i)?.[1] || 0);
@@ -358,7 +408,12 @@ async function _deliverOutboxMessage(messageId) {
                 _scheduleMessageRetry(item);
             } else {
                 _updateOutboxMessage(item, 'failed', error);
-                showToast('Message was not accepted: ' + (error.message || 'Check Supabase message permissions/schema.'), 'error');
+                const indexFailure = error.code === '54000' || /idx_messages_feed_covering|exceeds btree.*maximum/i.test(error.message || '');
+                if (indexFailure) {
+                    item.lastError = 'Orbit’s database rejected the album because its feed index includes oversized message content. The database index needs repair. Your uploaded files are retained for retry.';
+                    _updateOutboxMessage(item, 'failed', {message:item.lastError});
+                }
+                showToast(indexFailure ? item.lastError : 'Message was not accepted: ' + (error.message || 'Check Supabase message permissions/schema.'), 'error');
             }
             return;
         }
@@ -403,7 +458,7 @@ async function _hydrateAndResumeMessageOutbox(userId = currentUser?.id) {
     if (_outboxHydratedForUser !== userId) {
         _outboxHydratedForUser = userId;
         try {
-            const stored = await OrbitCrypto.openQueue(JSON.parse(localStorage.getItem(_messageOutboxStorageKey(userId)) || '[]'));
+            const stored = await OrbitCrypto.openQueue(await _readOutboxRecord(userId));
             if(currentUser?.id!==userId)return;
             if (Array.isArray(stored)) stored.forEach(item => {
                 if (item?.payload?.id && item.payload.sender_id === userId) {
@@ -798,7 +853,7 @@ async function _uploadQueuedMedia(item) {
             const slowLink = ['slow-2g', '2g', '3g'].includes(navigator.connection?.effectiveType) || navigator.connection?.saveData;
             const targetDim = isHd ? 2560 : slowLink ? 720 : 1080;
             const targetQuality = isHd ? 0.92 : slowLink ? 0.58 : 0.70;
-            const compressed = await compressImageForUpload(uploadBody, targetDim, targetQuality);
+            const compressed = await compressImageForUpload(uploadBody, targetDim, targetQuality, isHd ? null : (slowLink ? 80 : 160) * 1024);
             if (compressed instanceof Blob) {
                 uploadBody = compressed;
                 mime = compressed.type || 'image/jpeg';
