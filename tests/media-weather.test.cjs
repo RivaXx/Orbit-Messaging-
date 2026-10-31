@@ -6,7 +6,7 @@ const path=require('node:path');
 const root=path.join(__dirname,'..');
 function mediaContext(){
  const toasts=[],store=new Map(),events=[];
- const context=vm.createContext({OrbitCrypto:{requireUnlocked:async()=>{},clearDraft(){},sealLocalFile:async file=>file,sealQueue:async items=>items,encryptAttachment:async body=>({body,digest:'a'.repeat(64)})},window:{addEventListener:()=>{}},document:{getElementById:()=>null,querySelector:()=>null,addEventListener:()=>{}},
+ const context=vm.createContext({OrbitCrypto:{requireUnlocked:async()=>{},selfSeal:async(id,room,value)=>value,selfOpen:async value=>value,clearDraft(){},sealLocalFile:async file=>file,sealQueue:async items=>items,encryptAttachment:async body=>({body,digest:'a'.repeat(64)})},window:{addEventListener:()=>{}},document:{getElementById:()=>null,querySelector:()=>null,addEventListener:()=>{}},
   navigator:{onLine:true},Blob,File,URL:{createObjectURL:()=> 'blob:preview',revokeObjectURL:()=>events.push('revoke')},crypto,
   localStorage:{getItem:k=>store.get(k)??null,setItem:(k,v)=>store.set(k,v)},console:{warn:()=>{},error:()=>{}},
   setTimeout,clearTimeout,setInterval:()=>0,clearInterval:()=>{},

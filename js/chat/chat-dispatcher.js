@@ -13,10 +13,31 @@ let _mediaOutboxDbPromise = null;
 // Some devices deny IndexedDB or cannot clone File objects. Keep the original
 // bytes in this tab so a disk-cache failure never prevents an online upload.
 const _mediaOutboxMemory = new Map();
+const _mediaUploadCheckpoints = new Map();
 const _mediaOutboxVolatile = new Set();
 const _pendingChatCacheWrites = new Set();
 let _chatCacheWriteTimer = null;
 let _mediaUploadLane = Promise.resolve();
+let _mediaStagingLane = Promise.resolve();
+
+function _setMediaQueuePhase(item, phase) {
+    const node = document.getElementById(`msg-${item.payload.id}`);
+    const label = node?.querySelector('.media-upload-pct-label');
+    if (label) label.textContent = phase;
+}
+
+// Serialize staging across messages as each encryption reads the entire file.
+function _stageOutboxMedia(item, items) {
+    const operation = _mediaStagingLane.then(async () => {
+        for (const info of item.mediaUploadInfo) {
+            if (item.cancelled || currentUser?.id !== item.payload.sender_id) return;
+            _setMediaQueuePhase(item, `Saving ${info.index + 1}/${item.mediaUploadInfo.length}`);
+            await _storeOutboxMedia(item.payload.id, info.index, items[info.index].file);
+        }
+    });
+    _mediaStagingLane = operation.catch(() => {});
+    return operation;
+}
 
 function _flushChatCacheWrites() {
     _chatCacheWriteTimer = null;
@@ -97,6 +118,9 @@ async function _getOutboxMedia(messageId, index) {
 }
 
 async function _deleteOutboxMedia(messageId, index = null) {
+    for (const key of _mediaUploadCheckpoints.keys()) {
+        if (index === null ? key.startsWith(`${messageId}:`) : key === `${messageId}:${index}:upload`) _mediaUploadCheckpoints.delete(key);
+    }
     for (const key of _mediaOutboxMemory.keys()) {
         if (index === null ? key.startsWith(`${messageId}:`) : key === `${messageId}:${index}`) {
             _mediaOutboxMemory.delete(key); _mediaOutboxVolatile.delete(key);
@@ -107,7 +131,7 @@ async function _deleteOutboxMedia(messageId, index = null) {
         await new Promise((resolve, reject) => {
             const tx = db.transaction('files', 'readwrite');
             const store = tx.objectStore('files');
-            if (index !== null) store.delete(`${messageId}:${index}`);
+            if (index !== null) { store.delete(`${messageId}:${index}`); store.delete(`${messageId}:${index}:upload`); }
             else {
                 const request = store.openCursor();
                 request.onsuccess = () => {
@@ -121,6 +145,50 @@ async function _deleteOutboxMedia(messageId, index = null) {
             tx.onerror = () => reject(tx.error);
         });
     } catch (_) {}
+}
+
+// Commit the upload bytes and signed retry metadata together, separately from
+// the original. A reload between this commit and queue persistence can recover
+// the exact ciphertext without encrypting ciphertext as if it were a photo.
+async function _storeOutboxUpload(messageId, index, body, info) {
+    const owner = currentUser?.id, key = `${messageId}:${index}:upload`;
+    const sealedInfo = await OrbitCrypto.selfSeal(messageId, `local-upload:${index}`, { purpose: 'upload-checkpoint', ...info });
+    if (!owner || currentUser?.id !== owner) throw new Error('The signed-in account changed.');
+    const saved = { key, messageId, owner, body, sealedInfo };
+    _mediaUploadCheckpoints.set(key, saved);
+    try {
+        const db = await _openMediaOutboxDb();
+        await new Promise((resolve, reject) => {
+            const tx = db.transaction('files', 'readwrite');
+            const timer = setTimeout(() => { try { tx.abort(); } catch (_) {} reject(new Error('Device upload storage stalled.')); }, 10000);
+            const finish = error => { clearTimeout(timer); error ? reject(error) : resolve(); };
+            tx.oncomplete = () => finish();
+            tx.onerror = tx.onabort = () => finish(tx.error || new Error('Could not save upload checkpoint.'));
+            tx.objectStore('files').put(saved);
+        });
+    } catch (_) {
+        showToast('Keep this tab open until the upload finishes. Device storage could not save its retry checkpoint.', 'info');
+    }
+}
+
+async function _getOutboxUpload(messageId, index) {
+    const key = `${messageId}:${index}:upload`, owner = currentUser?.id;
+    let saved = _mediaUploadCheckpoints.get(key);
+    if (!saved) {
+        try {
+            const db = await _openMediaOutboxDb();
+            saved = await new Promise((resolve, reject) => {
+                const request = db.transaction('files', 'readonly').objectStore('files').get(key);
+                request.onsuccess = () => resolve(request.result);
+                request.onerror = () => reject(request.error);
+            });
+        } catch (_) { return null; }
+    }
+    if (!saved) return null;
+    if (!owner || saved.owner !== owner) throw new Error('This upload belongs to another account.');
+    const info = await OrbitCrypto.selfOpen(saved.sealedInfo);
+    if (currentUser?.id !== owner || info.purpose !== 'upload-checkpoint' || !/^[a-f0-9]{64}$/.test(info.digest || '') || !(saved.body instanceof Blob)) throw new Error('Invalid upload checkpoint.');
+    return { body: saved.body, ...info };
 }
 
 // ── Global in-flight tracking: lets realtime dedup find optimistic bubbles regardless of status ──
@@ -564,6 +632,9 @@ async function queueMediaMessage(items, caption = '', messageType = null, target
         ? crypto.randomUUID()
         : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => { const r = Math.random() * 16 | 0; return (c === 'x' ? r : (r & 3 | 8)).toString(16); });
     if(items.some(item=>!item.file && !item.url?.startsWith('data:')))throw new Error('An original file is missing. Select the photos again.');
+    if (items.length > 20 || items.some(item => item.file?.size > 49 * 1024 * 1024) || items.reduce((total, item) => total + (item.file?.size || 0), 0) > 100 * 1024 * 1024) {
+        throw new Error('Send up to 20 files, 49 MB each and 100 MB total. Split larger selections into smaller batches.');
+    }
     const originals = items.map((item,index)=>item.type==='image' && item.originalQuality ? index : -1).filter(index=>index>=0);
     if (originals.length) {
         const client = await ensureSupabase();
@@ -620,7 +691,7 @@ async function queueMediaMessage(items, caption = '', messageType = null, target
         created_at: new Date().toISOString()
     };
     const item = { payload, aliases, clientTempId: tempId, attempt: 0, status: 'queued', mediaUploadInfo };
-    item.mediaReadyPromise = Promise.all(mediaUploadInfo.map(info => _storeOutboxMedia(id, info.index, items[info.index].file)));
+    item.mediaReadyPromise = _stageOutboxMedia(item, items);
     _messageOutbox.set(id, item);
     _inflightMessages.set(id, { clientTempId: tempId, room: roomAtSend, status: 'sending', text: payload.text });
 
@@ -685,11 +756,20 @@ async function _uploadQueuedMedia(item) {
             reportProgress();
             continue;
         }
-        const file = await _getOutboxMedia(item.payload.id, info.index);
+        const checkpoint = await _getOutboxUpload(item.payload.id, info.index);
+        if (checkpoint) {
+            info.prepared = true;
+            info.originalMime = checkpoint.originalMime;
+            info.encryptedDigest = checkpoint.digest;
+            info.recipientKeyset = checkpoint.recipientKeyset;
+            info.checkpointVersion = 1;
+        }
+        const file = checkpoint?.body || await _getOutboxMedia(item.payload.id, info.index);
         if (!file) throw new Error(`Queued file ${info.name || ''} is missing on this device. Please select it again.`);
         uploadTotals.set(info.index, file.size);
         const attachment = item.payload.attachments[info.index];
-        if (attachment && !attachment.url) {
+        if (checkpoint) attachment.size = checkpoint.plainSize;
+        if (attachment && !attachment.url && !checkpoint && !info.encryptedDigest) {
             attachment.url = URL.createObjectURL(file);
             attachment.upload_pending = true;
         }
@@ -735,20 +815,28 @@ async function _uploadQueuedMedia(item) {
         }
 
         let encryptedUpload;
-        if(info.encryptedDigest)encryptedUpload={body:uploadBody,digest:info.encryptedDigest,recipientKeyset:info.recipientKeyset};
+        if (checkpoint) encryptedUpload = checkpoint;
+        // Compatibility with queues saved by the preceding release, which kept
+        // ciphertext in the original slot and its digest in the queue record.
+        else if(info.encryptedDigest && !info.checkpointVersion)encryptedUpload={body:uploadBody,digest:info.encryptedDigest,recipientKeyset:info.recipientKeyset};
         else{
+            _setMediaQueuePhase(item, `Encrypting ${completedCount + 1}/${totalUploads}`);
             encryptedUpload=await OrbitCrypto.encryptAttachment(uploadBody,item.payload.room);
             info.originalMime=mime;
-            await _storeOutboxMedia(item.payload.id,info.index,encryptedUpload.body);
+            await _storeOutboxUpload(item.payload.id, info.index, encryptedUpload.body, {
+                digest: encryptedUpload.digest, recipientKeyset: encryptedUpload.recipientKeyset,
+                originalMime: mime, plainSize: uploadBody.size
+            });
             info.encryptedDigest=encryptedUpload.digest;
             info.recipientKeyset=encryptedUpload.recipientKeyset;
+            info.checkpointVersion=1;
             await _persistMessageOutbox(item.payload.sender_id);
         }
         const originalMime=info.originalMime;uploadBody=encryptedUpload.body;mime='application/octet-stream';
         let url = null, privatePhoto = null;
         try {
             if(attachment?.view_once){
-                privatePhoto=await uploadOrbitPrivatePhoto(uploadBody,'attachment.bin',item.payload.id,info.index,progress=>{uploadTotals.set(info.index,progress.total||uploadBody.size);uploadBytes.set(info.index,progress.loaded||0);reportProgress();});url=privatePhoto.url;
+                privatePhoto=await uploadOrbitPrivatePhoto(uploadBody,'attachment.bin',item.payload.id,info.checkpointVersion ? `${info.index}_${encryptedUpload.digest}` : info.index,progress=>{uploadTotals.set(info.index,progress.total||uploadBody.size);uploadBytes.set(info.index,progress.loaded||0);reportProgress();});url=privatePhoto.url;
             } else url = await uploadMediaToStorage(uploadBody, 'attachment.bin', mime, 'encrypted', progress => {
                 updateChatMediaUploadProgress(info.name, progress.percent, completedCount, totalUploads);
                 uploadTotals.set(info.index, progress.total);
@@ -759,7 +847,8 @@ async function _uploadQueuedMedia(item) {
                     updateBubbleSendingProgress(item.payload.id, overallPct);
                     if (item.clientTempId) updateBubbleSendingProgress(item.clientTempId, overallPct);
                 }
-            }, `${item.payload.id}_${info.index}`);
+                _setMediaQueuePhase(item, `${completedCount + 1}/${totalUploads} · ${progress.percent}%`);
+            }, `${item.payload.id}_${info.index}${info.checkpointVersion ? '_' + encryptedUpload.digest : ''}`);
         } catch (uploadError) {
             console.warn('[Orbit] Cloud storage upload failed:', uploadError?.message);
             // CRITICAL: Never inject multi-megabyte base64 strings into the database!

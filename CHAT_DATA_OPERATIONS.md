@@ -33,3 +33,13 @@ Users sign in if needed, choose a conversation and see Orbit's existing attachme
 ## Verification
 
 Run `node --test tests/*.test.cjs tests/*.test.mjs`. The cleanup regression uses only synthetic rows/storage metadata inside rolled-back transactions and a 1970 cutoff; it never calls the Storage deletion API. Do not run a live global purge as a deployment test. Node tests cover authorization, pagination, storage failures/resume, encrypted archives/tampering and share POST handling. Browser checks cover real IndexedDB encryption, export/restore and both themes. Actual appearance in Android's OS share sheet additionally requires testing an installed PWA on an Android device.
+
+## Media reliability release — 1 November 2026
+
+`media-share-20261101-r1` serializes local file staging across albums and allows longer file-crypto operations. The composer accepts up to 20 files, 49 MiB each and 100 MiB total, with saving/encrypting/upload progress shown in the message. Original quality bypasses compression; existing account allowances still apply.
+
+The original/prepared file remains in its encrypted local queue slot. A separate IndexedDB record commits the upload ciphertext and signed, encrypted retry metadata in one transaction. A stale outbox record can recover that checkpoint after reload. New object names include the ciphertext digest, so regenerating ciphertext after a lost local checkpoint cannot accidentally reuse a different object's bytes. Legacy pending queues keep their earlier paths. Message UUIDs stay fixed and insertion still occurs only after every attachment upload succeeds. A device-storage failure falls back to this tab and asks the user to keep it open. Confirmed delivery removes both original and checkpoint records.
+
+The manifest includes square 192px and 512px PNG icons alongside the existing SVG. Android gallery integration still requires a supporting installed/updated PWA, and OS share registration may lag an app update. Finish pending sends before reinstalling. Physical Android share-sheet behavior has not been verified.
+
+This release retains mandatory encryption. Optional ordinary chat and conversation privacy consent require a separate authenticated server/client protocol change and are not included. Recovery passphrases, encryption identities, existing encrypted history, backup formats, storage policies and admin cleanup are unchanged.

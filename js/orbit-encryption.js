@@ -28,6 +28,7 @@
   if(typeof _outboxHydratedForUser!=='undefined')_outboxHydratedForUser=null;
   if(typeof _inflightMessages!=='undefined')_inflightMessages.clear();
   if(typeof _mediaOutboxMemory!=='undefined')_mediaOutboxMemory.clear();
+  if(typeof _mediaUploadCheckpoints!=='undefined')_mediaUploadCheckpoints.clear();
   document.dispatchEvent(new CustomEvent('orbit-encryption-locked'));
  }
  function syncOwner(){const id=uid();if(owner&&owner!==id)reset();owner=id;return id;}
@@ -42,7 +43,7 @@
   }
   const id=++sequence,requestEpoch=epoch;
   return new Promise((resolve,reject)=>{
-   const timer=setTimeout(()=>{pending.delete(id);reject(error('Encryption timed out. Retry with a smaller attachment.'));},60000);
+   const timer=setTimeout(()=>{pending.delete(id);reject(error('Encryption timed out. Retry with a smaller attachment.'));}, method==='encryptFile'||method==='decryptFile'?300000:60000);
    pending.set(id,{resolve,reject,timer,owner:idOwner,epoch:requestEpoch});worker.postMessage({id,method,args});
   });
  }
