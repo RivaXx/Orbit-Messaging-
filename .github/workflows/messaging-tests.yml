@@ -18,7 +18,7 @@ jobs:
 
       - name: Install isolated PostgreSQL test engine
         run: npm install --prefix "$RUNNER_TEMP/orbit-pg-check" --ignore-scripts --no-audit --no-fund @electric-sql/pglite@0.5.13
-      - name: Reproduce and repair oversized album indexes in PostgreSQL
+      - name: Verify album repair, analytics authorization and note retention in PostgreSQL
         env:
           NODE_PATH: ${{ runner.temp }}/orbit-pg-check/node_modules
         run: node --test tests/album-index.pg.cjs

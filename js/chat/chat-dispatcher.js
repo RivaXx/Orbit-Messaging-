@@ -26,15 +26,19 @@ function _setMediaQueuePhase(item, phase) {
     if (label) label.textContent = phase;
 }
 
-// Serialize staging across messages as each encryption reads the entire file.
+// Stage one file at a time while the uploader works on files already staged.
 function _stageOutboxMedia(item, items) {
-    const operation = _mediaStagingLane.then(async () => {
-        for (const info of item.mediaUploadInfo) {
-            if (item.cancelled || currentUser?.id !== item.payload.sender_id) return;
-            _setMediaQueuePhase(item, `Saving ${info.index + 1}/${item.mediaUploadInfo.length}`);
-            await _storeOutboxMedia(item.payload.id, info.index, items[info.index].file);
-        }
-    });
+    let previous = _mediaStagingLane;
+    item.mediaStages = new Map();
+    const active = () => !item.cancelled && currentUser?.id === item.payload.sender_id;
+    for (const {index} of item.mediaUploadInfo) {
+        previous = previous.then(async () => {
+            if (!active()) return;
+            await _storeOutboxMedia(item.payload.id, index, items[index].file, active);
+        });
+        item.mediaStages.set(index, previous);
+    }
+    const operation = Promise.all(item.mediaStages.values());
     _mediaStagingLane = operation.catch(() => {});
     return operation;
 }
@@ -79,14 +83,16 @@ function _openMediaOutboxDb() {
     return _mediaOutboxDbPromise;
 }
 
-async function _storeOutboxMedia(messageId, index, file) {
+async function _storeOutboxMedia(messageId, index, file, active = () => true) {
     const key = `${messageId}:${index}`;
     file = await OrbitMediaSource.snapshot(file);
+    if (!active()) return false;
     _mediaOutboxMemory.set(key, file);
     if (_mediaOutboxVolatile.has(key)) return false;
     try {
         const encryptedFile=await OrbitCrypto.sealLocalFile(file,messageId,index);
         const db = await _openMediaOutboxDb();
+        if (!active()) return false;
         await new Promise((resolve, reject) => {
             const tx = db.transaction('files', 'readwrite');
             const timer = setTimeout(() => { try { tx.abort(); } catch (_) {} reject(new Error('Device media storage stalled.')); }, 3000);
@@ -100,7 +106,7 @@ async function _storeOutboxMedia(messageId, index, file) {
         _mediaOutboxVolatile.delete(key);
         return true;
     } catch (error) {
-        _mediaOutboxVolatile.add(key);
+        if (active()) _mediaOutboxVolatile.add(key);
         console.warn('[Orbit] Device media cache unavailable; sending from this tab:', error?.message);
         return false;
     }
@@ -245,14 +251,17 @@ async function _persistMessageOutbox(userId = currentUser?.id) {
         const items = Array.from(_messageOutbox.values())
             .filter(item => item.payload?.sender_id === userId)
             .map(item => {
-                const safeItem = { ...item, payload: { ...item.payload, attachments: (item.payload.attachments || []).map(a => ({ ...a })) } };
+                const attachments = (item.payload.attachments || []).map(a => ({ ...a, url: /^(blob:|data:)/i.test(a.url || '') ? '' : a.url }));
+                const safeItem = { ...item, payload: { ...item.payload, attachments } };
                 (safeItem.mediaUploadInfo || []).forEach(upload => {
-                    if (safeItem.payload.attachments[upload.index]?.upload_pending !== false) {
-                        safeItem.payload.attachments[upload.index].url = '';
-                        safeItem.payload.attachments[upload.index].upload_pending = true;
+                    const attachment = attachments[upload.index];
+                    if (attachment && attachment.upload_pending !== false) {
+                        attachment.url = '';
+                        attachment.upload_pending = true;
                     }
                 });
                 delete safeItem.mediaReadyPromise;
+                delete safeItem.mediaStages;
                 delete safeItem.progressTimer;
                 delete safeItem.previewObjectUrls;
                 return safeItem;
@@ -389,7 +398,7 @@ async function _deliverOutboxMessage(messageId) {
                 await _uploadQueuedMedia(item);
             } finally { releaseUpload(); }
         }
-        if (_messageOutbox.get(messageId) !== item || item.cancelled) return;
+        if (_messageOutbox.get(messageId) !== item || item.cancelled || currentUser?.id !== item.payload.sender_id) return;
         if (typeof sendFastMessagePreview === 'function') sendFastMessagePreview(item.payload);
         const { data, error } = await executeResilientMessageInsert(item.payload);
         // Realtime can confirm the insert before the slower REST response; its
@@ -465,9 +474,10 @@ async function _hydrateAndResumeMessageOutbox(userId = currentUser?.id) {
                     delete item.progressTimer;
                     const oldNetworkFailure = /Network error during file upload|failed to fetch|ERR_INTERNET_DISCONNECTED|timed out|connection dropped/i.test(item.lastError || '');
                     item.status = item.status === 'failed' && !oldNetworkFailure ? 'failed' : 'queued';
-                    _messageOutbox.set(item.payload.id, item);
+                    if (!_messageOutbox.has(item.payload.id)) _messageOutbox.set(item.payload.id, item);
                 }
             });
+            if (localStorage.getItem(_messageOutboxStorageKey(userId)) !== null) void _persistMessageOutbox(userId);
         } catch (_) {}
     }
     _messageOutbox.forEach(item => {
@@ -780,12 +790,18 @@ async function queueMediaMessage(items, caption = '', messageType = null, target
         document.getElementById('reply-preview-bar')?.classList.add('hide');
     }
     _persistMessageOutbox(userAtSend);
+    const online = navigator.onLine;
+    if (online) void _deliverOutboxMessage(id);
     item.mediaReadyPromise.then(() => {
+        if (item.cancelled || _messageOutbox.get(id) !== item) return;
+        delete item.mediaStages;
+        delete item.mediaReadyPromise;
         if (mediaUploadInfo.some(info => _mediaOutboxVolatile.has(`${id}:${info.index}`))) {
             showToast('Device storage is unavailable. Keep this tab open until the media finishes sending.', 'info');
         }
-        return _deliverOutboxMessage(id);
+        if (!online) return _deliverOutboxMessage(id);
     }).catch(error => {
+        if (online || item.cancelled || _messageOutbox.get(id) !== item) return;
         item.status = 'failed';
         _updateOutboxMessage(item, 'failed', error);
         showToast(`Media saved in chat but could not be queued for upload: ${error.message || 'device storage error'}`, 'error');
@@ -795,7 +811,6 @@ window.queueMediaMessage = queueMediaMessage;
 
 async function _uploadQueuedMedia(item) {
     if (!Array.isArray(item.mediaUploadInfo) || !item.mediaUploadInfo.length) return;
-    if (item.mediaReadyPromise) await item.mediaReadyPromise;
     const totalUploads = item.mediaUploadInfo.length;
     let completedCount = 0;
     const uploadBytes = new Map();
@@ -811,7 +826,8 @@ async function _uploadQueuedMedia(item) {
 
     // Serialize uploads so one failed request cannot race other files or queue persistence.
     for (const info of item.mediaUploadInfo) {
-        if (item.cancelled) return;
+        await item.mediaStages?.get(info.index);
+        if (item.cancelled || currentUser?.id !== item.payload.sender_id) return;
         const saved = item.payload.attachments[info.index];
         if (saved?.upload_pending === false && (saved.encrypted&&saved.storage_path || /^https?:\/\//.test(saved.url || '') || saved.storage_bucket==='orbit-view-once')) {
             completedCount++;
@@ -872,7 +888,8 @@ async function _uploadQueuedMedia(item) {
                 if (info.rotation || converted.size < file.size) uploadBody = converted;
                 else { uploadBody = file; mime = file.type || info.mime; }
             }
-            await _storeOutboxMedia(item.payload.id, info.index, uploadBody);
+            await _storeOutboxMedia(item.payload.id, info.index, uploadBody, () => !item.cancelled && currentUser?.id === item.payload.sender_id);
+            if (item.cancelled || currentUser?.id !== item.payload.sender_id) return;
             info.prepared = true;
             info.rotation = 0;
             info.mime = mime;
@@ -888,6 +905,7 @@ async function _uploadQueuedMedia(item) {
         else{
             _setMediaQueuePhase(item, `Encrypting ${completedCount + 1}/${totalUploads}`);
             encryptedUpload=await OrbitCrypto.encryptAttachment(uploadBody,item.payload.room);
+            if (item.cancelled || currentUser?.id !== item.payload.sender_id) return;
             info.originalMime=mime;
             await _storeOutboxUpload(item.payload.id, info.index, encryptedUpload.body, {
                 digest: encryptedUpload.digest, recipientKeyset: encryptedUpload.recipientKeyset,
@@ -933,14 +951,6 @@ async function _uploadQueuedMedia(item) {
         }
         item.payload.attachments[info.index] = { name: info.name, url:attachment?.url||'', encrypted:true,digest:encryptedUpload.digest,recipient_keyset:encryptedUpload.recipientKeyset,mime:originalMime,storage_path: privatePhoto?.storage_path || getOrbitStorageObjectPath(url), storage_bucket: privatePhoto?.storage_bucket||'chat-assets', type: info.type, quality:attachment?.quality,size: attachment?.size || file.size, upload_pending: false, view_once: !!attachment?.view_once };
         
-        // Update bubble DOM element directly so the permanent URL is immediately active
-        const bubbleNode = document.getElementById(`msg-${item.payload.id}`) ||
-            document.querySelector(`[data-client-temp-id="${item.clientTempId}"]`);
-        if (bubbleNode) {
-            const imgEls = bubbleNode.querySelectorAll('.wa-image-bunch-grid img');
-            // Keep the local plaintext preview. The storage URL now contains ciphertext.
-        }
-
         // Persist completed URLs before starting the next file; keep blobs until delivery.
         _persistMessageOutbox(item.payload.sender_id);
         // Keep original blobs until the entire message is confirmed, so partial retries work.

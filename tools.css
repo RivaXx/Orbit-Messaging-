@@ -1,3 +1,13 @@
+/* Clock controls use consistent, touch-friendly hit areas. */
+.orbit-alarm-days{display:flex;gap:7px;flex-wrap:wrap;align-items:center;border:1px solid var(--glass-border);border-radius:14px;padding:9px;margin:0;color:var(--text-primary)}
+.orbit-alarm-days label{display:flex;align-items:center;gap:4px;padding:6px;font-size:13px}
+.orbit-alarm-days small,.orbit-alarm-repeat,.orbit-calendar-handoff{color:var(--text-secondary);font-size:12px}
+.orbit-alarm-days small{flex-basis:100%}
+.orbit-alarm-edit,.orbit-timer-presets button,.orbit-clock-action{min-height:44px;padding:0 12px;width:auto;font:inherit}
+.orbit-timer-presets{display:flex;flex-wrap:wrap;justify-content:center;gap:8px}
+.orbit-clock-action{margin:10px auto}
+.stopwatch-lap-row{font-variant-numeric:tabular-nums;gap:8px;flex-wrap:wrap}
+
 /* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
    ORBIT PRO TOOLS SUITE STYLESHEET (tools.css)
    Includes: iOS Clock Suite, Pro Calculator, Calendar & Holidays, Compass & Level

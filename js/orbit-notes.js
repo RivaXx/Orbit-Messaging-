@@ -1,16 +1,25 @@
 // Personal notes: confirmed cloud saves, local drafts and one source for calendar reminders.
 const OrbitNotes=(()=>{
- const state={owner:null,rows:[],filter:'all',query:'',editing:null,saving:false,loadEpoch:0,dirty:false,draftTimer:null,channel:null,editVersion:null,operations:new Map()};
+ const state={owner:null,rows:[],filter:'all',query:'',editing:null,saving:false,loadEpoch:0,dirty:false,draftTimer:null,channel:null,editVersion:null,operations:new Map(),layout:'list',tag:'',color:'',type:'',checkedLast:false,order:[]};
  const colors=['default','blue','green','rose','amber'];
  const el=id=>document.getElementById(id),esc=value=>escapeHtml(String(value??''));
- const key=()=>`orbit_note_draft_${currentUser?.id||'guest'}`;
+ const legacyDraftKey=()=>`orbit_note_draft_${currentUser?.id||'guest'}`;
+ const key=()=>`${legacyDraftKey()}_${state.editing ? 'note_'+state.editing : 'new'}`;
+ function clearDraft(){
+  try{
+   localStorage.removeItem(key());
+   if(JSON.parse(localStorage.getItem(legacyDraftKey())||'null')?.id===state.editing)localStorage.removeItem(legacyDraftKey());
+  }catch(_){}
+ }
+ const prefKey=()=>`orbit_note_preferences_${state.owner}`;
  const validId=id=>typeof id==='string'&&/^[a-z0-9_-]{1,80}$/i.test(id);
  function normalized(row){return {...row,id:String(row.id),title:String(row.title||'Untitled'),content:String(row.content||''),tags:Array.isArray(row.tags)?row.tags:[],color:colors.includes(row.color)?row.color:'default',pinned:!!row.pinned,archived:!!row.archived};}
  function init(){
   if(!el('notes-toolbar')){
    const toolbar=document.createElement('div');toolbar.id='notes-toolbar';toolbar.className='notes-toolbar';
    toolbar.innerHTML='<label class="notes-search"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i><input id="notes-search" type="search" placeholder="Search notes and tags" aria-label="Search notes"></label><div class="notes-filters" role="group" aria-label="Note folders">'+[['all','All notes'],['pinned','Pinned'],['archived','Archive'],['trash','Trash']].map(([id,name])=>`<button type="button" data-note-filter="${id}" aria-pressed="${id==='all'}">${name}</button>`).join('')+'</div><p id="notes-sync-status" role="status"></p>';
-   el('notes-list').before(toolbar);el('notes-search').addEventListener('input',event=>{state.query=event.target.value;render();});
+   el('notes-list').before(toolbar);
+   initLibraryControls(toolbar);el('notes-search').addEventListener('input',event=>{state.query=event.target.value;render();});
    toolbar.querySelectorAll('[data-note-filter]').forEach(button=>button.addEventListener('click',()=>{state.filter=button.dataset.noteFilter;render();}));
   }
   if(!el('note-reminder')){
@@ -20,15 +29,35 @@ const OrbitNotes=(()=>{
    el('note-body-inp').after(extra);
    el('note-insert-checklist').onclick=()=>{const input=el('note-body-inp'),at=input.selectionStart??input.value.length;input.value=input.value.slice(0,at)+(at&&input.value[at-1]!=='\n'?'\n':'')+'- [ ] '+input.value.slice(at);input.focus();draft();};
    el('note-enable-alerts').onclick=()=>requestNotificationPermission();
-   el('note-discard-draft').onclick=()=>{if(confirm('Replace this local draft with the latest saved note?')){try{localStorage.removeItem(key());}catch(_){}open(state.editing);}};
+   el('note-discard-draft').onclick=()=>{if(confirm('Replace this local draft with the latest saved note?')){clearDraft();open(state.editing);}};
    for(const id of ['note-title-inp','note-body-inp','note-tags','note-color','note-pinned','note-reminder'])el(id).addEventListener('input',draft);
    el('modal-note').querySelector('.glass-btn-primary').id='note-save-button';
    el('modal-note').addEventListener('keydown',event=>{if(event.key==='Escape'){event.preventDefault();event.stopPropagation();close();}else if((event.ctrlKey||event.metaKey)&&event.key==='Enter'){event.preventDefault();save();}});
   }
  }
+ function initLibraryControls(toolbar) {
+  const options=document.createElement('div');options.className='notes-library-controls';
+  options.innerHTML='<label>View<select id="notes-layout" aria-label="View"><option value="list">List</option><option value="grid">Grid</option></select></label><label>Label<select id="notes-label-filter" aria-label="Label"></select></label><label>Color<select id="notes-color-filter" aria-label="Color"><option value="">All colors</option>'+colors.map(color=>'<option>'+color+'</option>').join('')+'</select></label><label>Type<select id="notes-type-filter" aria-label="Type"><option value="">All types</option><option value="text">Text</option><option value="checklist">Checklist</option><option value="link">Contains links</option></select></label><label class="notes-checked-last"><input type="checkbox" id="notes-checked-last"> Show checked items last</label><button type="button" id="notes-export">Export notes</button>';
+  toolbar.insertBefore(options,el('notes-sync-status'));
+  const bindings={'notes-layout':'layout','notes-label-filter':'tag','notes-color-filter':'color','notes-type-filter':'type','notes-checked-last':'checkedLast'};
+  for(const [id,property] of Object.entries(bindings))el(id).onchange=event=>{
+   state[property]=event.target.type==='checkbox'?event.target.checked:event.target.value;
+   if(property==='layout'||property==='checkedLast')savePreferences();
+   render();
+  };
+  el('notes-export').onclick=exportNotes;
+ }
+ function savePreferences(){
+  if(!state.owner)return;
+  try{localStorage.setItem(prefKey(),JSON.stringify({layout:state.layout,checkedLast:state.checkedLast,order:state.order}));}catch(_){}
+ }
  function resetOwner(){
   const owner=currentUser?.id;if(state.owner===owner)return;
-  state.channel&&getSupabase()?.removeChannel(state.channel);state.channel=null;state.owner=owner;state.rows=[];state.editing=null;state.dirty=false;state.query='';state.filter='all';
+  state.channel&&getSupabase()?.removeChannel(state.channel);state.channel=null;state.owner=owner;state.rows=[];state.editing=null;state.dirty=false;state.query='';state.filter='all';state.tag='';state.color='';state.type='';
+  let preferences;try{preferences=JSON.parse(localStorage.getItem(prefKey())||'null');}catch(_){}
+  state.layout=preferences?.layout==='grid'?'grid':'list';state.checkedLast=!!preferences?.checkedLast;
+  state.order=Array.isArray(preferences?.order)?preferences.order.filter(validId):[];
+  if(el('notes-search'))el('notes-search').value='';
   // Remove previous account's derived reminders before rendering another account.
   if(typeof userCalendarEvents!=='undefined')userCalendarEvents=userCalendarEvents.filter(row=>!row.noteId);
  }
@@ -46,15 +75,96 @@ const OrbitNotes=(()=>{
  }
  function render(){
   if(!el('notes-list'))return;
-  const query=state.query.toLocaleLowerCase();const rows=state.rows.filter(n=>state.filter==='trash'?!!n.deleted_at:!n.deleted_at&&(state.filter==='archived'?n.archived:!n.archived)&&(state.filter!=='pinned'||n.pinned)).filter(n=>(n.title+' '+n.content+' '+n.tags.join(' ')).toLocaleLowerCase().includes(query)).sort((a,b)=>Number(b.pinned)-Number(a.pinned)||Date.parse(b.updated_at||0)-Date.parse(a.updated_at||0));
+  const query=state.query.trim().toLocaleLowerCase(),order=new Map(state.order.map((id,index)=>[id,index]));
+  if(state.tag&&!state.rows.some(note=>note.tags.includes(state.tag)))state.tag='';
+  const rows=state.rows.filter(n=>state.filter==='trash'?!!n.deleted_at:!n.deleted_at&&(state.filter==='archived'?n.archived:!n.archived)&&(state.filter!=='pinned'||n.pinned))
+   .filter(n=>(n.title+' '+n.content+' '+n.tags.join(' ')).toLocaleLowerCase().includes(query))
+   .filter(n=>!state.tag||n.tags.includes(state.tag))
+   .filter(n=>!state.color||n.color===state.color)
+   .filter(n=>!state.type||(state.type==='link'?/https?:\/\/\S+/i.test(n.content):/^-\s\[[ x]\]\s/im.test(n.content)===(state.type==='checklist')))
+   .sort((a,b)=>Number(b.pinned)-Number(a.pinned)||(order.get(a.id)??Infinity)-(order.get(b.id)??Infinity)||Date.parse(b.updated_at||0)-Date.parse(a.updated_at||0));
+  el('notes-list').classList.toggle?.('notes-grid',state.layout==='grid');
+  const tags=el('notes-label-filter');
+  if(tags){
+   const choices=[...new Set(state.rows.flatMap(n=>n.tags))].sort((a,b)=>a.localeCompare(b));
+   tags.innerHTML='<option value="">All labels</option>'+choices.map(tag=>'<option value="'+esc(tag)+'">'+esc(tag)+'</option>').join('');
+   tags.value=state.tag;el('notes-layout').value=state.layout;el('notes-color-filter').value=state.color;
+   el('notes-type-filter').value=state.type;el('notes-checked-last').checked=state.checkedLast;
+  }
   document.querySelectorAll('[data-note-filter]').forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.noteFilter===state.filter)));
   el('notes-list').innerHTML=rows.length?rows.map(n=>{
-   const lines=n.content.split('\n'),tasks=lines.filter(line=>/^- \[[ x]\] /i.test(line)),done=tasks.filter(line=>/^- \[x\] /i.test(line)).length;
-   return `<article class="orbit-note-card" data-color="${n.color}" data-note-id="${esc(n.id)}"><button type="button" class="note-open" data-action="open"><span class="note-card-title">${n.pinned?'📌 ':''}${esc(n.title)}</span><span class="note-excerpt">${esc(n.content.slice(0,240))}</span></button>${tasks.length?`<div class="note-progress">${done}/${tasks.length} completed</div>`:''}${tasks.length&&!n.deleted_at?`<div class="note-checklist">${lines.map((line,index)=>/^- \[[ x]\] /i.test(line)?`<label><input type="checkbox" data-task="${index}" ${/^- \[x\]/i.test(line)?'checked':''}><span>${esc(line.slice(6))}</span></label>`:'').filter(Boolean).slice(0,6).join('')}</div>`:''}<div class="note-tags">${n.tags.map(tag=>`<span>#${esc(tag)}</span>`).join('')}</div>${n.reminder_at?`<small class="note-reminder-label">🔔 ${esc(new Date(n.reminder_at).toLocaleString())}</small>`:''}<footer><small>${esc(new Date(n.updated_at||Date.now()).toLocaleDateString())}</small><div>${n.deleted_at?'<button type="button" data-action="restore">Restore</button>':`<button type="button" data-action="pin">${n.pinned?'Unpin':'Pin'}</button><button type="button" data-action="archive">${n.archived?'Unarchive':'Archive'}</button><button type="button" data-action="trash">Trash</button>`}</div></footer></article>`;
+   const lines=n.content.split('\n'),tasks=lines.map((line,index)=>({line,index,done:/^- \[x\] /i.test(line)})).filter(item=>/^- \[[ x]\] /i.test(item.line));
+   const done=tasks.filter(item=>item.done).length;
+   if(state.checkedLast)tasks.sort((a,b)=>Number(a.done)-Number(b.done));
+   const checks=tasks.map((item,index)=>'<div class="note-task-row" data-task-row="'+item.index+'"><label><input type="checkbox" data-task="'+item.index+'" '+(item.done?'checked':'')+'><span>'+esc(item.line.slice(6))+'</span></label><button type="button" data-move-task="'+item.index+'" data-target-task="'+(tasks[index-1]?.index??'')+'" aria-label="Move checklist item up" '+(index&&(!state.checkedLast||item.done===tasks[index-1].done)?'':'disabled')+'>↑</button></div>').join('');
+   const extras='<button type="button" data-action="duplicate">Duplicate</button><button type="button" data-action="share">Share</button><button type="button" data-action="moveUp">Move up</button>';
+   return `<article class="orbit-note-card" data-color="${n.color}" data-note-id="${esc(n.id)}"><button type="button" class="note-open" data-action="open"><span class="note-card-title">${n.pinned?'📌 ':''}${esc(n.title)}</span><span class="note-excerpt">${esc(n.content.slice(0,240))}</span></button>${tasks.length?`<div class="note-progress">${done}/${tasks.length} completed</div>`:''}${tasks.length&&!n.deleted_at?`<div class="note-checklist">${checks}</div>`:''}<div class="note-tags">${n.tags.map(tag=>`<span>#${esc(tag)}</span>`).join('')}</div>${n.deleted_at&&n.trash_expires_at?`<small class="note-reminder-label">Expires ${esc(new Date(n.trash_expires_at).toLocaleString())}</small>`:''}${n.reminder_at?`<small class="note-reminder-label">🔔 ${esc(new Date(n.reminder_at).toLocaleString())}</small>`:''}<footer><small>${esc(new Date(n.updated_at||Date.now()).toLocaleDateString())}</small><div>${n.deleted_at?'<button type="button" data-action="restore">Restore</button>':`<button type="button" data-action="pin">${n.pinned?'Unpin':'Pin'}</button><button type="button" data-action="archive">${n.archived?'Unarchive':'Archive'}</button><button type="button" data-action="trash">Trash</button>${extras}`}</div></footer></article>`;
   }).join(''):'<div class="notes-empty"><i class="fa-regular fa-note-sticky" aria-hidden="true"></i><h3>'+ (query?'No matching notes':state.filter==='trash'?'Trash is empty':'A little space for your thoughts')+'</h3><p>'+(query?'Try a different word or tag.':'Create a note, checklist or reminder to get started.')+'</p></div>';
   el('notes-list').querySelectorAll('[data-note-id]').forEach(card=>{
-   const id=card.dataset.noteId;card.querySelectorAll('[data-action]').forEach(button=>button.onclick=()=>action(id,button.dataset.action));card.querySelectorAll('[data-task]').forEach(input=>input.onchange=()=>task(id,Number(input.dataset.task),input.checked));
+   const id=card.dataset.noteId, note=rows.find(row=>row.id===id);
+   card.querySelectorAll('[data-action]').forEach(button=>button.onclick=()=>{
+    if(button.dataset.action==='moveUp'){
+     const peers=rows.filter(row=>row.pinned===note.pinned);
+     moveCard(rows,id,peers[peers.indexOf(note)-1]?.id);
+    }else action(id,button.dataset.action);
+   });
+   card.querySelectorAll('[data-task]').forEach(input=>input.onchange=()=>task(id,Number(input.dataset.task),input.checked));
+   card.querySelectorAll('[data-move-task]').forEach(button=>button.onclick=()=>{
+    if(button.dataset.targetTask!=='')moveTask(id,Number(button.dataset.moveTask),Number(button.dataset.targetTask));
+   });
+   if(!note.deleted_at){
+    enableReorder(card,'application/x-orbit-note',id,from=>moveCard(rows,from,id),'.note-card-title');
+    card.querySelectorAll('[data-task-row]').forEach(row=>enableReorder(row,'application/x-orbit-task',id+':'+row.dataset.taskRow,from=>{
+     const [source,index]=from.split(':');
+     if(source===id)moveTask(id,Number(index),Number(row.dataset.taskRow));
+    }));
+   }
   });
+ }
+ function enableReorder(target,type,value,drop,handleSelector){
+  const handle=handleSelector?target.querySelector(handleSelector):target;
+  if(!handle)return;
+  handle.draggable=true;
+  handle.ondragstart=event=>{event.stopPropagation();event.dataTransfer.setData(type,value);event.dataTransfer.effectAllowed='move';};
+  target.ondragover=event=>{if(event.dataTransfer.types.includes(type)){event.stopPropagation();event.preventDefault();}};
+  target.ondrop=event=>{const from=event.dataTransfer.getData(type);if(from&&from!==value){event.stopPropagation();event.preventDefault();drop(from);}};
+ }
+ function moveCard(rows,from,to){
+  const source=rows.find(note=>note.id===from),target=rows.find(note=>note.id===to);
+  if(!source||!target||source===target||source.pinned!==target.pinned)return;
+  const ids=rows.map(note=>note.id).filter(id=>id!==from);
+  ids.splice(ids.indexOf(to),0,from);
+  const affected=new Set(ids);
+  state.order=[...ids,...state.order.filter(id=>!affected.has(id))];
+  savePreferences();render();
+ }
+ function moveTask(id,from,to){
+  return change(id,async()=>{
+   const row=state.rows.find(note=>note.id===id);
+   if(!row||row.deleted_at||from===to)return;
+   const lines=row.content.split('\n'),positions=[];
+   for(let i=0;i<lines.length;i++)if(/^- \[[ x]\] /i.test(lines[i]))positions.push(i);
+   const start=positions.indexOf(from),end=positions.indexOf(to);
+   if(start<0||end<0||(state.checkedLast&&/^- \[x\]/i.test(lines[from])!==/^- \[x\]/i.test(lines[to])))return;
+   const tasks=positions.map(index=>lines[index]);
+   tasks.splice(end,0,tasks.splice(start,1)[0]);
+   positions.forEach((index,position)=>{lines[index]=tasks[position];});
+   try{await write(id,{content:lines.join('\n'),updated_at:new Date().toISOString()});}
+   catch(error){showToast(error.message,'error');}
+  });
+ }
+ function exportNotes(){
+  if(!state.owner||state.owner!==currentUser?.id)return;
+  const rows=state.rows.map(({title,content,tags,color,pinned,archived,deleted_at,reminder_at,updated_at})=>({title,content,tags,color,pinned,archived,deleted_at,reminder_at,updated_at}));
+  const url=URL.createObjectURL(new Blob([JSON.stringify({version:1,notes:rows},null,2)],{type:'application/json'}));
+  const link=document.createElement('a');link.href=url;link.download='orbit-notes.json';link.click();
+  setTimeout(()=>URL.revokeObjectURL(url),10000);
+ }
+ async function shareNote(row){
+  try{
+   if(navigator.share)await navigator.share({title:row.title,text:row.content});
+   else{await navigator.clipboard.writeText(row.title+'\n\n'+row.content);showToast('Note copied.','success');}
+  }catch(error){if(error.name!=='AbortError')showToast('Could not share the note.','error');}
  }
  function values(){return {title:el('note-title-inp').value.trim(),content:el('note-body-inp').value,tags:[...new Set(el('note-tags').value.split(',').map(x=>x.trim()).filter(Boolean))].slice(0,12),color:el('note-color').value,pinned:el('note-pinned').checked,reminder:el('note-reminder').value};}
  function draft(){
@@ -65,7 +175,7 @@ const OrbitNotes=(()=>{
  function open(id=null){
   if(state.saving)return;resetOwner();init();const row=id?state.rows.find(n=>n.id===id):null;if(id&&!row)return;if(row?.deleted_at){showToast('Restore this note from Trash before editing.','info');return;}
   state.editing=id;state.editVersion=row?.updated_at||null;el('note-discard-draft').hidden=true;let value=row?{...row,reminder:localTime(row.reminder_at)}:{title:'',content:'',tags:[],color:'default',pinned:false,reminder:''};
-  try{const saved=JSON.parse(localStorage.getItem(key())||'null');if(saved&&saved.id===id){value=saved.values;state.editVersion=saved.version||state.editVersion;el('note-discard-draft').hidden=false;el('note-draft-status').textContent=saved.version&&row?.updated_at!==saved.version?'Cloud note changed. Copy your draft or use the saved version.':'Recovered unsaved draft';}else el('note-draft-status').textContent='';}catch(_){}
+  try{const saved=JSON.parse(localStorage.getItem(key())||localStorage.getItem(legacyDraftKey())||'null');if(saved&&saved.id===id){value=saved.values;state.editVersion=saved.version||state.editVersion;el('note-discard-draft').hidden=false;el('note-draft-status').textContent=saved.version&&row?.updated_at!==saved.version?'Cloud note changed. Copy your draft or use the saved version.':'Recovered unsaved draft';}else el('note-draft-status').textContent='';}catch(_){}
   el('note-title-inp').value=value.title;el('note-body-inp').value=value.content;el('note-tags').value=Array.isArray(value.tags)?value.tags.join(', '):'';el('note-color').value=value.color;el('note-pinned').checked=value.pinned;el('note-reminder').value=value.reminder||'';state.dirty=false;el('note-word-count').textContent=value.content.trim()?value.content.trim().split(/\s+/).length+' words':'0 words';
   el('modal-note').classList.add('active');el('note-title-inp').focus();
  }
@@ -80,17 +190,25 @@ const OrbitNotes=(()=>{
  async function save(){
   if(state.saving)return;const v=values();if(!v.title&&!v.content.trim()){showToast('Write a title or note first.','info');return;}if(v.content.length>50000||v.title.length>180){showToast('Keep titles under 180 characters and notes under 50,000 characters.','info');return;}
   const reminder=v.reminder?new Date(v.reminder):null,old=state.rows.find(n=>n.id===state.editing);if(reminder&&(!Number.isFinite(reminder.getTime())||(+reminder<=Date.now()&&+reminder!==Date.parse(old?.reminder_at)))){showToast('Choose a future reminder time.','error');return;}
+  const owner=currentUser?.id;
   state.saving=true;el('note-save-button').disabled=true;el('modal-note').querySelectorAll('input,textarea,select,button').forEach(input=>input.disabled=true);
-  try{await write(state.editing,{title:v.title||'Untitled',content:v.content,tags:v.tags,color:v.color,pinned:v.pinned,reminder_at:reminder?.toISOString()||null,updated_at:new Date().toISOString()},state.editVersion);clearTimeout(state.draftTimer);try{localStorage.removeItem(key());}catch(_){}state.dirty=false;el('modal-note').classList.remove('active');showToast(reminder?'Note saved · reminder added to Calendar':'Note saved','success');}
-  catch(error){showToast(error.message||'Could not save. Your draft is kept.','error');draft();}
+  try{await write(state.editing,{title:v.title||'Untitled',content:v.content,tags:v.tags,color:v.color,pinned:v.pinned,reminder_at:reminder?.toISOString()||null,updated_at:new Date().toISOString()},state.editVersion);clearTimeout(state.draftTimer);clearDraft();state.dirty=false;el('modal-note').classList.remove('active');showToast(reminder?'Note saved · reminder added to Calendar':'Note saved','success');}
+  catch(error){if(currentUser?.id===owner&&state.owner===owner){showToast(error.message||'Could not save. Your draft is kept.','error');draft();}}
   finally{state.saving=false;el('note-save-button').disabled=false;el('modal-note').querySelectorAll('input,textarea,select,button').forEach(input=>input.disabled=false);}
  }
  function change(id,operation){const owner=currentUser?.id;const pending=(state.operations.get(id)||Promise.resolve()).catch(()=>{}).then(()=>{if(currentUser?.id===owner)return operation();});state.operations.set(id,pending);pending.finally(()=>{if(state.operations.get(id)===pending)state.operations.delete(id);}).catch(()=>{});return pending;}
- function action(id,kind){if(kind==='open'){open(id);return Promise.resolve();}return change(id,()=>applyAction(id,kind));}
+ function action(id,kind){if(kind==='open'){open(id);return Promise.resolve();}if(kind==='share'){const row=state.rows.find(note=>note.id===id&&!note.deleted_at);if(row&&state.owner===currentUser?.id)return shareNote(row);return;}return change(id,()=>applyAction(id,kind));}
  async function applyAction(id,kind){
   const row=state.rows.find(n=>n.id===id);if(!row)return;if(kind==='open'){open(id);return;}
+  if(kind==='duplicate'){
+   try{await write(null,{title:(row.title+' (copy)').slice(0,180),content:row.content,tags:row.tags,color:row.color,updated_at:new Date().toISOString()});showToast('Note duplicated.','success');}catch(error){showToast(error.message,'error');}return;
+  }
+  if(!['pin','archive','trash','restore'].includes(kind))return;
   const patch=kind==='pin'?{pinned:!row.pinned}:kind==='archive'?{archived:!row.archived}:kind==='trash'?{deleted_at:new Date().toISOString()}:{deleted_at:null};
-  try{await write(id,{...patch,updated_at:new Date().toISOString()});showToast(kind==='trash'?'Moved to Trash. You can restore it.':'Note updated','success');}catch(error){showToast(error.message,'error');}
+  try{
+   const saved=await write(id,{...patch,updated_at:new Date().toISOString()});
+   showToast(kind==='trash'?(saved.trash_expires_at?'Moved to Trash for 7 days.':'Moved to Trash. You can restore it.'):'Note updated','success');
+  }catch(error){showToast(error.message,'error');}
  }
  function task(id,index,checked){return change(id,()=>applyTask(id,index,checked));}
  async function applyTask(id,index,checked){const row=state.rows.find(n=>n.id===id);if(!row||row.deleted_at)return;const lines=row.content.split('\n');if(!/^- \[[ x]\] /i.test(lines[index]||''))return;lines[index]='- ['+(checked?'x':' ')+'] '+lines[index].slice(6);try{await write(id,{content:lines.join('\n'),updated_at:new Date().toISOString()});}catch(error){render();showToast(error.message,'error');}}

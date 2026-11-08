@@ -1,3 +1,13 @@
+
+.notes-library-controls{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.notes-library-controls label{display:flex;gap:6px;align-items:center;color:var(--text-primary);font-size:12px}
+.notes-library-controls select,.notes-library-controls button,.note-task-row button{min-height:36px;border:1px solid var(--glass-border);border-radius:10px;padding:4px 8px;background:var(--glass-bg);color:var(--text-primary);font:inherit}
+#notes-list.notes-grid{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));align-items:start}
+.note-task-row{display:flex;align-items:start;justify-content:space-between;gap:6px;min-width:0}
+.note-task-row button:disabled{visibility:hidden}
+.note-task-row label{min-width:0}
+.note-card-title[draggable=true],.note-task-row[draggable=true]{cursor:grab}
+@media(max-width:350px){#notes-list.notes-grid{grid-template-columns:minmax(0,1fr)}}
 /* Notes share the app's light/dark text tokens and keep long text contained. */
 .notes-toolbar { display:grid; gap:12px; margin:8px 6px 18px; }
 .notes-search { display:flex; align-items:center; gap:10px; padding:12px 15px; border:1px solid var(--glass-border); border-radius:16px; background:var(--glass-bg); color:var(--text-secondary); }

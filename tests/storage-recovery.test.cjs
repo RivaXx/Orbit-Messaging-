@@ -10,4 +10,10 @@ test('pending uploads, local-only media, notes and preferences survive quota err
  const f=fixture();for(const [key,value] of [['orbit_cache_msgs_pending',JSON.stringify([{status:'failed',text:'pending'}])],['orbit_cache_msgs_media',JSON.stringify([{status:'sent',text:'data:image/jpeg;original'}])],['orbit_notes_me','private notes'],['orbit_calc_wallpaper','saved image']])f.local.setItem(key,value);
  f.limit(1);assert.throws(()=>f.local.setItem('orbit_draft_room','draft'));assert.ok(f.local.getItem('orbit_cache_msgs_pending'));assert.ok(f.local.getItem('orbit_cache_msgs_media'));assert.equal(f.local.getItem('orbit_notes_me'),'private notes');assert.equal(f.local.getItem('orbit_calc_wallpaper'),'saved image');assert.deepEqual(f.events,['orbit-storage-full']);
 });
+test('failed snapshot writes leave the existing profile and local-only data alone without a toast',()=>{
+ const f=fixture();f.local.setItem('orbit_profile_me','last confirmed profile');f.local.setItem('orbit_note_draft_me','unsaved note');f.limit(1);
+ f.local.setItem('orbit_profile_me','new profile');f.local.setItem('orbit_notes_me','large confirmed snapshot');
+ assert.equal(f.local.getItem('orbit_profile_me'),'last confirmed profile');
+ assert.equal(f.local.getItem('orbit_note_draft_me'),'unsaved note');assert.deepEqual(f.events,[]);
+});
 test('an optional cache write does not crash the app when no space can be freed',()=>{const f=fixture();f.limit(10);f.local.setItem('orbit_global_cache_v26','directory');assert.equal(f.local.getItem('orbit_global_cache_v26'),null);});

@@ -15,6 +15,20 @@ test('staging serializes files across batches and resumes after a failed batch',
  const first=context.stage(item('bad'),files).catch(()=>{}), second=context.stage(item('ok'),files);
  await Promise.all([first,second]);assert.equal(max,1);assert.deepEqual(calls,['bad0','ok0','ok1']);
 });
+test('first photo becomes available while the second file is still staging',async()=>{
+ const source=fs.readFileSync(path.join(root,'js/chat/chat-dispatcher.js'),'utf8');
+ const body=source.slice(source.indexOf('function _stageOutboxMedia('),source.indexOf('function _flushChatCacheWrites('));
+ let finishSecond,completed=false;
+ const second=new Promise(resolve=>{finishSecond=resolve;});
+ const c=vm.createContext({currentUser:{id:'u'},_storeOutboxMedia:async(_id,index)=>{if(index===1)await second;}});
+ vm.runInContext('let _mediaStagingLane=Promise.resolve();\n'+body,c);
+ const item={payload:{id:'album',sender_id:'u'},mediaUploadInfo:[{index:0},{index:1}]};
+ const staging=c._stageOutboxMedia(item,[{file:{}},{file:{}}]).then(()=>{completed=true;});
+ await item.mediaStages.get(0);
+ assert.equal(completed,false);
+ finishSecond();await staging;
+ assert.equal(completed,true);
+});
 test('share target manifest includes standard PNG icon sizes',()=>{
  const m=JSON.parse(fs.readFileSync(path.join(root,'manifest.json')));
  for(const size of [192,512]) {const icon=m.icons.find(i=>i.sizes===`${size}x${size}`&&i.type==='image/png');assert.ok(icon);const data=fs.readFileSync(path.join(root,icon.src));assert.equal(data.readUInt32BE(16),size);assert.equal(data.readUInt32BE(20),size);}

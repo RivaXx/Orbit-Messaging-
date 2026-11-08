@@ -291,7 +291,7 @@ async function getSignedOrbitMediaUrl(urlOrPath, expiresIn = 300) {
 function hydrateOrbitPrivateMedia(root){
  const nodes=root.matches?.('img[src],video[src],audio[src]')?[root]:[];
  nodes.push(...(root.querySelectorAll?.('img[src],video[src],audio[src]')||[]));
- for(const media of nodes){const original=media.getAttribute('src'),ref=orbitStorageRef(original);
+ for(const media of nodes){if(media.dataset.orbitAvatar==='true')continue;const original=media.getAttribute('src'),ref=orbitStorageRef(original);
   if(!ref||ref.access==='sign'||ref.bucket==='avatars')continue;
   getSignedOrbitMediaUrl(original).then(url=>{if(url&&media.isConnected&&media.getAttribute('src')===original){media.src=url;if(media.tagName!=='IMG')media.load();}});
  }
@@ -389,12 +389,15 @@ function isPrimaryAdmin() {
 
 async function fetchUserProfile() {
     try {
-        const { data } = await sb.from('user_profiles').select('*').eq('user_id', currentUser.id).maybeSingle();
+        const owner = currentUser?.id;
+        if (!owner) return;
+        const {data, error} = await sb.from('user_profiles').select('*').eq('user_id', owner).maybeSingle();
+        if (error || currentUser?.id !== owner) return;
         if (data) {
             userProfile = {
                 ...data,
-                username: userProfile?.username || currentUser.email.split('@')[0].replace(/[^a-zA-Z0-9_]/g, '_'),
-                about: userProfile?.about || 'Hey there! I am using Orbit.'
+                username: data.username || userProfile?.username || currentUser.email.split('@')[0].replace(/[^a-zA-Z0-9_]/g, '_'),
+                about: data.about ?? userProfile?.about ?? 'Hey there! I am using Orbit.'
             };
             localStorage.setItem(`orbit_profile_${currentUser.id}`, JSON.stringify(userProfile));
             updateUserHeaderUI();
@@ -406,7 +409,8 @@ async function fetchUserProfile() {
                 dp_url: null,
                 updated_at: new Date().toISOString()
             };
-            await sb.from('user_profiles').upsert(initial, { onConflict: 'user_id' });
+            const created = await sb.from('user_profiles').insert(initial);
+            if (created.error || currentUser?.id !== owner) return;
             userProfile = {
                 ...initial,
                 username: currentUser.email.split('@')[0].replace(/[^a-zA-Z0-9_]/g, '_'),
@@ -430,11 +434,7 @@ function updateUserHeaderUI() {
     document.getElementById('dash-id').innerHTML = `<span class="user-chip-label">${escapeHtml(name)}</span>${verifiedBadge}`;
     
     const av = document.getElementById('dash-av');
-    if (userProfile?.dp_url) {
-        av.innerHTML = `<img src="${formatMediaUrl(userProfile.dp_url)}" alt="Avatar">`;
-    } else {
-        av.innerText = name[0].toUpperCase();
-    }
+    orbitPaintAvatar(av, name, [userProfile?.dp_url]);
     av.title = 'Open profile';
     av.style.cursor = 'pointer';
     av.onclick = event => { event.stopPropagation(); openProfileScreen(); };

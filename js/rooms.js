@@ -9,16 +9,18 @@ function resolveDirectPeerId(roomId, selfId = currentUser?.id, expectedPeerId = 
     if (!roomId?.startsWith('dm_') || !selfId) return null;
     const parts = roomId.slice(3).split('_');
     if (parts.length !== 2) return null;
-    if (parts[0] === selfId) return parts[1];
-    if (parts[1] === selfId) return parts[0];
+    const exactPeer = parts[0] === selfId ? parts[1] : parts[1] === selfId ? parts[0] : null;
+    if (exactPeer?.length === selfId.length && exactPeer !== selfId) return exactPeer;
     if (expectedPeerId && expectedPeerId !== selfId &&
         ((selfId.startsWith(parts[0]) && expectedPeerId.startsWith(parts[1])) ||
          (selfId.startsWith(parts[1]) && expectedPeerId.startsWith(parts[0])))) return expectedPeerId;
 
+    if (!parts.every(Boolean)) return null;
     const selfParts = parts.filter(p => selfId.startsWith(p));
     if (selfParts.length !== 1) return null;
     const peerPart = parts[0] === selfParts[0] ? parts[1] : parts[0];
-    if (peerPart.length > 20) return peerPart;
+    if (!peerPart || peerPart === selfId) return null;
+    if (peerPart.length === selfId.length) return peerPart;
 
     const candidates = new Set();
     if (typeof globalUsersMap !== 'undefined') {
@@ -30,6 +32,7 @@ function resolveDirectPeerId(roomId, selfId = currentUser?.id, expectedPeerId = 
     if (typeof allRoomsMap !== 'undefined') {
         allRoomsMap.forEach(room => {
             if (!room?.is_direct || !Array.isArray(room.participants)) return;
+            if (room.participants.length !== 2) return;
             const peer = room.participants.find(id => id !== selfId && id.startsWith(peerPart));
             if (room.participants.includes(selfId) && peer) candidates.add(peer);
         });
@@ -267,8 +270,20 @@ function getDeterministicDMId(uidA, uidB) {
 function renderRecentChatsFromCache(cachedItems, list) {
     if (!list || !Array.isArray(cachedItems) || cachedItems.length === 0) return;
     const frag = document.createDocumentFragment();
+    const conversations = new Map();
+    for (const item of cachedItems) {
+        const peer = item.isGroup ? null : orbitRecentPeer(item.roomId) || item.peerUserId;
+        const key = peer ? `peer:${peer}` : item.roomId;
+        const saved = conversations.get(key);
+        if (!saved) conversations.set(key, { ...item, peerUserId: peer });
+        else {
+            saved.isPinned ||= item.isPinned;
+            saved.isUnread ||= item.isUnread;
+            saved.dp_url ||= item.dp_url;
+        }
+    }
     let excluded=[];try{excluded=[...JSON.parse(localStorage.getItem(`orbit_hidden_rooms_${currentUser.id}`)||'[]'),...JSON.parse(localStorage.getItem(`orbit_archived_rooms_${currentUser.id}`)||'[]')];}catch(_){}
-    cachedItems.filter(item=>!resolveRoomAliases(item.roomId).some(id=>excluded.includes(id))).forEach(item => {
+    [...conversations.values()].filter(item=>!resolveRoomAliases(item.roomId,item.peerUserId).some(id=>excluded.includes(id))).forEach(item => {
         const card = document.createElement('div');
         card.className = 'contact-glass-card touch-fix';
         // Always stamp roomId so retroactive long-press attachment in chat-select.js can find it
@@ -291,6 +306,41 @@ function renderRecentChatsFromCache(cachedItems, list) {
     list.appendChild(frag);
 }
 
+function orbitRecentPeer(roomId) {
+    const room = allRoomsMap.get(roomId);
+    const self = currentUser?.id;
+    if (room && (!room.is_direct || room.participants?.length !== 2 || !room.participants.includes(self))) return null;
+    return room?.participants.find(id => id !== self) || resolveDirectPeerId(roomId, self);
+}
+
+const orbitPendingProfiles = new Map();
+async function orbitLoadChatProfiles(ids, owner) {
+    if (currentUser?.id !== owner || !navigator.onLine) return;
+    const pending = ids.map(id => orbitPendingProfiles.get(id)).filter(Boolean);
+    const missing = [...new Set(ids)].filter(id => id && !globalUsersMap.get(id)?.dp_url && !orbitPendingProfiles.has(id));
+    if (!missing.length) { await Promise.all(pending); return; }
+    const request = (async () => {
+        const client = await ensureSupabase();
+        for (let i = 0; i < missing.length && currentUser?.id === owner; i += 80) {
+            const {data, error} = await client.from('user_profiles')
+                .select('user_id,first_name,last_name,dp_url').in('user_id', missing.slice(i, i + 80));
+            if (error || currentUser?.id !== owner) return;
+            for (const profile of data || []) {
+                const existing = globalUsersMap.get(profile.user_id) || {};
+                globalUsersMap.set(profile.user_id, {
+                    user_id: profile.user_id,
+                    display_name: [profile.first_name, profile.last_name].filter(Boolean).join(' '),
+                    ...existing,
+                    dp_url: existing.dp_url || profile.dp_url
+                });
+            }
+        }
+    })().catch(() => {});
+    missing.forEach(id => orbitPendingProfiles.set(id, request));
+    await Promise.all([request, ...pending]);
+    missing.forEach(id => { if (orbitPendingProfiles.get(id) === request) orbitPendingProfiles.delete(id); });
+}
+
 let recentChatsController = null;
 async function loadMainChats(fromCacheFirst = false) {
     const list = document.getElementById('main-chats-list');
@@ -304,7 +354,7 @@ async function loadMainChats(fromCacheFirst = false) {
 
 
     // â”€â”€ 0ms Instant Local Storage Cache Hydration â”€â”€
-    if (currentUser) {
+    if (currentUser && !list.firstElementChild && !window.isInChatSelectionMode?.()) {
         try {
             const cachedStr = localStorage.getItem(`orbit_recent_chats_v27_${currentUser.id}`);
             if (cachedStr) {
@@ -389,10 +439,17 @@ async function loadMainChats(fromCacheFirst = false) {
 
         // Preview-only rows never seed transcript caches: they lack media and history.
         const recentRoomMap = new Map();
-        messagesData.forEach(m => {
-            if (m.room && !m.room.startsWith('self_') && !recentRoomMap.has(m.room)) {
-                recentRoomMap.set(m.room, m);
-            }
+        const seenPeers = new Set();
+        for (const message of messagesData) {
+            const roomId = message.room;
+            if (!roomId || roomId.startsWith('self_') || recentRoomMap.has(roomId)) continue;
+            const peer = orbitRecentPeer(roomId);
+            if (peer && seenPeers.has(peer)) continue;
+            if (peer) seenPeers.add(peer);
+            recentRoomMap.set(roomId, message);
+        }
+        void orbitLoadChatProfiles([...seenPeers], selfId).then(() => {
+            if (currentUser?.id === selfId) orbitRefreshChatPresence();
         });
 
         // Also include any group rooms the user is in that might not have recent messages
@@ -434,14 +491,17 @@ async function loadMainChats(fromCacheFirst = false) {
         }
 
         // Filter out hidden and archived
+        const pinned = new Set();
         const filteredEntries = Array.from(recentRoomMap.entries()).filter(([rid]) => {
-            return !resolveRoomAliases(rid).some(id=>hiddenRooms.includes(id)||archivedRooms.includes(id));
+            const aliases = resolveRoomAliases(rid, orbitRecentPeer(rid));
+            if (aliases.some(id => pinnedRooms.includes(id))) pinned.add(rid);
+            return !aliases.some(id => hiddenRooms.includes(id) || archivedRooms.includes(id));
         });
 
         // Sort: pinned first, then chronological
         filteredEntries.sort(([rIdA, msgA], [rIdB, msgB]) => {
-            const isPinA = pinnedRooms.includes(rIdA) ? 1 : 0;
-            const isPinB = pinnedRooms.includes(rIdB) ? 1 : 0;
+            const isPinA = pinned.has(rIdA) ? 1 : 0;
+            const isPinB = pinned.has(rIdB) ? 1 : 0;
             if (isPinA !== isPinB) return isPinB - isPinA;
             return new Date(msgB.created_at || 0) - new Date(msgA.created_at || 0);
         });
@@ -451,7 +511,6 @@ async function loadMainChats(fromCacheFirst = false) {
         filteredEntries.forEach(([roomId, lastMsg]) => {
             const roomMeta = allRoomsMap.get(roomId);
             let title = 'Chat';
-            let avatarHtml = '<i class="fa-solid fa-comments"></i>';
             let isGroup = false;
 
             let peerUserId = null;
@@ -461,17 +520,14 @@ async function loadMainChats(fromCacheFirst = false) {
                 if (!roomMeta.is_direct) {
                     isGroup = true;
                     title = roomMeta.name || 'Group Chat';
-                    avatarHtml = roomMeta.dp_url ? `<img src="${formatMediaUrl(roomMeta.dp_url)}">` : '<i class="fa-solid fa-users" style="color:var(--accent);"></i>';
                 } else if (Array.isArray(roomMeta.participants) && currentUser) {
                     peerUserId = roomMeta.participants.find(id => id !== currentUser.id) || null;
                     const otherUser = peerUserId ? globalUsersMap.get(peerUserId) : null;
                     if (otherUser) {
-                        title = otherUser.display_name || otherUser.email.split('@')[0];
-                        avatarHtml = otherUser.dp_url ? `<img src="${formatMediaUrl(otherUser.dp_url)}">` : `<span>${title[0].toUpperCase()}</span>`;
+                        title = otherUser.display_name || otherUser.email?.split('@')[0] || 'Direct Chat';
                         resolvedDpUrl = otherUser.dp_url || resolvedDpUrl;
                     } else {
                         title = roomMeta.name || 'Direct Chat';
-                        avatarHtml = `<span>${title[0].toUpperCase()}</span>`;
                     }
                 }
             } else {
@@ -479,16 +535,14 @@ async function loadMainChats(fromCacheFirst = false) {
                 const matchedUser = peerUserId ? globalUsersMap.get(peerUserId) : null;
                 if (matchedUser) {
                     title = matchedUser.display_name || (matchedUser.email ? matchedUser.email.split('@')[0] : 'Friend');
-                    avatarHtml = matchedUser.dp_url ? `<img src="${formatMediaUrl(matchedUser.dp_url)}">` : `<span>${title[0].toUpperCase()}</span>`;
                     resolvedDpUrl = matchedUser.dp_url || resolvedDpUrl;
                 }
                 if (!title || title === 'Chat') {
                     title = (currentUser && lastMsg.sender_id !== currentUser.id && lastMsg.username) ? lastMsg.username : 'Direct Chat';
-                    avatarHtml = `<span>${title[0].toUpperCase()}</span>`;
                 }
             }
 
-            const isPinned = pinnedRooms.includes(roomId);
+            const isPinned = pinned.has(roomId);
             const isUnread = (typeof unreadRoomsSet !== 'undefined') && unreadRoomsSet.has(roomId);
             const timeDisplay = orbitFormatMessageTime(lastMsg.created_at);
             const presenceDisplay = isGroup ? `${roomMeta?.participants?.length || 0} members` : orbitChatPresence(peerUserId);
@@ -499,7 +553,6 @@ async function loadMainChats(fromCacheFirst = false) {
                 title,
                 dp_url: resolvedDpUrl,
                 isGroup,
-                avatarHtml,
                 isUnread,
                 isPinned,
                 timeDisplay,

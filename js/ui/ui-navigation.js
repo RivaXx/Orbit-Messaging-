@@ -98,8 +98,7 @@ async function launchApp({introduction=false,forceIntroduction=false}={}) {
         } catch (error) { console.warn('[Orbit] Session repair could not finish: ' + error.message); }})();
     }
     if (navigator.onLine) Promise.allSettled([
-        fetchUserProfile(),
-        updatePresenceStatus(true),
+        fetchUserProfile().then(() => { if (currentUser?.id === launchOwner) return updatePresenceStatus(true); }),
         initPresenceRealtime(),
         (typeof loadMainChats === 'function' ? loadMainChats() : Promise.resolve()),
         loadFriendRequestsCount(),
@@ -109,15 +108,6 @@ async function launchApp({introduction=false,forceIntroduction=false}={}) {
         if (typeof _bgFetchGlobalUsers === 'function') _bgFetchGlobalUsers();
         if (typeof _prewarmRecentMessages === 'function') _prewarmRecentMessages();
     }, 3000);
-
-    // Background purge of legacy base64 bloat via RPC if available
-    try {
-        ensureSupabase().then(client => {
-            if (client && typeof client.rpc === 'function' && !isOrbitSlowConnection() && !currentRoom) {
-                client.rpc('purge_base64_bloat').catch(() => {});
-            }
-        }).catch(() => {});
-    } catch(e) {}
 
     const sqlButton = document.getElementById('btn-supabase-sql');
     if (sqlButton) sqlButton.classList.toggle('hide', typeof isPrimaryAdmin !== 'function' || !isPrimaryAdmin());
@@ -149,9 +139,7 @@ async function launchApp({introduction=false,forceIntroduction=false}={}) {
 async function updatePresenceStatus(isOnline = true) {
     if (!currentUser || !sb || !navigator.onLine) return;
     try {
-        const name = (userProfile && (userProfile.display_name || userProfile.first_name))
-            ? (userProfile.display_name || userProfile.first_name)
-            : (currentUser.email ? currentUser.email.split('@')[0] : 'User');
+        const name = userProfile?.display_name || [userProfile?.first_name, userProfile?.last_name].filter(Boolean).join(' ') || currentUser.email?.split('@')[0] || 'User';
         let dp = userProfile?.dp_url || null;
         if (dp && dp.startsWith('data:') && dp.length > 2000) dp = null;
         const nowIso = new Date().toISOString();
@@ -160,7 +148,7 @@ async function updatePresenceStatus(isOnline = true) {
             user_id: currentUser.id,
             email: currentUser.email,
             display_name: name,
-            dp_url: dp,
+            ...(dp ? { dp_url: dp } : {}),
             is_online: isOnline,
             last_seen: nowIso
         }, { onConflict: 'user_id' });

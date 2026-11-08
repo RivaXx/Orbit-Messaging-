@@ -3,7 +3,7 @@ let orbitPushStatus = '';
 let orbitStorageWarningAt=0;
 window.addEventListener('orbit-storage-full',()=>{
     if(Date.now()-orbitStorageWarningAt<10000)return;orbitStorageWarningAt=Date.now();
-    if(typeof showToast==='function')showToast('Browser storage is full. This change could not be saved; your drafts and pending uploads were kept.','error');
+    if(typeof showToast==='function')showToast('Browser storage is full. Orbit couldn’t save this change on this device.','error');
 });
 async function orbitAcknowledgeDelivery(messages){
     const owner=currentUser?.id;

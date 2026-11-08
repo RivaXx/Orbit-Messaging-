@@ -121,14 +121,18 @@ async function handleProfileAvatarUpload(e) {
         if (currentUser?.id !== owner) return;
         const client = await ensureSupabase();
         const profile = {...(userProfile || {}), dp_url:url};
-        const {error} = await client.from('user_profiles').upsert({
-            user_id: owner,
-            first_name: profile.first_name || '',
-            last_name: profile.last_name || '',
-            dp_url: url,
-            updated_at: new Date().toISOString()
-        }, { onConflict: 'user_id' });
+        if (currentUser?.id !== owner) return;
+        const changes = {dp_url:url, updated_at:new Date().toISOString()};
+        const {data, error} = await client.from('user_profiles').update(changes)
+            .eq('user_id', owner).select('user_id').maybeSingle();
         if (error) throw error;
+        if (!data && currentUser?.id === owner) {
+            const inserted = await client.from('user_profiles').insert({
+                user_id:owner, first_name:profile.first_name || currentUser.email?.split('@')[0] || 'Orbit User',
+                last_name:profile.last_name || '', ...changes
+            });
+            if (inserted.error) throw inserted.error;
+        }
         if (currentUser?.id !== owner) return;
         userProfile = profile;
         try { localStorage.setItem(`orbit_profile_${owner}`, JSON.stringify(profile)); } catch (_) {}
@@ -310,7 +314,7 @@ async function _bgFetchGlobalUsers() {
 
         // Update memory cache
         globalUsersArray = clean;
-        clean.forEach(u => globalUsersMap.set(u.user_id, u));
+        clean.forEach(u => globalUsersMap.set(u.user_id, {...u, dp_url: u.dp_url || globalUsersMap.get(u.user_id)?.dp_url}));
         if(typeof orbitRefreshChatPresence==='function')orbitRefreshChatPresence();
 
         // Persist to disk cache
@@ -446,9 +450,61 @@ function openSettingsModal() {
     syncOrbitSettingsControls();
     window.refreshOrbitLiquidGlass?.();
     document.getElementById('admin-storage-section')?.classList.toggle('hide', !isPrimaryAdmin());
+    document.getElementById('orbit-analytics-panel')?.classList.toggle('hide', !isPrimaryAdmin());
+    document.getElementById('orbit-analytics-output')?.replaceChildren();
     if (isPrimaryAdmin()) loadOrbitCleanupSettings();
     document.getElementById('modal-settings').classList.add('active');
     if (typeof updateNotificationSettingsUI === 'function') updateNotificationSettingsUI();
+}
+
+async function orbitLoadUsageAnalytics(button) {
+    const output = document.getElementById('orbit-analytics-output');
+    if (!output || !isPrimaryAdmin()) return;
+    const owner = currentUser.id;
+    const visible = () => currentUser?.id === owner && isPrimaryAdmin() &&
+        document.getElementById('modal-settings').classList.contains('active');
+    output.textContent = 'Loading usage…';
+    button.disabled = true;
+    try {
+        const client = await ensureSupabase();
+        if (!visible()) return;
+        const {data, error} = await orbitAwaitPushQuery(client.rpc('orbit_admin_usage_analytics'));
+        if (error) throw error;
+        if (!visible()) return;
+        const figures = [
+            ['Registered accounts', data.registered_accounts],
+            ['New accounts', data.new_accounts],
+            ['Accounts seen', data.active_accounts],
+            ['Accounts that sent messages', data.active_senders],
+            ['Messages currently retained', data.messages]
+        ];
+        output.replaceChildren();
+        const summary = document.createElement('dl');
+        for (const [label, value] of figures) {
+            const term = document.createElement('dt');
+            const detail = document.createElement('dd');
+            term.textContent = label;
+            detail.textContent = Number(value).toLocaleString();
+            summary.append(term, detail);
+        }
+        output.append(summary);
+        const details = document.createElement('details');
+        const heading = document.createElement('summary');
+        heading.textContent = 'Daily activity (UTC)';
+        details.append(heading);
+        const trend = document.createElement('ul');
+        for (const row of data.days || []) {
+            const day = document.createElement('li');
+            day.textContent = row.day + ' · ' + row.signups + ' signups · ' + row.messages + ' retained messages';
+            trend.append(day);
+        }
+        details.append(trend);
+        output.append(details);
+    } catch (error) {
+        if (visible()) output.textContent = ['PGRST202','42883'].includes(error.code)
+            ? 'Usage analytics requires the Orbit analytics database migration.'
+            : 'Usage could not be loaded. Try again.';
+    } finally { button.disabled = false; }
 }
 
 function scrollSettingsTo(sectionId, button) {

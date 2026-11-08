@@ -30,10 +30,12 @@ test('profile photo uses resized avatar upload and changes local state only afte
  const {context:c,element,cache,toasts}=baseContext();let saved,folder;
  c.compressImageForUpload=async()=> 'data:image/jpeg;base64,YXZhdGFy';
  c.uploadMediaToStorage=async(blob,_name,_mime,subfolder)=>{assert.equal(await blob.text(),'avatar');folder=subfolder;return 'https://example.com/avatars/user/photo.jpg';};
- c.ensureSupabase=async()=>({from:()=>({upsert:async value=>{saved=value;return {error:null};}})});
+ const query={update(value){saved=value;return query;},eq(key,id){assert.equal(key,'user_id');assert.equal(id,'user');return query;},
+  select(){return query;},maybeSingle:async()=>({data:{user_id:'user'},error:null}),insert(){throw Error('Existing profile should not be replaced');}};
+ c.ensureSupabase=async()=>({from:()=>query});
  vm.runInContext(fs.readFileSync(path.join(root,'js/ui/ui-modals.js'),'utf8'),c);
  await c.handleProfileAvatarUpload({target:{files:[new Blob(['image'],{type:'image/png'})]}});
- assert.equal(folder,'avatars');assert.equal(saved.user_id,'user');assert.equal(c.userProfile.dp_url,saved.dp_url);
+ assert.equal(folder,'avatars');assert.deepEqual(Object.keys(saved).sort(),['dp_url','updated_at']);assert.equal(c.userProfile.dp_url,saved.dp_url);
  assert.equal(element('profile-large-av').image.src,saved.dp_url);
  assert.equal(JSON.parse(cache.get('orbit_profile_user')).dp_url,saved.dp_url);
  assert.ok(toasts.some(item=>item.type==='success'));
@@ -41,7 +43,9 @@ test('profile photo uses resized avatar upload and changes local state only afte
 test('rejected profile save keeps old photo and reports the server error',async()=>{
  const {context:c,toasts}=baseContext();c.compressImageForUpload=async()=> 'data:image/jpeg;base64,YQ==';
  c.uploadMediaToStorage=async()=> 'https://example.com/new.jpg';
- c.ensureSupabase=async()=>({from:()=>({upsert:async()=>({error:{message:'Permission denied'}})})});
+ const query={update(){return query;},eq(){return query;},select(){return query;},
+  maybeSingle:async()=>({error:{message:'Permission denied'}})};
+ c.ensureSupabase=async()=>({from:()=>query});
  vm.runInContext(fs.readFileSync(path.join(root,'js/ui/ui-modals.js'),'utf8'),c);
  await c.handleProfileAvatarUpload({target:{files:[new Blob(['image'],{type:'image/png'})]}});
  assert.equal(c.userProfile.dp_url,'https://example.com/old.jpg');

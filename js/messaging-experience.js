@@ -208,7 +208,7 @@ function orbitStopAlarm() {clearInterval(orbitAlarmRingTimer);clearTimeout(orbit
 function orbitSnoozeAlarm() {
     if(!orbitActiveAlarm)return;
     const alarm={...orbitActiveAlarm,id:crypto.randomUUID(),snoozeAt:Date.now()+300000,enabled:true};orbitStopAlarm();userAlarms.push(alarm);
-    localStorage.setItem('orbit_alarms',JSON.stringify(userAlarms));renderAlarmsList();orbitClockNotify('Alarm snoozed','Rings again in 5 minutes.');
+    try{localStorage.setItem('orbit_alarms',JSON.stringify(userAlarms));}catch(_){}renderAlarmsList();orbitClockNotify('Alarm snoozed','Rings again in 5 minutes.');
 }
 function orbitInitClockControls() {
     const label=document.getElementById('alarm-label-inp');if(!label)return;

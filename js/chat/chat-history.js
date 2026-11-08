@@ -165,12 +165,20 @@ async function openChatRoom(roomId, roomTitle, avatarUrl, isSelf = false, peerUs
                 av.style.background = 'rgba(10,132,255,0.2)';
                 av.style.borderColor = 'var(--self-chat-blue)';
                 av.innerHTML = '<i class="fa-solid fa-cloud-arrow-up" style="color:var(--self-chat-blue);"></i>';
-            } else if (avatarUrl) {
-                av.innerHTML = `<img src="${formatMediaUrl(avatarUrl)}" alt="${escapeHtml(roomTitle || 'User')}">`;
             } else {
                 av.style.background = 'linear-gradient(135deg, #262632, #16161E)';
                 av.style.borderColor = 'var(--glass-border)';
-                av.innerText = (roomTitle && roomTitle[0]) ? roomTitle[0].toUpperCase() : 'U';
+                const peer = activeChatPeerId, owner = currentUser.id;
+                const sources = [globalUsersMap.get(peer)?.dp_url, avatarUrl];
+                orbitPaintAvatar(av, roomTitle, sources, !!roomMeta && !roomMeta.is_direct);
+                if (peer && !sources.some(Boolean)) {
+                    void orbitLoadChatProfiles([peer], owner).then(() => {
+                        const photo = globalUsersMap.get(peer)?.dp_url;
+                        if (photo && currentUser?.id === owner && currentRoom === roomId && activeChatPeerId === peer) {
+                            orbitPaintAvatar(av, roomTitle, [photo]);
+                        }
+                    });
+                }
             }
         }
 

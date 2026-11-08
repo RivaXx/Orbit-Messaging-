@@ -19,6 +19,31 @@ function orbitConversationPreview(message,isGroup=false){
  if(!text)text='Message';
  return isGroup&&message.sender_id!==currentUser?.id&&message.username?`${message.username}: ${text}`:message.sender_id===currentUser?.id?`You: ${text}`:text;
 }
+function orbitPaintAvatar(container, title, urls, group = false) {
+ if (!container) return;
+ const sources = [...new Set(urls.filter(Boolean).map(formatMediaUrl).filter(Boolean))];
+ const fallback = document.createElement(group ? 'i' : 'span');
+ if (group) fallback.className = 'fa-solid fa-users';
+ else fallback.textContent = Array.from((title || 'User').trim())[0]?.toUpperCase() || 'U';
+ container.replaceChildren(fallback);
+ if (!sources.length) return;
+ const image = document.createElement('img');
+ image.alt = ''; image.decoding = 'async'; image.dataset.orbitAvatar = 'true';
+ let source = sources.shift(), triedSigned = false;
+ image.onerror = async () => {
+  if (image.parentNode !== container) return;
+  if (!triedSigned && typeof getSignedOrbitMediaUrl === 'function') {
+   triedSigned = true;
+   const signed = await getSignedOrbitMediaUrl(source);
+   if (image.parentNode !== container) return;
+   if (signed && signed !== source) { image.src = signed; return; }
+  }
+  if (sources.length) {
+   source = sources.shift(); triedSigned = false; image.src = source;
+  } else container.replaceChildren(fallback);
+ };
+ container.replaceChildren(image); image.src = source;
+}
 function orbitRenderConversationCard(card,item){
  orbitEnsureConversationOwner();orbitConversationItems.set(item.roomId,{...item});
  const count=orbitConversationUnread(item.roomId),muted=(window.OrbitChatSelect?.getMutedRooms()||[]).some(id=>orbitConversationAliases(item.roomId).includes(id));
@@ -26,12 +51,18 @@ function orbitRenderConversationCard(card,item){
  const presence=item.isGroup?item.presenceDisplay:orbitChatPresence(item.peerUserId)||(localStorage.getItem('orbit_privacy_last_seen')==='nobody'?'Last seen hidden':'Last seen unavailable');
  card.dataset.roomId=item.roomId;card.dataset.peerId=item.peerUserId||'';card.dataset.group=String(!!item.isGroup);
  card.classList.toggle('orbit-chat-unread',!!isUnread);
- card.innerHTML=`<div class="c-av-wrap">${item.avatarHtml||'<i class="fa-solid fa-comments"></i>'}</div><div class="c-info-wrap"><div class="c-top-row"><span class="c-name">${escapeHtml(item.title)}</span><span class="c-time">${escapeHtml(item.timeDisplay||'')}</span></div><div class="c-preview-row"><span class="c-last-msg">${escapeHtml(item.msgPreview||'Message')}</span><span class="orbit-chat-markers">${muted?'<i class="fa-solid fa-bell-slash" title="Muted"></i>':''}${item.isPinned?'<i class="fa-solid fa-thumbtack" title="Pinned"></i>':''}<span class="orbit-chat-count${isUnread?'':' hide'}" aria-label="${count?`${count} unread messages`:'Unread messages'}">${count?count>99?'99+':count:'•'}</span></span></div><div class="c-presence-line${presence==='Online'?' is-online':''}">${escapeHtml(presence)}</div></div>`;
+ card.innerHTML=`<div class="c-av-wrap"></div><div class="c-info-wrap"><div class="c-top-row"><span class="c-name">${escapeHtml(item.title)}</span><span class="c-time">${escapeHtml(item.timeDisplay||'')}</span></div><div class="c-preview-row"><span class="c-last-msg">${escapeHtml(item.msgPreview||'Message')}</span><span class="orbit-chat-markers">${muted?'<i class="fa-solid fa-bell-slash" title="Muted"></i>':''}${item.isPinned?'<i class="fa-solid fa-thumbtack" title="Pinned"></i>':''}<span class="orbit-chat-count${isUnread?'':' hide'}" aria-label="${count?`${count} unread messages`:'Unread messages'}">${count?count>99?'99+':count:'•'}</span></span></div><div class="c-presence-line${presence==='Online'?' is-online':''}">${escapeHtml(presence)}</div></div>`;
+ orbitPaintAvatar(card.querySelector('.c-av-wrap'), item.title, [globalUsersMap.get(item.peerUserId)?.dp_url, item.dp_url], item.isGroup);
 }
 function orbitRefreshChatPresence(){
  if(document.hidden)return;
  document.querySelectorAll('#main-chats-list [data-peer-id]').forEach(card=>{
   if(card.dataset.group==='true')return;const status=card.querySelector('.c-presence-line');if(!status)return;
+  const item=orbitConversationItems.get(card.dataset.roomId), photo=globalUsersMap.get(card.dataset.peerId)?.dp_url;
+  if(item&&photo&&item.dp_url!==photo){
+   orbitPaintAvatar(card.querySelector('.c-av-wrap'),item.title,[photo,item.dp_url]);
+   item.dp_url=photo;
+  }
   const text=orbitChatPresence(card.dataset.peerId)||(localStorage.getItem('orbit_privacy_last_seen')==='nobody'?'Last seen hidden':'Last seen unavailable');
   if(status.textContent!==text)status.textContent=text;status.classList.toggle('is-online',text==='Online');
  });

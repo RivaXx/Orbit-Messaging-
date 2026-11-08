@@ -1,3 +1,9 @@
+.orbit-analytics-output dl{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px 16px;font-size:13px}
+.orbit-analytics-output dd{margin:0;font-weight:700;font-variant-numeric:tabular-nums}
+.orbit-analytics-output li{margin-block:5px}
+@media(prefers-reduced-motion:reduce){
+ .timer-svg circle,#main-chats-list .contact-glass-card{transition:none!important}
+}
 
 /* Ink follows the local surface, including composited glass and chat wallpapers. */
 body.light-mode {color-scheme:light;--text-primary:#142033;--text-secondary:#3d4d63;--text-muted:#536176;--bg-color:#f4f7fb}

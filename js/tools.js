@@ -47,7 +47,12 @@ function toggleWorldClockEditMode() {
 let userAlarms = (() => {
     try {
         const stored = localStorage.getItem('orbit_alarms');
-        if (stored) return JSON.parse(stored);
+        if (stored) {
+            const alarms = JSON.parse(stored);
+            if (Array.isArray(alarms)) return alarms.filter(alarm => alarm &&
+                /^[\w-]{1,80}$/.test(alarm.id || '') &&
+                (Number.isFinite(alarm.snoozeAt) || /^([01]\d|2[0-3]):[0-5]\d$/.test(alarm.time)));
+        }
     } catch(e) {}
     return [
         { id: 'alm_1', time: '07:00', label: 'Morning Wakeup', enabled: true },
@@ -81,6 +86,8 @@ function switchClockView(view, btn) {
 
     if (view === 'world') renderWorldClocks();
     else if (view === 'alarm') renderAlarmsList();
+    else if (view === 'stopwatch') updateStopwatchDisplay(swIsRunning ? Date.now() - swStartTime : swElapsed);
+    else if (view === 'timer') updateTimerDisplay();
 }
 
 function renderWorldClocks() {
@@ -220,26 +227,45 @@ function renderAlarmsList() {
         return;
     }
 
-    list.innerHTML = userAlarms.map(a => `
+    list.innerHTML = [...userAlarms].sort((a, b) => (a.time || '').localeCompare(b.time || '')).map(a => `
         <div class="alarm-item touch-fix">
             <div>
                 <div class="alarm-time" style="${a.enabled ? '' : 'color:var(--text-muted);'}">${a.snoozeAt ? new Date(a.snoozeAt).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}) : a.time}</div>
                 <div class="alarm-label">${escapeHtml(a.label || 'Alarm')}</div>
+                <small class="orbit-alarm-repeat">${a.snoozeAt ? 'Snoozed' : !a.days || a.days.length === 7 ? 'Daily' : a.days.length ? a.days.map(day => orbitAlarmDays[day]).filter(Boolean).join(' · ') : 'Once'}</small>
             </div>
             <div style="display:flex; align-items:center; gap:12px;">
                 <label class="ios-switch">
-                    <input type="checkbox" ${a.enabled ? 'checked' : ''} onchange="toggleAlarm('${a.id}', this.checked)">
+                    <input type="checkbox" ${a.enabled ? 'checked' : ''} aria-label="Enable ${escapeHtml(a.label || 'alarm')}" onchange="toggleAlarm('${a.id}', this.checked)">
                     <span class="ios-slider"></span>
                 </label>
+                ${a.snoozeAt ? '' : `<button class="btn-reset orbit-alarm-edit" type="button" data-alarm-edit="${escapeHtml(a.id)}">Edit</button>`}
                 <button class="btn-reset" onclick="deleteAlarm('${a.id}', event)" style="color:var(--text-muted); font-size:14px; padding:4px;" title="Delete Alarm">
                     <i class="fa-solid fa-trash-can"></i>
                 </button>
             </div>
         </div>
     `).join('');
+    list.querySelectorAll('[data-alarm-edit]').forEach(button => {
+        button.onclick = () => openAddAlarmModal(button.dataset.alarmEdit);
+    });
 }
 
-function openAddAlarmModal() {
+const orbitAlarmDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+let orbitEditingAlarm = null;
+function openAddAlarmModal(id = null) {
+    const alarm = userAlarms.find(item => item.id === id);
+    orbitEditingAlarm = alarm?.id || null;
+    document.getElementById('orbit-alarm-heading').textContent = alarm ? 'Edit alarm' : 'New alarm';
+    document.getElementById('alarm-time-inp').value = alarm?.time || '07:00';
+    document.getElementById('alarm-label-inp').value = alarm?.label || '';
+    const tone = document.getElementById('orbit-alarm-tone');
+    const music = document.getElementById('orbit-alarm-music');
+    if (tone) tone.value = alarm?.tone || 'orbit';
+    if (music) music.value = alarm?.musicUrl || '';
+    document.querySelectorAll('[data-orbit-alarm-day]').forEach(input => {
+        input.checked = !!alarm && (!Array.isArray(alarm.days) || alarm.days.includes(Number(input.dataset.orbitAlarmDay)));
+    });
     document.getElementById('modal-add-alarm')?.classList.add('active');
 }
 
@@ -256,16 +282,19 @@ function saveNewAlarm() {
     const musicInput=document.getElementById('orbit-alarm-music')?.value.trim();
     if(musicInput && !orbitMusicUrl(musicInput)){showToast('Enter a valid HTTPS YouTube or YouTube Music link.','error');return;}
 
-    userAlarms.push({
-        id: `alm_${Date.now()}`,
+    const previous = userAlarms.find(item => item.id === orbitEditingAlarm);
+    const alarm = {
+        id: previous?.id || crypto.randomUUID(),
         time: time,
         label: label || 'Alarm',
         tone: document.getElementById('orbit-alarm-tone')?.value || 'orbit',
         musicUrl: orbitMusicUrl(document.getElementById('orbit-alarm-music')?.value || ''),
-        enabled: true
-    });
-
-    try { localStorage.setItem('orbit_alarms', JSON.stringify(userAlarms)); } catch(e) {}
+        days: [...document.querySelectorAll('[data-orbit-alarm-day]:checked')].map(input => Number(input.dataset.orbitAlarmDay)),
+        enabled: previous?.enabled ?? true
+    };
+    const next = [...userAlarms.filter(item => item.id !== alarm.id), alarm];
+    try { localStorage.setItem('orbit_alarms', JSON.stringify(next)); } catch (_) { return; }
+    userAlarms = next;
     closeAddAlarmModal();
     renderAlarmsList();
     orbitUnlockAudio();
@@ -289,7 +318,6 @@ function deleteAlarm(id, event) {
     renderAlarmsList();
 }
 
-let lastCheckedAlarmMin = '';
 function checkTriggerAlarms() {
     const now = new Date();
     const currentHM = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
@@ -297,12 +325,12 @@ function checkTriggerAlarms() {
     let changed=false;
     userAlarms.forEach(a => {
         const snoozed=Number.isFinite(a.snoozeAt);
-        if (a.enabled && (snoozed ? a.snoozeAt<=now.getTime() : a.time===currentHM && a.lastFiredMinute!==minuteKey)) {
-            a.lastFiredMinute=minuteKey;if(snoozed)a.enabled=false;changed=true;
+        if (a.enabled && (snoozed ? a.snoozeAt<=now.getTime() : a.time===currentHM && a.lastFiredMinute!==minuteKey && (!a.days?.length || a.days.includes(now.getDay())))) {
+            a.lastFiredMinute=minuteKey;if(snoozed || a.days?.length === 0)a.enabled=false;changed=true;
             orbitRingAlarm(a);
         }
     });
-    if(changed){userAlarms=userAlarms.filter(a=>!a.snoozeAt||a.enabled);localStorage.setItem('orbit_alarms',JSON.stringify(userAlarms));renderAlarmsList();}
+    if(changed){userAlarms=userAlarms.filter(a=>!a.snoozeAt||a.enabled);try{localStorage.setItem('orbit_alarms',JSON.stringify(userAlarms));}catch(_){}renderAlarmsList();}
 }
 
 // ── Stopwatch ──
@@ -330,9 +358,11 @@ function toggleStopwatch() {
 
         swInterval = setInterval(() => {
             swElapsed = Date.now() - swStartTime;
-            updateStopwatchDisplay(swElapsed);
-        }, 30);
+            if (!document.hidden && currentClockView === 'stopwatch' && document.getElementById('tab-clock')?.offsetParent) updateStopwatchDisplay(swElapsed);
+        }, 33);
     } else {
+        swElapsed = Date.now() - swStartTime;
+        updateStopwatchDisplay(swElapsed);
         swIsRunning = false;
         orbitClockNotify('Stopwatch stopped',`${(swElapsed/1000).toFixed(1)} seconds elapsed`);
         clearInterval(swInterval);
@@ -345,8 +375,8 @@ function toggleStopwatch() {
 function lapStopwatch() {
     const lapBtn = document.getElementById('stopwatch-btn-lap');
     if (swIsRunning) {
-        const lapTime = swElapsed;
-        swLaps.unshift({ lapNum: swLaps.length + 1, time: lapTime });
+        const lapTime = Date.now() - swStartTime;
+        swLaps.unshift({ lapNum: swLaps.length + 1, time: lapTime, split: lapTime - (swLaps[0]?.time || 0) });
         renderStopwatchLaps();
     } else {
         swElapsed = 0;
@@ -357,31 +387,39 @@ function lapStopwatch() {
     }
 }
 
-function updateStopwatchDisplay(ms) {
-    const display = document.getElementById('stopwatch-display');
-    if (!display) return;
+function formatStopwatchTime(ms) {
     const mins = Math.floor(ms / 60000);
     const secs = Math.floor((ms % 60000) / 1000);
     const hundredths = Math.floor((ms % 1000) / 10);
-    display.innerText = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}.${String(hundredths).padStart(2, '0')}`;
+    return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}.${String(hundredths).padStart(2, '0')}`;
+}
+
+function updateStopwatchDisplay(ms) {
+    const display = document.getElementById('stopwatch-display');
+    if (display) display.innerText = formatStopwatchTime(ms);
 }
 
 function renderStopwatchLaps() {
     const table = document.getElementById('stopwatch-laps-table');
     if (!table) return;
+    document.getElementById('orbit-copy-laps').disabled = !swLaps.length;
     table.innerHTML = swLaps.map(l => {
-        const ms = l.time;
-        const mins = Math.floor(ms / 60000);
-        const secs = Math.floor((ms % 60000) / 1000);
-        const hundredths = Math.floor((ms % 1000) / 10);
-        const timeStr = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}.${String(hundredths).padStart(2, '0')}`;
         return `
             <div class="stopwatch-lap-row">
                 <span>Lap ${l.lapNum}</span>
-                <span style="font-family:monospace; font-weight:700;">${timeStr}</span>
+                <span>Split ${formatStopwatchTime(l.split)}</span><strong>${formatStopwatchTime(l.time)} total</strong>
             </div>
         `;
     }).join('');
+}
+
+async function orbitCopyLaps() {
+    if (!swLaps.length) return;
+    try {
+        await navigator.clipboard.writeText([...swLaps].reverse().map(lap =>
+            `Lap ${lap.lapNum}\t${formatStopwatchTime(lap.split)} split\t${formatStopwatchTime(lap.time)} total`).join('\n'));
+        showToast('Laps copied.', 'success');
+    } catch (_) { showToast('The clipboard is unavailable.', 'error'); }
 }
 
 // ── Timer ──
@@ -390,6 +428,7 @@ let timerTotalSeconds = 300;
 let timerRemainingSeconds = 300;
 let timerIsRunning = false;
 let orbitTimerDeadline = 0;
+let orbitTimerPaused = false;
 
 function toggleTimer() {
     const toggleBtn = document.getElementById('timer-btn-toggle');
@@ -397,14 +436,17 @@ function toggleTimer() {
     const secInp = document.getElementById('timer-inp-sec');
 
     if (!timerIsRunning) {
-        if (timerRemainingSeconds === timerTotalSeconds || timerRemainingSeconds <= 0) {
+        if (!orbitTimerPaused || timerRemainingSeconds <= 0) {
             const m = parseInt(minInp?.value || '5', 10) || 0;
             const s = parseInt(secInp?.value || '0', 10) || 0;
-            timerTotalSeconds = (m * 60) + s;
-            if (timerTotalSeconds <= 0) timerTotalSeconds = 60;
+            timerTotalSeconds = Math.max(0, Math.min(m, 180)) * 60 + Math.max(0, Math.min(s, 59));
+            if (!timerTotalSeconds) { showToast('Set a timer duration first.', 'info'); return; }
             timerRemainingSeconds = timerTotalSeconds;
         }
 
+        orbitTimerPaused = false;
+        if (minInp) minInp.disabled = true;
+        if (secInp) secInp.disabled = true;
         orbitUnlockAudio();
         orbitTimerDeadline=Date.now()+timerRemainingSeconds*1000;
         orbitClockNotify('Timer started', `${Math.ceil(timerRemainingSeconds/60)} min remaining`);
@@ -414,6 +456,7 @@ function toggleTimer() {
             toggleBtn.className = 'stopwatch-btn stop touch-fix';
         }
 
+        updateTimerDisplay();
         clearInterval(timerInterval);
         timerInterval = setInterval(() => {
             timerRemainingSeconds=Math.max(0,Math.ceil((orbitTimerDeadline-Date.now())/1000));
@@ -422,6 +465,8 @@ function toggleTimer() {
             if (timerRemainingSeconds <= 0) {
                 clearInterval(timerInterval);
                 timerIsRunning = false;
+                if (minInp) minInp.disabled = false;
+                if (secInp) secInp.disabled = false;
                 if (toggleBtn) {
                     toggleBtn.innerText = 'Start';
                     toggleBtn.className = 'stopwatch-btn start touch-fix';
@@ -430,8 +475,11 @@ function toggleTimer() {
             }
         }, 1000);
     } else {
+        timerRemainingSeconds = Math.max(1, Math.ceil((orbitTimerDeadline - Date.now()) / 1000));
+        orbitTimerPaused = true;
         timerIsRunning = false;
         clearInterval(timerInterval);
+        updateTimerDisplay();
         orbitClockNotify('Timer paused','Tap Resume to continue.');
         if (toggleBtn) {
             toggleBtn.innerText = 'Resume';
@@ -440,17 +488,28 @@ function toggleTimer() {
     }
 }
 
-function cancelTimer() {
+function cancelTimer(notify = true) {
+    orbitTimerPaused = false;
     timerIsRunning = false;
+    document.getElementById('timer-inp-min').disabled = false;
+    document.getElementById('timer-inp-sec').disabled = false;
     clearInterval(timerInterval);
     timerRemainingSeconds = timerTotalSeconds;
     updateTimerDisplay();
     const toggleBtn = document.getElementById('timer-btn-toggle');
     if (toggleBtn) {
-        orbitClockNotify('Timer cancelled','Timer reset.');
+        if (notify) orbitClockNotify('Timer cancelled','Timer reset.');
         toggleBtn.innerText = 'Start';
         toggleBtn.className = 'stopwatch-btn start touch-fix';
     }
+}
+
+function orbitSetTimerPreset(minutes) {
+    cancelTimer(false);
+    document.getElementById('timer-inp-min').value = minutes;
+    document.getElementById('timer-inp-sec').value = 0;
+    timerRemainingSeconds = timerTotalSeconds = minutes * 60;
+    updateTimerDisplay();
 }
 
 function updateTimerDisplay() {
@@ -832,6 +891,7 @@ function renderCalendarEvents(dateStr) {
                     <div class="cal-agenda-time"><i class="fa-regular fa-clock"></i> ${ev.time || 'All Day'}</div>
                     ${ev.desc ? ('<div style="font-size:11.5px; color:var(--text-secondary); margin-top:4px;">' + escapeHtml(ev.desc) + '</div>') : ''}
                 </div>
+                <button type="button" class="btn-reset touch-fix" onclick="exportOrbitCalendarEvent('${ev.id}')" aria-label="Export event to calendar" title="Export .ics"><i class="fa-solid fa-download"></i></button>
                 <button class="btn-reset touch-fix" onclick="deleteCalendarEvent('${ev.id}')" style="color:var(--text-muted); font-size:13px; padding:6px;" title="${ev.noteId?'Edit note reminder':'Delete event'}">
                     <i class="fa-solid ${ev.noteId?'fa-pen':'fa-trash-can'}"></i>
                 </button>
@@ -854,6 +914,7 @@ function renderCalendarEvents(dateStr) {
                         <div class="cal-agenda-title">${escapeHtml(ev.title)} <span style="font-size:11px; font-weight:600; color:var(--text-muted); margin-left:6px;">(${evDate})</span></div>
                         <div class="cal-agenda-time"><i class="fa-regular fa-clock"></i> ${ev.time || 'All Day'}</div>
                     </div>
+                    <button type="button" class="btn-reset touch-fix" onclick="event.stopPropagation(); exportOrbitCalendarEvent('${ev.id}')" aria-label="Export event to calendar" title="Export .ics"><i class="fa-solid fa-download"></i></button>
                     <button class="btn-reset touch-fix" onclick="event.stopPropagation(); deleteCalendarEvent('${ev.id}')" style="color:var(--text-muted); font-size:13px; padding:6px;" title="${ev.noteId?'Edit note reminder':'Delete event'}">
                         <i class="fa-solid ${ev.noteId?'fa-pen':'fa-trash-can'}"></i>
                     </button>
@@ -934,6 +995,7 @@ function renderCalendarAgendaView() {
                         <div class="cal-agenda-time"><i class="fa-regular fa-clock"></i> ${item.time}</div>
                         ${item.desc ? ('<div style="font-size:11px; color:var(--text-secondary); margin-top:3px;">' + escapeHtml(item.desc) + '</div>') : ''}
                     </div>
+                    <button type="button" class="btn-reset touch-fix" onclick="exportOrbitCalendarEvent('${item.id}')" aria-label="Export event to calendar" title="Export .ics"><i class="fa-solid fa-download"></i></button>
                     <button class="btn-reset touch-fix" onclick="deleteCalendarEvent('${item.id}')" style="color:var(--text-muted); font-size:13px; padding:6px;" title="${item.noteId?'Edit note reminder':'Delete event'}">
                         <i class="fa-solid ${item.noteId?'fa-pen':'fa-trash-can'}"></i>
                     </button>
@@ -1003,6 +1065,43 @@ function saveCalendarEvent() {
         renderCalendarEvents(calSelectedDateStr);
     }
     showToast('Event saved ✓', 'success');
+}
+
+function orbitCalendarFile(event) {
+    const start = new Date(event.date + 'T' + (event.time || '10:00'));
+    if (!Number.isFinite(start.getTime())) throw Error('This event has an invalid date or time.');
+    const stamp = value => value.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}Z$/, 'Z');
+    const escapeText = value => String(value ?? '').replace(/\\/g, '\\\\')
+        .replace(/\r\n|\r|\n/g, '\\n').replace(/([;,])/g, '\\$1').replace(/[\x00-\x08\x0b-\x1f\x7f]/g, '');
+    const encoder = new TextEncoder();
+    const lines = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Orbit Messenger//Calendar//EN', 'BEGIN:VEVENT',
+        'UID:' + escapeText(event.id) + '@orbit-messaging.vercel.app',
+        'DTSTAMP:' + stamp(new Date()), 'DTSTART:' + stamp(start),
+        'DTEND:' + stamp(new Date(start.getTime() + 3600000)),
+        'SUMMARY:' + escapeText(event.title), 'DESCRIPTION:' + escapeText(event.desc),
+        'END:VEVENT', 'END:VCALENDAR'];
+    return lines.map(line => {
+        let folded = '', bytes = 0;
+        for (const char of line) {
+            const size = encoder.encode(char).length;
+            if (bytes + size > 75) { folded += '\r\n '; bytes = 1; }
+            folded += char; bytes += size;
+        }
+        return folded;
+    }).join('\r\n') + '\r\n';
+}
+
+function exportOrbitCalendarEvent(id) {
+    const event = userCalendarEvents.find(row => row.id === id);
+    if (!event) return;
+    try {
+        const url = URL.createObjectURL(new Blob([orbitCalendarFile(event)], {type:'text/calendar;charset=utf-8'}));
+        const link = document.createElement('a');
+        link.href = url; link.download = 'orbit-event.ics';
+        link.click();
+        setTimeout(() => URL.revokeObjectURL(url), 10000);
+        showToast('Calendar file downloaded. Import it into your chosen calendar.', 'success');
+    } catch (error) { showToast(error.message, 'error'); }
 }
 
 function deleteCalendarEvent(id) {
