@@ -31,6 +31,8 @@
         }
         if (document.querySelector('.orbit-data-overlay')) { window.OrbitChatData?.close(); return true; }
         if (document.querySelector('#modal-share-app.active')) { window.closeShareAppModal(); return true; }
+        if (document.querySelector('#modal-orbit-editor.active')) { closeOrbitMediaEditor(); return true; }
+        if (document.querySelector('#modal-media-preview.active')) { closeMediaPreviewScreen(); return true; }
         if (document.querySelector('.glass-modal-overlay.active, #screen-chat.active, #screen-profile.active, #user-dropdown.open')) {
             window.dispatchEvent(new KeyboardEvent('keydown', {key:'Escape'}));
             return true;
