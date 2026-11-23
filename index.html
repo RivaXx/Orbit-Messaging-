@@ -1255,8 +1255,8 @@
                 <!-- 2. Oblong Capsule Pill Input Field -->
                 <div class="input-glass-pill">
                     <textarea id="msg-input" class="msg-text-input" rows="1" placeholder="Message..." autocapitalize="sentences" autocorrect="on" spellcheck="true" oninput="handleInputResize(this); handleChatInputText(this);" onkeydown="handleInputKeyDown(event)"></textarea>
-                    <!-- Sticker / Emoji Icon docked inside right of capsule pill -->
-                    <button type="button" class="btn-reset touch-fix pill-inner-icon-btn" onclick="toggleEmojiPicker()" title="Stickers & Emoji">
+                    <button type="button" class="btn-reset touch-fix orbit-sticker-toggle" onclick="OrbitStickers.open()" title="Stickers" aria-label="Stickers"><i class="fa-regular fa-note-sticky" aria-hidden="true"></i></button>
+                    <button type="button" class="btn-reset touch-fix pill-inner-icon-btn" onclick="toggleEmojiPicker()" title="Emoji" aria-label="Emoji">
                         <i class="fa-regular fa-face-smile"></i>
                     </button>
                 </div>
@@ -2463,7 +2463,6 @@
 
             <div class="media-preview-caption-row">
                 <div class="preview-caption-pill">
-                    <button type="button" class="btn-reset touch-fix orbit-sticker-toggle" onclick="OrbitStickers.open()" title="Stickers" aria-label="Stickers"><i class="fa-regular fa-note-sticky" aria-hidden="true"></i></button>
                     <button type="button" class="btn-reset touch-fix" onclick="openEmojiPickerModal()" style="color:var(--text-muted); font-size:18px; margin-left:8px; display:flex; align-items:center;">
                         <i class="fa-regular fa-face-smile"></i>
                     </button>

@@ -2,14 +2,16 @@
 .orbit-android .orbit-android-only { display: inline-flex !important; }
 .orbit-android .glass-modal-overlay,
 .orbit-android .orbit-intro-overlay,
-.orbit-android .orbit-data-overlay { backdrop-filter: none !important; }
+.orbit-android .orbit-data-overlay,
+.orbit-android #screen-chat .chat-input-bar::before,
+.orbit-android #screen-chat .chat-nav-bar::before { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
 .orbit-android .orbit-intro-overlay,
 .orbit-android .liquid-pod,
 .orbit-android #screen-chat { scroll-behavior: auto; }
 .orbit-android .celestial-canvas,
 .orbit-android #celestial-canvas { display: none !important; }
 .orbit-sticker-toggle { color: var(--text-muted); min-width: 40px; min-height: 44px; font-size: 18px; }
-.orbit-sticker-picker, .orbit-invite { box-sizing: border-box; color: var(--text-primary); background: var(--bg-card, #171923); }
+.orbit-sticker-picker, .orbit-invite { box-sizing: border-box; color: var(--text-primary); background: var(--bg-color, #171923); }
 .orbit-sticker-picker { inset: auto 0 0; margin: 0 auto; width: min(100%, 430px); max-height: 65dvh; padding: 18px max(16px, env(safe-area-inset-right)) max(16px, env(safe-area-inset-bottom)); border: 1px solid var(--glass-border); border-radius: 18px 18px 0 0; }
 .orbit-sticker-picker::backdrop { background: #0008; }
 .orbit-sticker-picker header, .orbit-invite .modal-header-row { display: flex; align-items: center; justify-content: space-between; }
