@@ -1,5 +1,6 @@
 .orbit-android-only { display: none !important; }
 .orbit-android .orbit-android-only { display: inline-flex !important; }
+.orbit-android .orbit-web-alert-help { display: none; }
 .orbit-android .glass-modal-overlay,
 .orbit-android .orbit-intro-overlay,
 .orbit-android .orbit-data-overlay,

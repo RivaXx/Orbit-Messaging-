@@ -1582,7 +1582,7 @@
                     <label class="ios-switch"><input id="chk-notification-device" type="checkbox" onchange="setNotificationDevicePreference(this.checked)"><span class="ios-slider"></span></label>
                 </div>
                 <div class="ios-toggle-row" style="margin:2px 0;">
-                    <span style="font-size:12px; font-weight:600;">Show message text in alerts</span>
+                    <span style="font-size:12px; font-weight:600;">Show notification previews</span>
                     <label class="ios-switch"><input id="chk-notification-previews" type="checkbox" checked onchange="setNotificationPreviewPreference(this.checked)"><span class="ios-slider"></span></label>
                 </div>
                 <div class="ios-toggle-row" style="margin:2px 0 8px;">
@@ -1592,7 +1592,8 @@
                 <button class="btn-reset touch-fix" onclick="testNotificationLive()" style="width:100%; padding:10px; background:rgba(255,215,0,0.12); border:1px solid rgba(255,215,0,0.3); border-radius:10px; color:var(--accent); font-size:12px; font-weight:700; display:flex; align-items:center; justify-content:center; gap:8px;">
                     <i class="fa-solid fa-bell"></i> Send a test system alert
                 </button>
-                <div style="font-size:10.5px; line-height:1.4; color:var(--text-muted); margin-top:8px;">Enable background alerts once on each device to receive messages when Orbit is closed. Notification delivery also depends on your browser and device notification settings.</div>
+                <div class="orbit-web-alert-help" style="font-size:10.5px; line-height:1.4; color:var(--text-muted); margin-top:8px;">Enable browser background alerts to receive messages when the web app is closed. Delivery depends on your browser and device notification settings.</div>
+                <div class="orbit-android-only" style="font-size:10.5px; line-height:1.4; color:var(--text-muted); margin-top:8px;">Orbit posts Android alerts while it is connected, including in the background. Android notification permissions and channel settings also apply.</div>
             </div>
 
             </section>
@@ -2695,7 +2696,7 @@
     <div id="orbit-weather-position" aria-live="polite"></div>
     <dl id="orbit-weather-metrics" class="orbit-weather-metrics hide"><div><dt>Humidity</dt><dd id="orbit-weather-humidity">Unavailable</dd></div><div><dt>Feels like</dt><dd id="orbit-weather-feels">Unavailable</dd></div><div><dt>Wind</dt><dd id="orbit-weather-wind">Unavailable</dd></div><div><dt>Current precipitation</dt><dd id="orbit-weather-rain">Unavailable</dd></div><div><dt>Surface pressure</dt><dd id="orbit-weather-pressure">Unavailable</dd></div><div><dt>AQI · US scale</dt><dd id="orbit-weather-aqi">Unavailable</dd></div><div><dt>PM2.5</dt><dd id="orbit-weather-pm25">Unavailable</dd></div><div><dt>PM10</dt><dd id="orbit-weather-pm10">Unavailable</dd></div><div><dt>High / low today</dt><dd id="orbit-weather-highlow">Unavailable</dd></div><div><dt>Rain chance today</dt><dd id="orbit-weather-chance">Unavailable</dd></div><div><dt>UV max today</dt><dd id="orbit-weather-uv">Unavailable</dd></div><div><dt>Sunrise / sunset</dt><dd id="orbit-weather-sun">Unavailable</dd></div></dl>
     <p id="orbit-weather-air-status" role="status"></p>
-    <p class="orbit-weather-privacy">Location is used for nearby forecasts and air quality. Orbit keeps precise coordinates in memory for this session.</p>
+    <p class="orbit-weather-privacy">Orbit sends your location to Open-Meteo for forecasts and air quality, and to BigDataCloud for the place name. Orbit keeps precise coordinates in memory for this session.</p>
     <p class="orbit-weather-attribution">Weather by <a href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer">Open-Meteo</a> · Place names by <a href="https://www.bigdatacloud.com/" target="_blank" rel="noopener noreferrer">BigDataCloud</a></p>
    </details>
   </div>
