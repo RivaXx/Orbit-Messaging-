@@ -4,6 +4,7 @@
 let orbitWorkerMessagesBound=false;
 async function initServiceWorker() {
     if(!('serviceWorker' in navigator)||!/^https?:$/.test(location.protocol))return;
+    if(window.OrbitDevice)return;
     // Bind immediately, even when a worker update is waiting on the network.
     if(!orbitWorkerMessagesBound){
         orbitWorkerMessagesBound=true;
@@ -81,11 +82,11 @@ async function checkExistingSession() {
         const project = new URL(SB_URL).hostname.split('.')[0];
         if(await orbitCompletePasswordRecovery())return;
         if(await orbitCompleteGoogleSignIn())return;
-        if(localStorage.getItem('orbit_explicit_signout')==='true')return;
+        if(localStorage.getItem('orbit_explicit_signout')==='true'||localStorage.getItem('orbit_weekly_signin')==='true')return;
         let cached=null;try{cached=JSON.parse(localStorage.getItem(`sb-${project}-auth-token`)||'null');}catch(_){}
         if(cached?.user?.id && orbitSessionIdleExpired(cached.user.id)){
-            const client=await ensureSupabase();await client.auth.signOut({scope:'local'});
-            localStorage.removeItem(`sb-${project}-auth-token`);return;
+            await orbitRequireWeeklySignIn(cached.user.id);
+            return;
         }
         // Render this device's remembered shell without waiting for the hourly
         // token refresh. This is not authentication: the SDK/RLS still gate I/O.
@@ -103,7 +104,7 @@ async function checkExistingSession() {
         const client = await ensureSupabase();
         const { data: { session } } = await client.auth.getSession();
         if (session && session.user) {
-            if(orbitSessionIdleExpired(session.user.id)){await client.auth.signOut({scope:'local'});return;}
+            if(orbitSessionIdleExpired(session.user.id)){await orbitRequireWeeklySignIn(session.user.id);return;}
             currentUser = session.user;
             await launchApp();
         }
@@ -111,6 +112,7 @@ async function checkExistingSession() {
         console.warn('Session restore note:', e);
     } finally {
         document.documentElement.classList.remove('orbit-restoring');
+        if(localStorage.getItem('orbit_weekly_signin')==='true')showToast('Your weekly security check is due. Sign in again to continue.','info');
     }
 }
 
@@ -212,22 +214,39 @@ async function orbitCompleteGoogleSignIn(){
     return true;
 }
 window.handleGoogleSignIn=handleGoogleSignIn;
-const ORBIT_SESSION_IDLE_MS=6*24*60*60*1000;
+const ORBIT_SESSION_IDLE_MS=7*24*60*60*1000;
 function orbitSessionIdleExpired(userId,now=Date.now()){
-    try{const last=Number(localStorage.getItem(`orbit_session_activity_${userId}`));return last>0 && now-last>=ORBIT_SESSION_IDLE_MS;}catch(_){return false;}
+    try{const last=Number(localStorage.getItem(`orbit_session_verified_${userId}`)||localStorage.getItem(`orbit_session_activity_${userId}`));return last>0 && (now<last||now-last>=ORBIT_SESSION_IDLE_MS);}catch(_){return false;}
 }
 function orbitRememberSessionActivity(force=false){
-    if(!currentUser?.id || document.hidden)return;
-    const key=`orbit_session_activity_${currentUser.id}`,now=Date.now();
-    if(!force&&orbitSessionIdleExpired(currentUser.id,now)){
-        try{localStorage.setItem('orbit_explicit_signout','true');const project=new URL(SB_URL).hostname.split('.')[0];localStorage.removeItem(`sb-${project}-auth-token`);}catch(_){}
-        window.location.reload();return;
-    }
-    try{const last=Number(localStorage.getItem(key));if(force||!last||now-last>60000)localStorage.setItem(key,String(now));}catch(_){}
+    if(!currentUser?.id)return;
+    const key=`orbit_session_verified_${currentUser.id}`;
+    try{
+        if(force||!localStorage.getItem(key))localStorage.setItem(key,force?String(Date.now()):localStorage.getItem(`orbit_session_activity_${currentUser.id}`)||String(Date.now()));
+        if(force)localStorage.removeItem('orbit_weekly_signin');
+    }catch(_){}
+    if(!force&&orbitSessionIdleExpired(currentUser.id))void orbitRequireWeeklySignIn(currentUser.id);
 }
-document.addEventListener('pointerdown',()=>orbitRememberSessionActivity(),{passive:true});
-document.addEventListener('keydown',()=>orbitRememberSessionActivity(),{passive:true});
-document.addEventListener('visibilitychange',()=>{if(!document.hidden&&currentUser?.id&&orbitSessionIdleExpired(currentUser.id))orbitRememberSessionActivity();});
+let orbitWeeklySignInPending=false;
+async function orbitRequireWeeklySignIn(id){
+    if(orbitWeeklySignInPending)return;
+    orbitWeeklySignInPending=true;
+    const project=new URL(SB_URL).hostname.split('.')[0];
+    window.OrbitCrypto?.lock();
+    document.querySelectorAll('.screen.active').forEach(node=>node.classList.remove('active'));
+    document.getElementById('screen-auth')?.classList.add('active');
+    currentUser=null;userProfile=null;
+    try{
+        localStorage.setItem('orbit_weekly_signin','true');
+        await window.OrbitTrustedDevice?.forget(id);
+    }catch(_){}finally{
+        localStorage.removeItem(`sb-${project}-auth-token`);
+        window.location.reload();
+    }
+}
+function orbitCheckRunningSession(){if(!document.hidden&&currentUser?.id&&orbitSessionIdleExpired(currentUser.id))void orbitRequireWeeklySignIn(currentUser.id);}
+document.addEventListener('visibilitychange',orbitCheckRunningSession);
+window.setInterval?.(orbitCheckRunningSession,60000);
 
 // 1. DEDICATED LOG IN HANDLER
 async function handleLogin() {
@@ -596,6 +615,7 @@ async function signOut() {
         if(typeof disposeOrbitTyping==='function')disposeOrbitTyping();
         await stopOrbitChatServices();
         window.OrbitCrypto?.lock();
+        await window.OrbitTrustedDevice?.forget(signedOutId).catch(()=>{});
         try {
             await updatePresenceStatus(false);
             await sb.auth.signOut();
@@ -611,7 +631,7 @@ async function signOut() {
         currentUser = null;
         try{localStorage.setItem('orbit_explicit_signout','true');}catch(_){}
         try{const project=new URL(SB_URL).hostname.split('.')[0];localStorage.removeItem(`sb-${project}-auth-token`);}catch(_){}
-        try{if(signedOutId)localStorage.removeItem(`orbit_session_activity_${signedOutId}`);}catch(_){}
+        try{if(signedOutId){localStorage.removeItem(`orbit_session_activity_${signedOutId}`);localStorage.removeItem(`orbit_session_verified_${signedOutId}`);}}catch(_){}
         userProfile = null;
         currentRoom = null;
         activeChatPeerId = null;

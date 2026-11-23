@@ -1,0 +1,13 @@
+{
+  "appName": "Orbit Messenger",
+  "versionName": "1.1.0",
+  "versionCode": 110,
+  "downloadUrl": "https://github.com/RivaXx/Orbit-Messaging-/releases/download/v1.1.0/Orbit-Messenger-v1.1.0.apk",
+  "summary": "Android app lock, stickers, Gallery sharing and faster startup",
+  "changes": [
+    "Unlock Android with your own four-digit PIN or strong biometrics",
+    "Remember encrypted chat access on trusted devices and check sign-in after seven days",
+    "Send built-in stickers and create stickers from photos",
+    "Share Gallery photos to an Orbit chat and invite people with a link or QR code"
+  ]
+}

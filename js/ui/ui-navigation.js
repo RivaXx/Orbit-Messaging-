@@ -29,7 +29,8 @@ async function launchApp({introduction=false,forceIntroduction=false}={}) {
     let repeatIntro=forceIntroduction;try{repeatIntro=repeatIntro||localStorage.getItem('orbit_explicit_signout')==='true';}catch(_){}
     window.OrbitIntroduction?.afterSignIn(currentUser,{interactive:introduction,force:repeatIntro});
     try{localStorage.removeItem('orbit_explicit_signout');}catch(_){}
-    if(typeof orbitRememberSessionActivity==='function')orbitRememberSessionActivity(true);
+    if(typeof orbitRememberSessionActivity==='function')orbitRememberSessionActivity(introduction);
+    window.OrbitCrypto?.restoreTrusted();
     if (typeof syncOrbitCleanupWatermark === 'function') syncOrbitCleanupWatermark().catch(() => {});
     document.getElementById('screen-auth').classList.remove('active');
     document.getElementById('screen-dash').classList.add('active');
@@ -48,6 +49,7 @@ async function launchApp({introduction=false,forceIntroduction=false}={}) {
     setTimeout(()=>{
         if(currentUser?.id!==launchOwner)return;
         window.OrbitChatData?.receiveShare();
+        window.OrbitChatData?.receiveAndroidShare();
         initOrbitWeather().catch(()=>{});
         if(typeof OrbitNotes!=='undefined'){OrbitNotes.load();if(window.orbitPendingNote)orbitOpenNoteLink(window.orbitPendingNote);}
         initOrbitChatServices().catch(error=>console.warn('[Orbit Services]',error.message));
@@ -87,6 +89,8 @@ async function launchApp({introduction=false,forceIntroduction=false}={}) {
             const client = await ensureSupabase();
             const result = await client.auth.getSession();
             if(!result.error&&!result.data?.session&&currentUser?.id===owner){
+                window.OrbitCrypto?.lock();
+                await window.OrbitTrustedDevice?.forget(owner).catch(()=>{});
                 currentUser=null;userProfile=null;
                 document.querySelectorAll('.screen.active').forEach(node=>node.classList.remove('active'));
                 document.getElementById('screen-auth').classList.add('active');
@@ -422,7 +426,8 @@ async function refreshNewsFeed() {
     try {
         let items = [];
         try{
-            const response=await fetch('/api/news?category='+encodeURIComponent(category),{cache:'no-store',signal:AbortSignal.timeout(8000)});
+            const newsPath='/api/news?category='+encodeURIComponent(category);
+            const response=await fetch(window.OrbitDevice ? 'https://orbit-messaging.vercel.app'+newsPath : newsPath,{cache:'no-store',signal:AbortSignal.timeout(8000)});
             if(response.ok){const feed=await response.json();if(Array.isArray(feed.items))items=feed.items.filter(row=>row.category===category&&row.title&&/^https?:/.test(row.link)&&Number.isFinite(Date.parse(row.pubDate)));}
         }catch(error){console.warn('[Orbit News] Aggregator unavailable:',error.message);}
         // Publisher RSS carries story images. Never substitute a stock photo.

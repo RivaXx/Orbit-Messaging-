@@ -39,14 +39,17 @@ test('realtime deduplicates unread increments; stale RPC results cannot erase in
  finish({data:[],error:null});await pending;assert.equal(c.orbitConversationUnread('room'),1);
  c.currentUser={id:'another'};c.unreadRoomsSet.clear();assert.equal(c.orbitConversationUnread('room'),0);
 });
-test('remembered session opens app without login flash and enforces six days of inactivity',async()=>{
- const {c,storage}=setup();vm.runInContext(read('js/ui/ui-auth.js'),c);let launches=0,signouts=0;
- storage.set('sb-example-auth-token',JSON.stringify({user:{id:'me'}}));storage.set('orbit_session_activity_me',String(Date.now()-86400000));
- c.launchApp=async()=>launches++;c.ensureSupabase=async()=>({auth:{getSession:async()=>{assert.equal(c.document.documentElement.classList.contains('orbit-restoring'),true);return {data:{session:{user:{id:'me'}}}};},signOut:async()=>signouts++}});
+test('remembered session opens without a network wait and does not postpone the weekly security check',async()=>{
+ const {c,storage}=setup();vm.runInContext(read('js/ui/ui-auth.js'),c);let launches=0,reloads=0;
+ const checkpoint=String(Date.now()-6*86400000);
+ storage.set('sb-example-auth-token',JSON.stringify({user:{id:'me'},refresh_token:'fixture'}));storage.set('orbit_session_verified_me',checkpoint);
+ c.launchApp=async()=>launches++;c.ensureSupabase=async()=>{throw Error('Cached restore must render before calling auth');};
  await c.checkExistingSession();assert.equal(launches,1);assert.equal(c.document.documentElement.classList.contains('orbit-restoring'),false);
- storage.set('orbit_session_activity_me',String(Date.now()-6*86400000));await c.checkExistingSession();assert.equal(launches,1);assert.equal(signouts,1);
- storage.set('orbit_explicit_signout','true');await c.checkExistingSession();assert.equal(launches,1);
- let reloaded=false;c.window.location.reload=()=>reloaded=true;c.orbitRememberSessionActivity();assert.equal(reloaded,true);assert.equal(storage.has('sb-example-auth-token'),false);
+ c.orbitRememberSessionActivity();assert.equal(storage.get('orbit_session_verified_me'),checkpoint);
+ c.window.location.reload=()=>reloads++;
+ storage.set('orbit_session_verified_me',String(Date.now()-7*86400000));await c.checkExistingSession();
+ assert.equal(launches,1);assert.equal(reloads,1);assert.equal(storage.has('sb-example-auth-token'),false);
+ assert.equal(storage.get('orbit_weekly_signin'),'true');await c.checkExistingSession();assert.equal(launches,1);
 });
 test('precise weather rejects stale fixes, retains best fresh fix and clears the geolocation watch',async()=>{
  const {c,timers}=setup();let success,error,cleared=0,options;

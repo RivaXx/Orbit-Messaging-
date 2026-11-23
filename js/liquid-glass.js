@@ -17,7 +17,7 @@
  }
  function refresh() {
   const enabled = preference('orbit_pref_glass_enabled', 1) !== 0;
-  try { quality = localStorage.getItem('orbit_pref_glass_quality') || 'balanced'; } catch (_) {}
+  try { quality = localStorage.getItem('orbit_pref_glass_quality') || (window.OrbitDevice ? 'fast' : 'balanced'); } catch (_) {}
   if (!['balanced','full','fast'].includes(quality)) quality = 'balanced';
   const refract = canRefract && quality !== 'fast';
   intensity = Math.max(0, Math.min(100, preference('orbit_pref_refraction', 55) || 0));

@@ -35,6 +35,7 @@
     let auroraPhase = 0;
 
     function initCelestialEngine() {
+        if (document.documentElement.classList.contains('orbit-android')) return;
         canvas = document.getElementById('orbit-celestial-canvas');
         if (!canvas) {
             canvas = document.createElement('canvas');

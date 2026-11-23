@@ -515,8 +515,7 @@ setTimeout(() => {
         if (!client?.auth) return;
         client.auth.getSession().then(({ data }) => {
             if (data?.session?.user) {
-                currentUser = currentUser || data.session.user;
-                _hydrateAndResumeMessageOutbox(data.session.user.id);
+                if(currentUser?.id===data.session.user.id)_hydrateAndResumeMessageOutbox(data.session.user.id);
             }
         }).catch(() => {});
         client.auth.onAuthStateChange((_event, session) => {
@@ -525,13 +524,17 @@ setTimeout(() => {
     } catch (_) {}
 }, 0);
 
-async function sendMessage() {
-    if (typeof orbitEditingMessage !== "undefined" && orbitEditingMessage) return orbitSaveEdit();
+async function sendMessage(sticker = null) {
+    if (sticker && !window.OrbitStickers?.valid(sticker)) return false;
+    if (typeof orbitEditingMessage !== "undefined" && orbitEditingMessage) {
+        if (!sticker) return orbitSaveEdit();
+        showToast('Finish editing before sending a sticker.','info');return false;
+    }
     // ── Double-send guard: prevent duplicate messages from rapid clicks or Enter key-repeat ──
     if (_isSendingMessage) return;
 
     const input = document.getElementById('msg-input');
-    const text = input ? input.value.trim() : '';
+    const text = sticker ? (sticker.emoji || 'Sticker') : input?.value.trim() || '';
     if (!text && pendingAttachments.length === 0) return;
     if (!currentRoom) return;
     // Bind this send to the room visible at click time. Network responses may
@@ -569,9 +572,12 @@ async function sendMessage() {
     }
 
     try{await OrbitCrypto.requireUnlocked();}catch(error){_isSendingMessage=false;showToast(error.message,'info');return;}
-    OrbitCrypto.clearDraft(sendViewRoom);
-    if (input) { input.value = ''; input.style.height = 'auto'; }
-    stopTypingBroadcast();
+    if(currentRoom!==sendViewRoom){_isSendingMessage=false;return false;}
+    if (!sticker) {
+        OrbitCrypto.clearDraft(sendViewRoom);
+        if (input) { input.value = ''; input.style.height = 'auto'; }
+        stopTypingBroadcast();
+    }
 
     let sendRoomId = sendViewRoom;
     if (!isGroupChat && sendPeerId && currentUser) {
@@ -593,7 +599,7 @@ async function sendMessage() {
         sendRoomId
     ]));
     // Standard JSON object attachments for 100% JSONB compatibility
-    const attData = pendingAttachments.map(a => ({
+    const attData = (sticker ? [] : pendingAttachments).map(a => ({
         name: a.name || 'File',
         url: a.url || '',
         type: a.type || 'file'
@@ -614,20 +620,21 @@ async function sendMessage() {
         sender_id: currentUser.id,
         username: userProfile?.first_name ? `${userProfile.first_name}` : (currentUser.email ? currentUser.email.split('@')[0] : 'User'),
         text: text || null,
-        type: pendingAttachments.length > 0 ? (pendingAttachments[0].type || 'file') : 'text',
+        type: attData[0]?.type || 'text',
         attachments: attData,
+        ...(sticker ? {metadata:{orbit_sticker:sticker}} : {}),
         reply_to: replyTargetMessage ? { id: replyTargetMessage.id, username: replyTargetMessage.username, text: replyTargetMessage.text } : null,
         created_at: new Date().toISOString()
     };
 
-    pendingAttachments = [];
-    if (typeof updateDynamicActionButtons === 'function') {
-        updateDynamicActionButtons();
-    }
-    const mediaStrip = document.getElementById('media-preview-strip');
-    if (mediaStrip) {
-        mediaStrip.classList.add('hide');
-        mediaStrip.innerHTML = '';
+    if (!sticker) {
+        pendingAttachments = [];
+        if (typeof updateDynamicActionButtons === 'function') updateDynamicActionButtons();
+        const mediaStrip = document.getElementById('media-preview-strip');
+        if (mediaStrip) {
+            mediaStrip.classList.add('hide');
+            mediaStrip.innerHTML = '';
+        }
     }
 
     // Clear reply bar
@@ -678,6 +685,7 @@ async function sendMessage() {
     _messageOutbox.set(clientMsgId, outboxItem);
     _persistMessageOutbox(currentUser.id);
     _deliverOutboxMessage(clientMsgId);
+    return true;
 }
 
 // Queue media locally and render its bubble before any network transfer. The

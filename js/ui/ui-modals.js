@@ -1142,20 +1142,14 @@ function toggleTheme() {
 // ══════════════════════════════════════════════════════════════════════════
 // SHARE WEB APP (QR Code Canvas Generator & Link Sharing)
 // ══════════════════════════════════════════════════════════════════════════
+const ORBIT_PUBLIC_URL = 'https://orbit-messaging.vercel.app/';
+const ORBIT_INVITE = 'Join me on Orbit Messenger.';
+
 function openShareAppModal() {
-    const modal = document.getElementById('modal-share-app');
-    const input = document.getElementById('share-url-inp');
-    const canvas = document.getElementById('share-qr-canvas');
     document.getElementById('user-dropdown')?.classList.remove('open');
-    
-    let currentUrl = window.location.href.split('?')[0].split('#')[0];
-    if (currentUrl.startsWith('file:///')) {
-        currentUrl = 'https://orbit-messenger.web.app';
-    }
-    if (input) input.value = currentUrl;
-    
-    modal.classList.add('active');
-    renderQrCode(canvas, currentUrl);
+    const qr = document.getElementById('orbit-invite-qr');
+    if (!qr.hasAttribute('src')) qr.src = qr.dataset.src;
+    document.getElementById('modal-share-app').classList.add('active');
 }
 
 function closeShareAppModal(e) {
@@ -1182,97 +1176,50 @@ function fallbackCopy(text) {
     document.body.appendChild(ta);
     ta.focus();
     ta.select();
-    try { document.execCommand('copy'); } catch(e) {}
-    document.body.removeChild(ta);
+    try { return document.execCommand('copy'); } catch(e) { return false; }
+    finally { ta.remove(); }
+}
+
+async function copyOrbitInvite(value, success) {
+    try {
+        if (navigator.clipboard && window.isSecureContext) await navigator.clipboard.writeText(value);
+        else if (!fallbackCopy(value)) throw new Error();
+        showToast(success, 'success');
+    } catch {
+        showToast('Could not copy the link. Press and hold it to copy.', 'info');
+    }
 }
 
 function copyShareAppUrl() {
-    const input = document.getElementById('share-url-inp');
-    const textToCopy = input ? input.value : window.location.href;
-    copyToClipboard(textToCopy);
-    showToast('App link copied to clipboard ✓', 'success');
+    return copyOrbitInvite(ORBIT_PUBLIC_URL, 'Orbit link copied.');
 }
 
 function copyInviteMessage() {
-    const input = document.getElementById('share-url-inp');
-    const url = input ? input.value : window.location.href;
-    const msg = `✨ Join me on Orbit Messenger — Your Go-To Messaging System!\n🔗 Link: ${url}`;
-    copyToClipboard(msg);
-    showToast('Full invitation copied ✓', 'success');
+    return copyOrbitInvite(ORBIT_INVITE + ' ' + ORBIT_PUBLIC_URL, 'Orbit invite copied.');
 }
 
 async function triggerNativeAppShare() {
-    const shareUrl = document.getElementById('share-url-inp')?.value || window.location.href;
-    if (navigator.share) {
-        try {
-            await navigator.share({
-                title: 'Orbit Messenger',
-                text: 'Join me on Orbit Messenger — Your Go-To Messaging System!',
-                url: shareUrl
-            });
-        } catch(e) {}
-    } else {
-        copyShareAppUrl();
-    }
-}
-
-function renderQrCode(canvas, text) {
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    const size = canvas.width;
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 0, size, size);
-
-    // High quality dynamic 25x25 QR Matrix Generator
-    const qrMatrixSize = 25;
-    const cellSize = (size - 24) / qrMatrixSize;
-    const offset = 12;
-
-    ctx.fillStyle = '#08080A';
-
-    // Position detection patterns (Top-Left, Top-Right, Bottom-Left)
-    function drawFinderPattern(x, y) {
-        ctx.fillRect(offset + x * cellSize, offset + y * cellSize, 7 * cellSize, 7 * cellSize);
-        ctx.fillStyle = '#ffffff';
-        ctx.fillRect(offset + (x + 1) * cellSize, offset + (y + 1) * cellSize, 5 * cellSize, 5 * cellSize);
-        ctx.fillStyle = '#08080A';
-        ctx.fillRect(offset + (x + 2) * cellSize, offset + (y + 2) * cellSize, 3 * cellSize, 3 * cellSize);
-    }
-
-    drawFinderPattern(0, 0);
-    drawFinderPattern(qrMatrixSize - 7, 0);
-    drawFinderPattern(0, qrMatrixSize - 7);
-
-    // Deterministic pseudo-random payload grid based on text hash
-    let hash = 0;
-    for (let i = 0; i < text.length; i++) {
-        hash = (hash << 5) - hash + text.charCodeAt(i);
-        hash |= 0;
-    }
-
-    for (let r = 0; r < qrMatrixSize; r++) {
-        for (let c = 0; c < qrMatrixSize; c++) {
-            if ((r < 8 && c < 8) || (r < 8 && c >= qrMatrixSize - 8) || (r >= qrMatrixSize - 8 && c < 8)) {
-                continue;
-            }
-            const bit = Math.abs(Math.sin((r * 31 + c * 17 + hash)) * 10000) % 1 > 0.48;
-            if (bit) {
-                ctx.fillRect(offset + c * cellSize, offset + r * cellSize, cellSize - 0.5, cellSize - 0.5);
-            }
-        }
-    }
-}
-
-function downloadQrCodeImage() {
-    const canvas = document.getElementById('share-qr-canvas');
-    if (!canvas) return;
     try {
-        const dataUrl = canvas.toDataURL('image/png');
-        downloadFile(dataUrl, 'Orbit_Messenger_QR.png');
-        showToast('QR Code downloaded ✓', 'success');
-    } catch(e) {
-        showToast('Download failed');
+        if (window.OrbitDevice) await OrbitDevice('shareInvite');
+        else if (navigator.share) await navigator.share({title:'Orbit Messenger',text:ORBIT_INVITE,url:ORBIT_PUBLIC_URL});
+        else await copyInviteMessage();
+    } catch (e) {
+        if (e.name !== 'AbortError') await copyInviteMessage();
     }
+}
+
+async function checkOrbitAndroidUpdate() {
+    try {
+        const response = await fetch(new URL('orbit-update.json', ORBIT_PUBLIC_URL), {cache:'no-store',signal:AbortSignal.timeout(10000)});
+        if (!response.ok) throw Error('The update service could not be reached.');
+        const release = await response.json();
+        const versionCode = await OrbitDevice('versionCode');
+        if (!Number.isInteger(release.versionCode) || typeof release.versionName !== 'string') throw Error('The update information is invalid.');
+        if (release.versionCode <= versionCode) {showToast('Orbit is up to date.','success');return;}
+        if (confirm('Orbit ' + release.versionName + ' is available. Open the download?')) {
+            await OrbitDevice('openUpdate',{url:release.downloadUrl});
+        }
+    } catch (e) { showToast(e.message || 'Could not check for updates.','error'); }
 }
 
 // ══════════════════════════════════════════════════════════════════════════
@@ -1664,8 +1611,6 @@ window.copyToClipboard = copyToClipboard;
 window.copyShareAppUrl = copyShareAppUrl;
 window.copyInviteMessage = copyInviteMessage;
 window.triggerNativeAppShare = triggerNativeAppShare;
-window.renderQrCode = renderQrCode;
-window.downloadQrCodeImage = downloadQrCodeImage;
 window.toggleTabVisibility = toggleTabVisibility;
 window.setMediaQualityPref = setMediaQualityPref;
 window.toggleAutoStorageClean = toggleAutoStorageClean;

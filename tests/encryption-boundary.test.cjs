@@ -56,6 +56,16 @@ test('actual application insert boundary stores signed ciphertext and recipient 
  const received=await b.client.from('messages').select('id,text').eq('id',id).single();assert.equal(received.data.text,'Private boundary test');assert.equal(received.data.sender_id,A);
  const outsider=await c.client.from('messages').select('*').eq('id',id).single();assert.equal(outsider.data._e2ee_locked,true);assert.ok(!outsider.data.text.includes('Private boundary test'));
 });
+test('custom sticker data traverses the same encrypted message boundary',async()=>{
+ const id=crypto.randomUUID();
+ const sticker={version:1,image:'data:image/webp;base64,c3RpY2tlcg=='};
+ const result=await a.client.from('messages').insert([{...message(id,'Sticker'),metadata:{orbit_sticker:sticker}}]);
+ assert.equal(result.error,null);
+ const wire=database.tables.messages.get(id);
+ assert.ok(!JSON.stringify(wire).includes(sticker.image));
+ const received=await b.client.from('messages').select('*').eq('id',id).single();
+ assert.equal(received.data.metadata.orbit_sticker.image,sticker.image);
+});
 test('recovery backups and local outbox persistence contain neither private key armor nor plaintext',async()=>{
  const item={payload:message(crypto.randomUUID(),'secret offline draft'),mediaUploadInfo:[{name:'private-file-name.jpg'}]};
  const sealed=await a.crypto.sealQueue([item],A),json=JSON.stringify(sealed);assert.ok(!json.includes('secret offline draft'));assert.ok(!json.includes('private-file-name'));

@@ -6,7 +6,7 @@
  const check=id=>{if(account()!==id)throw Error('The signed-in account changed. Please start again.');};
  const el=(tag,text,cls)=>{const node=document.createElement(tag);if(text!==undefined)node.textContent=text;if(cls)node.className=cls;return node;};
  const button=(label,fn)=>{const node=el('button',label);node.type='button';node.onclick=fn;return node;};
- function close(){selectionEpoch++;active?.remove();active=null;archive=null;urls.forEach(URL.revokeObjectURL);urls=[];}
+ function close(){selectionEpoch++;active?.remove();active=null;archive=null;shareOpened=false;urls.forEach(URL.revokeObjectURL);urls=[];}
  function panel(title){
   if(busy)return null;close();
   const overlay=el('div',undefined,'orbit-data-overlay'),dialog=el('section',undefined,'orbit-data-dialog');
@@ -151,7 +151,7 @@
   search.oninput=scope.onchange=()=>{page=0;render();};render();
  }
  function clearShareUrl(){const url=new URL(location.href);url.searchParams.delete('orbitShare');history.replaceState({},'',url.pathname+url.search+url.hash);}
- async function composeShare(payload,id,owner){
+ async function composeShare(payload,id,owner,discard=null){
    check(owner);
    const box=panel('Send photos and files');if(!box){shareOpened=false;return;}
    const epoch=selectionEpoch,checkSelection=()=>{check(owner);if(epoch!==selectionEpoch)throw Error('This selection was closed. Choose the files again.');};
@@ -174,16 +174,34 @@
       try{checkSelection();}catch(e){previews.forEach(releaseMediaPreviewItem);throw e;}
       openMediaPreviewScreen(previews);
      }
-     if(id){await OrbitShareInbox.remove(id);clearShareUrl();}close();
+     if(id){await OrbitShareInbox.remove(id);clearShareUrl();}
+     await discard?.();close();
     }catch(e){showToast(e.message,'error');}finally{busy=false;}
    };
    const render=()=>{list.replaceChildren();const rows=targets().filter(t=>t.title.toLowerCase().includes(search.value.toLowerCase()));rows.forEach(t=>list.append(button(t.title,()=>select(t))));if(!rows.length)list.append(el('p','No matching chats. Open or add your contact in Orbit, then try again.'));};
-   search.oninput=render;render();box.append(button('Discard selection',async()=>{if(id){await OrbitShareInbox.remove(id);clearShareUrl();}close();}));
+   search.oninput=render;render();
+   if(typeof loadMainChats==='function')Promise.resolve(loadMainChats()).then(()=>{if(epoch===selectionEpoch)render();}).catch(()=>{});
+   box.append(button('Discard selection',async()=>{if(id){await OrbitShareInbox.remove(id);clearShareUrl();}await discard?.();close();}));
+ }
+ async function receiveAndroidShare(){
+  const owner=account();if(!window.OrbitDevice||!owner||busy||shareOpened)return;
+  shareOpened=true;
+  try{
+   const batch=await OrbitDevice('pendingShare');check(owner);
+   if(!batch){shareOpened=false;return;}
+   const files=[];
+   for(const item of batch.files){
+    const url=new URL(item.path,location.origin);if(url.origin!==location.origin||!url.pathname.startsWith('/_orbit-native-share/'))throw Error('Invalid Android share attachment.');
+    const response=await fetch(url,{cache:'no-store'});if(!response.ok)throw Error('The shared photo is no longer available. Share it again from Gallery.');
+    files.push(new File([await response.blob()],item.name,{type:item.type}));check(owner);
+   }
+   await composeShare({files},null,owner,()=>OrbitDevice('discardShare',{id:batch.id}));shareOpened=!!active;
+  }catch(e){shareOpened=false;showToast(e.message,'error');}
  }
  async function receiveShare(){
   const id=new URL(location.href).searchParams.get('orbitShare');if(!id||!account()||shareOpened||busy)return;
   const owner=account();shareOpened=true;
-  try{const payload=await OrbitShareInbox.receive(id,owner);check(owner);await composeShare(payload,id,owner);}
+  try{const payload=await OrbitShareInbox.receive(id,owner);check(owner);await composeShare(payload,id,owner);shareOpened=!!active;}
   catch(e){shareOpened=false;showToast(e.message,'error');}
  }
  function canPickPhotos(){
@@ -220,7 +238,8 @@
   const progress=el('p','', 'orbit-data-status');box.append(progress);
   box.append(button('Check Orbit web update',async()=>{try{const registration=await navigator.serviceWorker?.getRegistration();if(!registration)throw Error('Open Orbit online in Chrome, then check again.');await registration.update();progress.textContent='Web update checked. Finish pending sends, close Orbit, then reopen it. Android share registration is updated separately by Chrome.';}catch(e){progress.textContent=e.message;}}));
  }
- window.OrbitChatData={openBackup,receiveShare,canPickPhotos,openPhotoPicker,photosPicked,openGalleryHelp,close};
+ window.OrbitChatData={openBackup,receiveShare,receiveAndroidShare,canPickPhotos,openPhotoPicker,photosPicked,openGalleryHelp,close};
+ if(window.OrbitDevice)window.addEventListener('orbit-android-share',receiveAndroidShare);
  document.addEventListener('orbit-encryption-locked',()=>{close();shareOpened=false;});
  document.addEventListener('keydown',e=>{if(e.key==='Escape')close();});
 })();
