@@ -38,6 +38,18 @@ test('encrypted files require their signed parent digest and authentic sender',a
  await assert.rejects(b.decryptFile(file.ciphertext,file.digest,{...rc,user_id:ra.user_id}));
  await assert.rejects(c.decryptFile(file.ciphertext,file.digest,ra));
 });
+test('a device-bound chat key unlocks without deriving a passphrase key and rejects tampering',async()=>{
+ const box=await b.exportDeviceIdentity();
+ assert.equal(box.secret.length,43);
+ assert.ok(!JSON.stringify(box).includes(passB));
+ assert.ok(!JSON.stringify(box).includes('PRIVATE KEY'));
+ const subtle=Object.fromEntries(['importKey','decrypt'].map(name=>[name,crypto.subtle[name].bind(crypto.subtle)]));
+ const recovered=createOrbitCryptoEngine(pgp,{subtle});
+ await assert.rejects(recovered.unlockDevice(ra.user_id,ra,box));
+ await assert.rejects(recovered.unlockDevice(rb.user_id,rb,{...box,ciphertext:(box.ciphertext[0]==='A'?'B':'A')+box.ciphertext.slice(1)}));
+ await recovered.unlockDevice(rb.user_id,rb,box);
+ assert.equal((await recovered.decrypt(ctx,wire.ciphertext,ra)).text,'Confidential synthetic text');
+});
 test('key fingerprints and sender recovery copies are mandatory',async()=>{
  await assert.rejects(a.encrypt(ctx,{type:'text',text:'x'},[rb]));
  await assert.rejects(a.encrypt(ctx,{type:'text',text:'x'},[ra,{...rb,fingerprint:'0'.repeat(64)}]));

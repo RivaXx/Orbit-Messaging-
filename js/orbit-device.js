@@ -18,7 +18,7 @@
         const timer = setTimeout(() => {
             waiting.delete(id);
             reject(new Error('Android did not respond. Try again.'));
-        }, 10000);
+        }, method==='requestNotifications'?120000:10000);
         waiting.set(id, {resolve, reject, timer});
         bridge.postMessage(JSON.stringify({id, method, args}));
     });
@@ -31,6 +31,7 @@
         }
         if (document.querySelector('.orbit-data-overlay')) { window.OrbitChatData?.close(); return true; }
         if (document.querySelector('#modal-share-app.active')) { window.closeShareAppModal(); return true; }
+        if (document.querySelector('#modal-orbit-weather.active')) { closeOrbitWeatherConsent(); return true; }
         if (document.querySelector('#modal-orbit-editor.active')) { closeOrbitMediaEditor(); return true; }
         if (document.querySelector('#modal-media-preview.active')) { closeMediaPreviewScreen(); return true; }
         if (document.querySelector('.glass-modal-overlay.active, #screen-chat.active, #screen-profile.active, #user-dropdown.open')) {
@@ -65,7 +66,6 @@
     }
     window.OrbitTrustedDevice = {
         async remember(account, record, backup, passphrase) {
-            if (window.OrbitDevice) return OrbitDevice('remember', {account, record, backup, passphrase});
             const key = await crypto.subtle.generateKey({name:'AES-GCM', length:256}, false, ['encrypt','decrypt']);
             const iv = crypto.getRandomValues(new Uint8Array(12));
             const bytes = encoder.encode(passphrase);

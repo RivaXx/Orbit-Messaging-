@@ -2,24 +2,77 @@
 let orbitWeatherOwner=null,orbitWeatherEpoch=0,orbitWeatherTimer=null,orbitWeatherBusy=false,orbitWeatherLastFetch=0;
 let orbitWeatherPermission=null,orbitWeatherAbort=null;
 let orbitWeatherGeoCancel=null;
+let orbitWeatherSolar=null, orbitWeatherSceneOverride='auto', orbitWeatherDiscoveryTimer=null;
 function orbitWeatherKey(){return `orbit_weather_enabled_${currentUser?.id||'guest'}`;}
 function orbitWeatherEnabled(){try{return localStorage.getItem(orbitWeatherKey())==='true';}catch{return false;}}
 function orbitWeatherLabel(text){document.getElementById('orbit-weather-label').textContent=text;}
 function orbitWeatherCode(code,day){
     if(code===0)return {label:day?'Clear sky':'Clear night',kind:day?'sun':'moon',icon:day?'☀':'☾'};
     if(code<=3)return {label:code===3?'Overcast':'Partly cloudy',kind:'cloud',icon:'☁'};
-    if(code===45||code===48)return {label:'Fog',kind:'cloud',icon:'≋'};
+    if(code===45||code===48)return {label:'Fog',kind:'fog',icon:'≋'};
     if(code>=95)return {label:'Thunderstorm',kind:'storm',icon:'ϟ'};
     if([71,73,75,77,85,86].includes(code))return {label:'Snow',kind:'snow',icon:'❄'};
     if([51,53,55,56,57,61,63,65,66,67,80,81,82].includes(code))return {label:code<60?'Drizzle':'Rain',kind:'rain',icon:'☂'};
     return {label:'Current weather',kind:'cloud',icon:'☁'};
 }
 function openOrbitWeatherConsent(){
-    let motion='calm';try{motion=localStorage.getItem('orbit_weather_motion')||'calm';}catch(_){}
+    let motion='live';try{motion=localStorage.getItem('orbit_weather_motion')||'live';}catch(_){}
     setOrbitWeatherMotion(motion,false);
+    setOrbitWeatherScene(orbitWeatherSceneOverride);
     document.getElementById('modal-orbit-weather').classList.add('active');
     document.getElementById('orbit-weather-disable').classList.toggle('hide',!orbitWeatherEnabled());
     document.getElementById('orbit-weather-refresh').textContent=orbitWeatherEnabled()?'Refresh weather':'Allow location & show weather';
+}
+function orbitWeatherPhase(now, sunset, day, localHour){
+    if(Number.isFinite(sunset) && now>=sunset-3600 && now<sunset+1800)return 'evening';
+    if(Number.isFinite(sunset)&&typeof day==='boolean')return day?'day':'night';
+    if(localHour>=17&&localHour<20)return 'evening';
+    if(typeof day==='boolean')return day?'day':'night';
+    return localHour>=6&&localHour<17?'day':'night';
+}
+function setOrbitWeatherScene(value){
+    const page=document.getElementById('modal-orbit-weather');
+    const select=document.getElementById('orbit-weather-scene-select');
+    orbitWeatherSceneOverride=['day','evening','night'].includes(value)?value:'auto';
+    const now=new Date();
+    const phase=orbitWeatherSceneOverride==='auto'?orbitWeatherPhase(now.getTime()/1000,orbitWeatherSolar?.sunset,orbitWeatherSolar?.day,now.getHours()):orbitWeatherSceneOverride;
+    page.dataset.phase=phase;
+    if(select)select.value=orbitWeatherSceneOverride;
+    document.getElementById('orbit-weather-phase').textContent=phase[0].toUpperCase()+phase.slice(1);
+}
+function triggerOrbitWeatherDiscovery(target){
+    const page=document.getElementById('modal-orbit-weather');
+    const {phase,weather}=page.dataset;
+    const sky={day:['birds','A flock passes overhead.'],evening:['lantern','A lantern drifts into the dusk.'],night:['stars','A shooting star crosses the sky.']};
+    const valley={day:['kite','A kite catches the breeze.'],evening:['fireflies','Fireflies gather by the river.'],night:['fireflies','Fireflies gather by the river.']};
+    const [effect,description]=target==='sky'?sky[phase]:weather==='rain'?['rainbow','A rainbow appears over the valley.']:valley[phase];
+    clearTimeout(orbitWeatherDiscoveryTimer);
+    page.dataset.discovery=effect;
+    for(const animation of page.querySelector('.orbit-weather-discovery')?.getAnimations?.()||[]){animation.cancel();animation.play();}
+    const note=document.getElementById('orbit-weather-discovery-status');note.textContent=description;
+    orbitWeatherDiscoveryTimer=setTimeout(()=>{delete page.dataset.discovery;note.textContent='';},3200);
+}
+function renderOrbitWeatherOutlook(weather){
+    const timeline=document.getElementById('orbit-weather-outlook');
+    const hours=weather.hourly;
+    timeline.replaceChildren();
+    const daily=weather.daily;
+    const range=document.getElementById('orbit-weather-range');
+    range.textContent=Number.isFinite(daily?.temperature_2m_max?.[0])&&Number.isFinite(daily?.temperature_2m_min?.[0])
+        ? `H ${Math.round(daily.temperature_2m_max[0])}°  ·  L ${Math.round(daily.temperature_2m_min[0])}°` : '';
+    if(!Array.isArray(hours?.time))return;
+    const first=hours.time.findIndex(time=>time>weather.current.time);
+    if(first<0)return;
+    for(let i=first;i<Math.min(first+4,hours.time.length);i++){
+        if(!Number.isFinite(hours.temperature_2m?.[i]))continue;
+        const date=new Date(hours.time[i]*1000),item=document.createElement('div');item.className='orbit-weather-hour';
+        const time=document.createElement('time');time.dateTime=date.toISOString();
+        time.textContent=date.toLocaleTimeString([],{hour:'numeric',timeZone:weather.timezone||undefined});
+        const condition=orbitWeatherCode(hours.weather_code?.[i],hours.is_day?.[i]===1);
+        const icon=document.createElement('span');icon.textContent=condition.icon;icon.setAttribute('role','img');icon.setAttribute('aria-label',condition.label);
+        const value=document.createElement('strong');value.textContent=`${Math.round(hours.temperature_2m[i])}°`;
+        item.append(time,icon,value);timeline.append(item);
+    }
 }
 function setOrbitWeatherMotion(value,save=true){
     if(!['calm','live','still'].includes(value))value='calm';
@@ -48,7 +101,10 @@ function renderOrbitWeatherMetrics(weather,air){
         ?`Air quality model updated ${time(quality.time)}. AQI uses the US scale; model estimates can differ from local monitors.`
         :'Air quality is temporarily unavailable. Other weather details are still shown.';
 }
-function closeOrbitWeatherConsent(){document.getElementById('modal-orbit-weather').classList.remove('active');}
+function closeOrbitWeatherConsent(){
+    const page=document.getElementById('modal-orbit-weather');page.classList.remove('active');delete page.dataset.discovery;
+    clearTimeout(orbitWeatherDiscoveryTimer);document.getElementById('orbit-weather-discovery-status').textContent='';
+}
 function stopOrbitWeather(){
     orbitWeatherEpoch++;clearTimeout(orbitWeatherTimer);orbitWeatherTimer=null;
     orbitWeatherAbort?.abort();orbitWeatherAbort=null;orbitWeatherBusy=false;orbitWeatherLastFetch=0;orbitWeatherOwner=null;
@@ -61,6 +117,9 @@ function stopOrbitWeather(){
     document.getElementById('orbit-weather-updated').textContent='';
     document.getElementById('orbit-weather-position')?.replaceChildren();
     const page=document.getElementById('modal-orbit-weather');if(page){page.dataset.weather='idle';page.dataset.night='false';}
+    orbitWeatherSolar=null;orbitWeatherSceneOverride='auto';
+    document.getElementById('orbit-weather-outlook')?.replaceChildren();
+    document.getElementById('orbit-weather-range').textContent='';
     const temperature=document.getElementById('orbit-weather-temperature');if(temperature)temperature.textContent='—°';
     const place=document.getElementById('orbit-weather-place');if(place)place.textContent='Your local forecast';
     const condition=document.getElementById('orbit-weather-condition');if(condition)condition.textContent='Enable location to see current conditions';
@@ -132,7 +191,7 @@ async function refreshOrbitWeather(explicit=false){
         let weather,place,air;
         try{
             const results=await Promise.allSettled([
-                orbitWeatherFetch(`https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,weather_code,is_day,apparent_temperature,relative_humidity_2m,wind_speed_10m,precipitation,surface_pressure&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max,uv_index_max,sunrise,sunset&temperature_unit=celsius&wind_speed_unit=kmh&precipitation_unit=mm&timeformat=unixtime&timezone=auto&forecast_days=1`,controller.signal),
+                orbitWeatherFetch(`https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,weather_code,is_day,apparent_temperature,relative_humidity_2m,wind_speed_10m,precipitation,surface_pressure&hourly=temperature_2m,weather_code,is_day&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max,uv_index_max,sunrise,sunset&temperature_unit=celsius&wind_speed_unit=kmh&precipitation_unit=mm&timeformat=unixtime&timezone=auto&forecast_days=2`,controller.signal),
                 orbitWeatherFetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=en`,controller.signal),
                 orbitWeatherFetch(`https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${latitude}&longitude=${longitude}&current=us_aqi,pm2_5,pm10&timeformat=unixtime&timezone=auto&forecast_days=1`,controller.signal)
             ]);
@@ -147,6 +206,9 @@ async function refreshOrbitWeather(explicit=false){
         const location=orbitWeatherPlaceName(place);
         orbitRenderWeatherPosition(latitude,longitude,accuracy);
         const page=document.getElementById('modal-orbit-weather');page.dataset.weather=condition.kind;page.dataset.night=String(current.is_day!==1);
+        orbitWeatherSolar={sunset:weather.daily?.sunset?.[0],day:current.is_day===1};
+        setOrbitWeatherScene(orbitWeatherSceneOverride);
+        renderOrbitWeatherOutlook(weather);
         document.getElementById('orbit-weather-place').textContent=location;
         document.getElementById('orbit-weather-temperature').textContent=`${Math.round(current.temperature_2m)}°`;
         document.getElementById('orbit-weather-condition').textContent=condition.label;
@@ -165,4 +227,9 @@ async function refreshOrbitWeather(explicit=false){
     finally{if(epoch===orbitWeatherEpoch){orbitWeatherBusy=false;orbitWeatherAbort=null;}}
 }
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshOrbitWeather(false);});
+document.addEventListener('keydown',event=>{
+    if(event.key==='Escape'&&document.getElementById('modal-orbit-weather')?.classList.contains('active')){
+        event.stopPropagation();closeOrbitWeatherConsent();
+    }
+});
 window.addEventListener('online',()=>refreshOrbitWeather(false));

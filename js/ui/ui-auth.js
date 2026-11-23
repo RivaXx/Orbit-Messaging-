@@ -238,7 +238,7 @@ async function orbitRequireWeeklySignIn(id){
     currentUser=null;userProfile=null;
     try{
         localStorage.setItem('orbit_weekly_signin','true');
-        await window.OrbitTrustedDevice?.forget(id);
+        if(!window.OrbitDevice)await window.OrbitTrustedDevice?.forget(id);
     }catch(_){}finally{
         localStorage.removeItem(`sb-${project}-auth-token`);
         window.location.reload();

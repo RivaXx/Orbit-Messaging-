@@ -26,9 +26,21 @@ export function createOrbitCryptoEngine(pgp, crypto = globalThis.crypto) {
     finally{bytes.fill(0);}
   }
   const backupAAD=(userId,fingerprint)=>enc.encode('orbit-e2ee-backup-v1|'+userId+'|'+fingerprint);
+  const deviceAAD=(userId,fingerprint)=>enc.encode('orbit-device-identity-v1|'+userId+'|'+fingerprint);
+  function identityBytes(privateKey,userId,fingerprint){
+    return textBytes({schema:'orbit-private-key-v1',user_id:userId,fingerprint,private_key:privateKey.armor()},50000);
+  }
+  async function importIdentity(userId,record,pub,plain){
+    const saved=JSON.parse(dec.decode(plain));
+    if(saved.schema!=='orbit-private-key-v1'||saved.user_id!==userId||saved.fingerprint!==record.fingerprint)fail('Backup identity mismatch');
+    const privateKey=await pgp.readPrivateKey({armoredKey:saved.private_key});
+    if(!privateKey.isDecrypted()||privateKey.getFingerprint()!==pub.getFingerprint())fail('Backup identity mismatch');
+    identity={userId,fingerprint:record.fingerprint,privateKey,publicKey:pub};
+    return {user_id:userId,fingerprint:identity.fingerprint};
+  }
   async function makeBackup(privateKey,userId,fingerprint,passphrase){
     const salt=crypto.getRandomValues(new Uint8Array(16)),iv=crypto.getRandomValues(new Uint8Array(12));
-    const key=await backupKey(passphrase,salt,'encrypt'),plain=textBytes({schema:'orbit-private-key-v1',user_id:userId,fingerprint,private_key:privateKey.armor()},50000);
+    const key=await backupKey(passphrase,salt,'encrypt'),plain=identityBytes(privateKey,userId,fingerprint);
     try{const ciphertext=new Uint8Array(await crypto.subtle.encrypt({name:'AES-GCM',iv,additionalData:backupAAD(userId,fingerprint),tagLength:128},key,plain));return {version:1,kdf:'PBKDF2-SHA256',iterations:600000,cipher:'AES-256-GCM',salt:b64(salt),iv:b64(iv),ciphertext:b64(ciphertext)};}
     finally{plain.fill(0);}
   }
@@ -47,11 +59,28 @@ export function createOrbitCryptoEngine(pgp, crypto = globalThis.crypto) {
     const key=await backupKey(passphrase,salt,'decrypt');let plain;
     try{plain=new Uint8Array(await crypto.subtle.decrypt({name:'AES-GCM',iv,additionalData:backupAAD(userId,record.fingerprint),tagLength:128},key,unb64(backup.ciphertext)));}
     catch{fail('Recovery passphrase is incorrect or the backup was altered');}
-    try{const saved=JSON.parse(dec.decode(plain));if(saved.schema!=='orbit-private-key-v1'||saved.user_id!==userId||saved.fingerprint!==record.fingerprint)fail('Backup identity mismatch');
-      const privateKey=await pgp.readPrivateKey({armoredKey:saved.private_key});
-      if(!privateKey.isDecrypted()||privateKey.getFingerprint()!==pub.getFingerprint())fail('Backup identity mismatch');
-      identity={userId,fingerprint:record.fingerprint,privateKey,publicKey:pub};return {user_id:userId,fingerprint:identity.fingerprint};
-    }finally{plain.fill(0);}
+    try{return await importIdentity(userId,record,pub,plain);}finally{plain.fill(0);}
+  }
+  async function exportDeviceIdentity(){
+    const {privateKey,userId,fingerprint}=requireIdentity();
+    const secret=crypto.getRandomValues(new Uint8Array(32)),iv=crypto.getRandomValues(new Uint8Array(12));
+    const plain=identityBytes(privateKey,userId,fingerprint);
+    try{
+      const key=await crypto.subtle.importKey('raw',secret,'AES-GCM',false,['encrypt']);
+      const ciphertext=await crypto.subtle.encrypt({name:'AES-GCM',iv,additionalData:deviceAAD(userId,fingerprint)},key,plain);
+      return {version:1,secret:b64(secret),iv:b64(iv),ciphertext:b64(new Uint8Array(ciphertext))};
+    }finally{secret.fill(0);plain.fill(0);}
+  }
+  async function unlockDevice(userId,record,box){
+    identity=null;
+    if(!uuid(userId)||record?.user_id!==userId||box?.version!==1||box.secret?.length!==43||box.iv?.length!==16||typeof box.ciphertext!=='string'||box.ciphertext.length>68000)fail('Invalid device identity');
+    const pub=await publicKey(record),secret=unb64(box.secret),iv=unb64(box.iv);
+    let plain;
+    try{
+      const key=await crypto.subtle.importKey('raw',secret,'AES-GCM',false,['decrypt']);
+      plain=new Uint8Array(await crypto.subtle.decrypt({name:'AES-GCM',iv,additionalData:deviceAAD(userId,record.fingerprint)},key,unb64(box.ciphertext)));
+      return await importIdentity(userId,record,pub,plain);
+    }finally{secret.fill(0);plain?.fill(0);}
   }
   async function recipientKeys(records){
     const me=requireIdentity();if(!Array.isArray(records)||records.length<1||records.length>100)fail('Invalid recipient list');
@@ -86,5 +115,5 @@ export function createOrbitCryptoEngine(pgp, crypto = globalThis.crypto) {
     await verifyResult(result);if(result.data.length>49*1024*1024)fail('Decrypted attachment exceeds the size limit');return result.data;
   }
   function lock(){identity=null;keys.clear();}
-  return {generate,unlock,encrypt,decrypt,encryptFile,decryptFile,lock,publicKey,status:()=>identity?{user_id:identity.userId,fingerprint:identity.fingerprint}:null};
+  return {generate,unlock,exportDeviceIdentity,unlockDevice,encrypt,decrypt,encryptFile,decryptFile,lock,publicKey,status:()=>identity?{user_id:identity.userId,fingerprint:identity.fingerprint}:null};
 }

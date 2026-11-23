@@ -55,35 +55,108 @@
 #orbit-weather-air-status { font-size:11px!important; }
 /* Decorative weather animation must not compete with chats for frame time. */
 .orbit-weather-pill::after,.orbit-weather-glow,.orbit-weather-symbol { animation:none; }
-/* Full-screen condition scene: only a few transform/opacity layers animate. */
-#modal-orbit-weather.orbit-weather-page{position:fixed;inset:0;z-index:13000;padding:0;background:#122f54;isolation:isolate;overflow:hidden}
-#modal-orbit-weather.orbit-weather-page.active{display:block}
-#modal-orbit-weather .orbit-weather-scene{position:absolute;inset:0;overflow:hidden;background:linear-gradient(165deg,#3d88b4,#5fabc2 50%,#bdcdbf);z-index:0;pointer-events:none}
-#modal-orbit-weather[data-night=true] .orbit-weather-scene{background:linear-gradient(165deg,#0b1634,#263d61 65%,#536076)}
-#modal-orbit-weather:is([data-weather=rain],[data-weather=storm],[data-weather=cloud]) .orbit-weather-scene{background:linear-gradient(165deg,#283e5a,#66879b 60%,#96a9b5)}
-#modal-orbit-weather[data-weather=snow] .orbit-weather-scene{background:linear-gradient(165deg,#6b8ba6,#c2d4df)}
-#modal-orbit-weather>.glass-modal-box{position:relative;z-index:1;box-sizing:border-box;width:min(100%,700px);max-width:none;max-height:100dvh;min-height:100dvh;margin:0 auto;padding:calc(20px + env(safe-area-inset-top)) 20px calc(24px + env(safe-area-inset-bottom));border-radius:0;border:0;background:#10223855!important;backdrop-filter:blur(3px)!important;-webkit-backdrop-filter:blur(3px)!important;color:#fff;box-shadow:none}
-#modal-orbit-weather .modal-header-row{position:sticky;top:-1px;z-index:2;padding:8px 0;gap:14px}
-#modal-orbit-weather :is(p,dt){color:#e1edf5!important}#modal-orbit-weather :is(dd,strong,button,label){color:#fff}
-#modal-orbit-weather .glass-btn-primary{color:var(--accent-on,#08080a)}
-#modal-orbit-weather .orbit-weather-metrics>div{background:#0c203844;border-color:#ffffff30;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
-#modal-orbit-weather .orbit-weather-hero{display:flex;align-items:center;flex-direction:column;gap:8px;text-align:center;margin:22px 0 28px}
-#modal-orbit-weather .orbit-weather-hero strong{font-size:90px;font-weight:250;line-height:1;letter-spacing:-4px}
-#modal-orbit-weather .orbit-weather-hero span{font-size:15px}
-#modal-orbit-weather .orbit-weather-motion-label{display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:12px;margin:20px 0}
-#orbit-weather-motion{border:1px solid #ffffff50;border-radius:12px;padding:8px 12px;background:#17354c;color:#fff;font:inherit}
-.orbit-weather-orb{position:absolute;width:180px;height:180px;right:8%;top:10%;border-radius:50%;background:radial-gradient(circle,#fff4b5,#f7d15b 65%,#f7d15b00 70%);box-shadow:0 0 90px #ffde8555;animation:orbit-sky-drift 16s ease-in-out infinite alternate}
-[data-night=true] .orbit-weather-orb{width:100px;height:100px;background:#f2f5e5;box-shadow:0 0 60px #e3eaff44}
-[data-weather=rain] .orbit-weather-orb,[data-weather=storm] .orbit-weather-orb{opacity:.12}
-.orbit-weather-cloud{position:absolute;width:360px;height:100px;border-radius:50%;background:radial-gradient(ellipse,#ffffff80,transparent 70%);top:20%;left:-10%;animation:orbit-sky-drift 24s ease-in-out infinite alternate}
-.orbit-weather-cloud.cloud-b{top:38%;left:45%;opacity:.6;animation-delay:-10s}
-.orbit-weather-particle{display:none;position:absolute;left:calc(var(--i)*7%);top:-10%;width:2px;height:45px;background:#dceeff88;transform:rotate(12deg);animation:orbit-sky-rain 1.3s linear infinite;animation-delay:calc(var(--i)*-.23s)}
-:is([data-weather=rain],[data-weather=storm]) .orbit-weather-particle{display:block}
-[data-weather=snow] .orbit-weather-particle{display:block;width:6px;height:6px;border-radius:50%;background:#fff;animation-duration:7s}
-[data-motion=calm] .orbit-weather-particle:nth-child(even){display:none}
-[data-motion=calm] .orbit-weather-particle{animation-duration:3s}
-[data-motion=still] .orbit-weather-scene *{animation:none!important}
-.orbit-battery-saver .orbit-weather-scene *{animation:none!important}
-@keyframes orbit-sky-drift{to{transform:translate3d(25px,15px,0)}}
-@keyframes orbit-sky-rain{to{transform:translate3d(-40px,110vh,0)}}
-@media(prefers-reduced-motion:reduce){.orbit-weather-scene *{animation:none!important}.orbit-weather-particle{display:none!important}}
+/* Compositor-friendly weather layers live only inside the open forecast. */
+#modal-orbit-weather { position:fixed; inset:0; z-index:13000; overflow:auto; padding:0; background:#101929; }
+#modal-orbit-weather.active { display:block; }
+#modal-orbit-weather > .orbit-forecast {
+ --weather-ink:#223046; --weather-muted:#536780; --weather-paper:#f7faff; --weather-tile:#eaf4ff;
+ position:relative; width:min(100%,720px); max-width:none; max-height:none; min-height:100dvh; margin:0 auto;
+ padding:0; border:0; border-radius:0; overflow:visible; color:var(--weather-ink);
+ background:var(--weather-paper)!important; box-shadow:0 0 64px #030a1a88;
+ backdrop-filter:none!important; -webkit-backdrop-filter:none!important;
+}
+#modal-orbit-weather[data-phase=evening] > .orbit-forecast { --weather-paper:#fff8f4; --weather-tile:#f6e7ee; --weather-ink:#322840; --weather-muted:#685369; }
+#modal-orbit-weather[data-phase=night] > .orbit-forecast { --weather-paper:#18223d; --weather-tile:#202f4e; --weather-ink:#f5f8ff; --weather-muted:#b5c5e1; }
+.orbit-weather-hero { position:relative; isolation:isolate; min-height:clamp(320px,59dvh,530px); overflow:hidden; color:#fff; background:#3774af; }
+.orbit-weather-scene { position:absolute; inset:0; overflow:hidden; pointer-events:none; }
+.orbit-weather-landscape {
+ position:absolute; inset:0; background-image:linear-gradient(180deg,#0b3479a8 0%,#21477b2e 50%,transparent 73%),url(assets/weather/orbit-valley.webp);
+ background-size:cover; background-position:center 66%; background-color:#5b9bdf;
+}
+[data-phase=evening] .orbit-weather-landscape { background-image:linear-gradient(180deg,#471f62b8,#ce69566e 53%,#4a2e6c38),url(assets/weather/orbit-valley.webp); }
+[data-phase=night] .orbit-weather-landscape { background-image:linear-gradient(180deg,#07163ff7,#263578df 54%,#182949bb),url(assets/weather/orbit-valley.webp); }
+[data-weather=cloud] .orbit-weather-landscape,[data-weather=fog] .orbit-weather-landscape { filter:saturate(.73); }
+:is([data-weather=rain],[data-weather=storm]) .orbit-weather-landscape { filter:brightness(.8) saturate(.64); }
+[data-weather=snow] .orbit-weather-landscape { filter:saturate(.45); }
+.orbit-weather-header,.orbit-weather-reading { position:relative; z-index:2; }
+.orbit-weather-header { display:flex; justify-content:space-between; align-items:center; padding:calc(14px + env(safe-area-inset-top)) 22px 0; }
+.orbit-weather-header h2 { margin:0; color:#fff; font-size:18px; font-weight:650; }
+.orbit-weather-header button,.orbit-weather-trail,.orbit-weather-orb { border:0; cursor:pointer; }
+.orbit-weather-close { width:44px; height:44px; padding:0; border-radius:50%; color:#fff; background:#152c5660; font:inherit; font-size:25px; }
+.orbit-weather-reading { display:flex; flex-direction:column; align-items:flex-start; gap:5px; margin:12px 22px 0; pointer-events:none; text-shadow:0 2px 14px #0a204b88; }
+#orbit-weather-place { font-size:16px; font-weight:650; max-width:72%; }
+#orbit-weather-temperature { font-size:clamp(66px,22vw,112px); line-height:1; letter-spacing:-.075em; font-weight:350; }
+#orbit-weather-condition { max-width:70%; font-size:14px; line-height:1.35; }
+.orbit-weather-phase { padding:4px 8px; margin-top:4px; border-radius:20px; background:#18386384; font-size:12px; }
+.orbit-weather-orb {
+ position:absolute; z-index:1; right:14%; top:40%; width:clamp(42px,11vw,72px); aspect-ratio:1; border-radius:50%;
+ background:radial-gradient(circle at 42% 40%,#fffdf0,#ffe1a7);
+ box-shadow:0 0 24px #fff3b995, 0 0 62px #ffd68b84;
+}
+[data-phase=evening] .orbit-weather-orb { top:53%; background:#ffe4ac; box-shadow:0 0 42px #ffab8399; }
+[data-phase=night] .orbit-weather-orb { top:36%; background:radial-gradient(circle at 38% 34%,#fdfdff,#c7d7fb); box-shadow:0 0 36px #abc8fa85; }
+:is([data-weather=rain],[data-weather=storm],[data-weather=fog]) .orbit-weather-orb { opacity:.45; }
+.orbit-weather-trail { position:absolute; z-index:2; left:21%; bottom:10%; width:44px; height:44px; border-radius:50%; color:#fffbe4; background:#17234035; opacity:.7; }
+.orbit-weather-trail:focus-visible,.orbit-weather-trail:hover { opacity:1; }
+.orbit-weather-discovery-status { position:absolute; z-index:2; right:14px; bottom:22px; max-width:66%; margin:0; padding:6px 9px; border-radius:10px; color:#fff; background:#16294cdd; font-size:12px; }
+.orbit-weather-discovery-status:empty { display:none; }
+.orbit-weather-sheet { position:relative; z-index:3; margin-top:-17px; padding:20px 20px calc(26px + env(safe-area-inset-bottom)); border-radius:23px 23px 0 0; background:var(--weather-paper); }
+.orbit-weather-sheet-heading { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+.orbit-weather-sheet h3 { margin:0; color:var(--weather-ink); font-size:18px; }
+#orbit-weather-range { color:var(--weather-muted); font-size:12px; white-space:nowrap; }
+.orbit-weather-outlook { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:6px; margin:13px 0; }
+.orbit-weather-outlook:empty { display:none; }
+.orbit-weather-hour { display:grid; justify-items:center; gap:5px; padding:9px 3px; border-radius:12px; background:var(--weather-tile); color:var(--weather-ink); }
+.orbit-weather-hour time { color:var(--weather-muted); font-size:11px; }
+.orbit-weather-hour span { font-size:21px; line-height:1.1; }
+.orbit-weather-controls,.orbit-weather-actions { display:flex; flex-wrap:wrap; gap:9px; margin-top:13px; }
+.orbit-weather-controls label { display:flex; align-items:center; gap:6px; color:var(--weather-muted); font-size:12px; }
+#modal-orbit-weather .orbit-weather-controls select { border:0; border-radius:9px; padding:8px; color:var(--weather-ink)!important; background:var(--weather-tile); font:inherit; color-scheme:light; }
+#modal-orbit-weather[data-phase=night] .orbit-weather-controls select { color-scheme:dark; }
+.orbit-weather-actions button { width:auto; min-height:42px; margin:0; padding:7px 12px; }
+.orbit-weather-actions .glass-btn-secondary { color:var(--weather-ink); background:var(--weather-tile); }
+.orbit-weather-more { margin-top:13px; border-top:1px solid var(--weather-tile); padding-top:12px; color:var(--weather-ink); }
+.orbit-weather-more summary { cursor:pointer; font-size:13px; font-weight:650; }
+#modal-orbit-weather .orbit-weather-sheet p { color:var(--weather-muted); font-size:12px; line-height:1.4; }
+#modal-orbit-weather .orbit-weather-sheet p:empty { display:none; }
+#modal-orbit-weather .orbit-weather-metrics > div,#modal-orbit-weather #orbit-weather-position { background:var(--weather-tile); color:var(--weather-ink); border:0; }
+#modal-orbit-weather .orbit-weather-metrics dt { color:var(--weather-muted); }
+#modal-orbit-weather .orbit-weather-metrics dd { color:var(--weather-ink); }
+.orbit-weather-stars {
+ display:none; position:absolute; inset:0 0 54%; opacity:.8;
+ background:radial-gradient(circle at 29% 24%,white 0 1px,transparent 2px),radial-gradient(circle at 74% 42%,white 0 1px,transparent 2px),radial-gradient(circle at 86% 21%,#d8e9ff 0 1px,transparent 2px),radial-gradient(circle at 43% 58%,#d8e9ff 0 1px,transparent 2px),radial-gradient(circle at 61% 30%,#d8e9ff 0 1px,transparent 2px),radial-gradient(circle at 14% 67%,white 0 1px,transparent 2px);
+ animation:orbit-weather-twinkle 5s ease-in-out infinite alternate;
+}
+[data-phase=night] .orbit-weather-stars { display:block; }
+.orbit-weather-cloud { position:absolute; left:-12%; top:26%; width:62%; height:17%; opacity:.32; background:radial-gradient(ellipse,#fff9,transparent 68%); animation:orbit-weather-drift 24s ease-in-out infinite alternate; }
+.orbit-weather-cloud.cloud-b { left:52%; top:43%; animation-delay:-10s; }
+:is([data-weather=cloud],[data-weather=fog]) .orbit-weather-cloud { opacity:.85; }
+[data-weather=fog] .orbit-weather-cloud.cloud-b { top:58%; width:82%; left:15%; }
+.orbit-weather-particle { display:none; position:absolute; top:-12%; left:calc(var(--i)*8.5%); width:2px; height:32px; background:linear-gradient(transparent,#e1f2ffbe); animation:orbit-weather-rain 1.55s linear infinite; animation-delay:calc(var(--i)*-.27s); }
+:is([data-weather=rain],[data-weather=storm],[data-weather=snow]) .orbit-weather-particle { display:block; }
+[data-weather=storm][data-motion=live] .orbit-weather-scene::after { content:''; position:absolute; inset:0; background:#c6dcff; opacity:0; animation:orbit-weather-lightning 13s linear infinite; }
+[data-weather=snow] .orbit-weather-particle { width:5px; height:5px; border-radius:50%; background:#fff; animation:orbit-weather-snow 7s linear infinite; animation-delay:calc(var(--i)*-.67s); }
+[data-motion=calm] .orbit-weather-particle:nth-child(even) { display:none; }
+[data-motion=calm] .orbit-weather-particle { animation-duration:4s; }
+[data-motion=still] :is(.orbit-weather-scene *,.orbit-weather-scene::after) { animation:none!important; }
+[data-motion=still] .orbit-weather-particle { display:none; }
+#modal-orbit-weather:not(.active) .orbit-weather-scene * { animation-play-state:paused!important; }
+.orbit-weather-discovery { display:none; position:absolute; z-index:1; right:22%; top:15%; color:#fff5ca; font-size:25px; }
+[data-discovery] .orbit-weather-discovery { display:block; animation:orbit-weather-discover 2.6s ease-out both; }
+[data-discovery=birds] .orbit-weather-discovery::before { content:'⌁  ⌁   ⌁'; }
+[data-discovery=stars] .orbit-weather-discovery::before { content:'✧ · · ✦'; }
+[data-discovery=lantern] .orbit-weather-discovery::before { content:'🏮'; }
+[data-discovery=kite] .orbit-weather-discovery::before { content:'🪁'; }
+[data-discovery=fireflies] .orbit-weather-discovery { top:69%; color:#ffef9f; text-shadow:0 0 12px #ffff96; }
+[data-discovery=fireflies] .orbit-weather-discovery::before { content:'· ✧  · ✦'; }
+[data-discovery=rainbow] .orbit-weather-discovery::before { content:'🌈'; }
+@keyframes orbit-weather-twinkle { to { opacity:.4; } }
+@keyframes orbit-weather-drift { to { transform:translate3d(28px,6px,0); } }
+@keyframes orbit-weather-rain { to { transform:translate3d(-49px,65vh,0); } }
+@keyframes orbit-weather-snow { to { transform:translate3d(38px,65vh,0); } }
+@keyframes orbit-weather-discover { from { opacity:0;transform:translate(48px,25px); } 25%,65% { opacity:1; } to { opacity:0;transform:translate(-74px,-22px); } }
+@keyframes orbit-weather-lightning { 0%,54%,58%,100%{opacity:0} 56%{opacity:.16} }
+@media (prefers-reduced-motion:reduce) {
+ #modal-orbit-weather :is(.orbit-weather-scene *,.orbit-weather-scene::after) { animation:none!important; }
+ #modal-orbit-weather .orbit-weather-particle { display:none; }
+}

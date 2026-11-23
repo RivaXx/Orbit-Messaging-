@@ -36,7 +36,7 @@ window.addEventListener('online',orbitRefreshReceipts);
 window.addEventListener('focus',orbitRefreshReceipts);
 let orbitPushConnectPromise=null,orbitPushConnectOwner=null,orbitPushEpoch=0;
 function isOrbitChatVisible(roomId) {
-    if (!currentUser || !currentRoom || document.hidden || !document.hasFocus() ||
+    if (!currentUser || !currentRoom || document.hidden || window.OrbitAndroidBackground || !document.hasFocus() ||
         !document.getElementById('screen-chat')?.classList.contains('active')) return false;
     return resolveRoomAliases(currentRoom, activeChatPeerId).includes(roomId);
 }
@@ -65,6 +65,7 @@ function enableOrbitBackgroundPush(prompt=false){
     orbitPushConnectPromise=pending;return pending;
 }
 async function orbitConnectBackgroundPush(prompt = false) {
+    if(window.OrbitDevice){updateNotificationSettingsUI();return false;}
     if (!currentUser || !('Notification' in window) || !('serviceWorker' in navigator) || !('PushManager' in window) || Notification.permission !== 'granted') return false;
     const owner = currentUser.id,epoch=orbitPushEpoch;
     try {
@@ -91,6 +92,7 @@ async function orbitConnectBackgroundPush(prompt = false) {
 }
 async function disableOrbitBackgroundPush() {
     orbitPushEpoch++;
+    if(window.OrbitDevice){await OrbitDevice('clearNotifications').catch(()=>{});return true;}
     try {
         if(orbitPushConnectPromise)await orbitPushConnectPromise;
         const registration = await navigator.serviceWorker.getRegistration();

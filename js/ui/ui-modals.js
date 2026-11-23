@@ -1216,8 +1216,11 @@ async function checkOrbitAndroidUpdate() {
         const versionCode = await OrbitDevice('versionCode');
         if (!Number.isInteger(release.versionCode) || typeof release.versionName !== 'string') throw Error('The update information is invalid.');
         if (release.versionCode <= versionCode) {showToast('Orbit is up to date.','success');return;}
-        if (confirm('Orbit ' + release.versionName + ' is available. Open the download?')) {
-            await OrbitDevice('openUpdate',{url:release.downloadUrl});
+        if (!/^[a-f0-9]{64}$/i.test(release.sha256 || '')) throw Error('This release is still being prepared for in-app installation.');
+        if (confirm('Orbit ' + release.versionName + ' is available. Download the signed update?')) {
+            await OrbitDevice('downloadUpdate',{
+                versionName:release.versionName,versionCode:release.versionCode,downloadUrl:release.downloadUrl,sha256:release.sha256
+            });
         }
     } catch (e) { showToast(e.message || 'Could not check for updates.','error'); }
 }

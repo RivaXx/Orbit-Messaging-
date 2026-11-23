@@ -177,12 +177,18 @@ function orbitPlayTone(kind='orbit',volume=.16,channel='general') {
 }
 async function orbitEnableClockNotifications() {
     orbitUnlockAudio();
+    if(window.OrbitDevice){await requestNotificationPermission();return;}
     if(!('Notification' in window)){showToast('This browser does not support system notifications.','info');return;}
     const permission=Notification.permission==='default'?await Notification.requestPermission():Notification.permission;
     showToast(permission==='granted'?'Clock notifications enabled. Keep Orbit open for alarms.':'Allow notifications in your browser settings to enable clock alerts.','info');
 }
 async function orbitClockNotify(title,body) {
     showToast(`${title}: ${body}`,'info');
+    if(window.OrbitDevice){
+        if((document.hidden||window.OrbitAndroidBackground)&&notificationPreference('orbit_device_notifications',true))
+            await OrbitDevice('showNotification',{kind:'reminder',tag:'orbit-clock',title:'Orbit reminder',body:'An Orbit reminder is due',preview:false}).catch(()=>{});
+        return;
+    }
     if(!document.hidden||!('Notification' in window)||Notification.permission!=='granted')return;
     const options={body,tag:'orbit-clock',icon:'./orbit-icon.svg',data:{url:location.origin}};
     try{const registration=await navigator.serviceWorker?.getRegistration();if(registration)await registration.showNotification(title,options);else new Notification(title,options);}catch(_){}
@@ -250,10 +256,22 @@ function orbitCallPanelCleanup() {
     clearTimeout(orbitCallReconnectTimer);orbitCallReconnectTimer=null;
     orbitFallbackCallNotification?.close();orbitFallbackCallNotification=null;
     const closingTag=orbitCallNotificationTag;
-    if(closingTag)navigator.serviceWorker?.getRegistration().then(async registration=>{for(const alert of await registration?.getNotifications({tag:closingTag})||[])alert.close();}).catch(()=>{});
+    if(closingTag){
+        if(window.OrbitDevice)OrbitDevice('clearNotification',{tag:closingTag}).catch(()=>{});
+        else navigator.serviceWorker?.getRegistration().then(async registration=>{for(const alert of await registration?.getNotifications({tag:closingTag})||[])alert.close();}).catch(()=>{});
+    }
     orbitCallNotificationTag=null;
 }
 async function orbitNotifyIncomingCall(row) {
+    if(window.OrbitDevice){
+        if(!notificationPreference('orbit_device_notifications',true)||_activeCallId!==row.id||orbitCallRow?.state!=='ringing')return;
+        orbitCallNotificationTag=`orbit-call-${row.id}`;
+        const tag=orbitCallNotificationTag;
+        await OrbitDevice('showNotification',{kind:'call',tag,title:row.caller_name||'Orbit call',body:'Incoming voice call',
+            preview:notificationPreference('orbit_notification_previews',true),silent:localStorage.getItem('orbit_call_ringtone')==='silent'||(!document.hidden&&!window.OrbitAndroidBackground&&document.hasFocus())}).catch(()=>false);
+        if(_activeCallId!==row.id||orbitCallRow?.state!=='ringing')OrbitDevice('clearNotification',{tag}).catch(()=>{});
+        return;
+    }
     if(!('Notification' in window)||Notification.permission!=='granted'||!notificationPreference('orbit_device_notifications',true))return;
     const previews=notificationPreference('orbit_notification_previews',true);
     orbitCallNotificationTag=`orbit-call-${row.id}`;

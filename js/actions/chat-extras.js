@@ -951,6 +951,7 @@ window.endVoiceCall = endVoiceCall;
 // NOTIFICATIONS & DYNAMIC ISLAND
 // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 let orbitNotificationAudioContext = null, orbitLastNotificationChime = 0;
+if(window.OrbitDevice)window.addEventListener('orbit-android-resume',()=>updateNotificationSettingsUI());
 function notificationPreference(key, fallback = true) {
     try {
         const value = localStorage.getItem(key);
@@ -964,12 +965,23 @@ function updateNotificationSettingsUI() {
     const device = document.getElementById('chk-notification-device');
     const previews = document.getElementById('chk-notification-previews');
     const sound = document.getElementById('chk-notification-sound');
+    if (previews) previews.checked = notificationPreference('orbit_notification_previews', true);
+    if (sound) sound.checked = notificationPreference('orbit_notification_sound', true);
+    if (window.OrbitDevice) {
+        if (!status || !enableButton) return;
+        OrbitDevice('notificationStatus').then(allowed=>{
+            const enabled=allowed && notificationPreference('orbit_device_notifications',true);
+            if(device)device.checked=enabled;
+            status.textContent=enabled?'Android alerts are enabled while Orbit is connected.':'Allow Android notifications to receive alerts while Orbit is connected.';
+            enableButton.textContent=enabled?'Android alerts enabled':'Allow Android notifications';
+            enableButton.disabled=enabled;
+        }).catch(()=>{});
+        return;
+    }
     const supported = 'Notification' in window;
     const secure = window.isSecureContext || ['localhost', '127.0.0.1'].includes(location.hostname);
 
     if (device) device.checked = supported && Notification.permission === 'granted' && notificationPreference('orbit_device_notifications', true);
-    if (previews) previews.checked = notificationPreference('orbit_notification_previews', true);
-    if (sound) sound.checked = notificationPreference('orbit_notification_sound', true);
     if (!status || !enableButton) return;
 
     if (!supported) {
@@ -985,7 +997,7 @@ function updateNotificationSettingsUI() {
     enableButton.disabled = false;
     if (Notification.permission === 'granted' && notificationPreference('orbit_device_notifications', true)) {
         status.textContent = typeof orbitPushStatus !== 'undefined' && orbitPushStatus ? orbitPushStatus : 'System alerts are enabled while Orbit is running. Enable background alerts to receive messages after closing the app.';
-        enableButton.innerHTML = '<i class="fa-solid fa-bell"></i> ' + (typeof orbitPushStatus !== 'undefined' && orbitPushStatus.startsWith('Background notifications connected.') ? 'Background alerts enabled' : 'Enable alerts when Orbit is closed');
+        enableButton.innerHTML = '<i class="fa-solid fa-bell"></i> ' + (typeof orbitPushStatus !== 'undefined' && orbitPushStatus.startsWith('Background notifications connected') ? 'Background alerts enabled' : 'Enable alerts when Orbit is closed');
     } else if (Notification.permission === 'denied') {
         status.textContent = 'Notifications are blocked for this site. Allow them in your browser or device settings, then reload Orbit.';
         enableButton.innerHTML = '<i class="fa-solid fa-gear"></i> Notifications blocked — see browser settings';
@@ -1005,7 +1017,7 @@ async function setNotificationDevicePreference(enabled) {
     }
     const granted = await requestNotificationPermission();
     if (granted && typeof enableOrbitBackgroundPush === 'function') await enableOrbitBackgroundPush(true);
-    if (!granted) {
+    if (!granted && !window.OrbitDevice) {
         try { localStorage.setItem('orbit_device_notifications', 'false'); } catch(e) {}
     }
     updateNotificationSettingsUI();
@@ -1046,6 +1058,15 @@ function playNotificationChime() {
 }
 
 async function requestNotificationPermission() {
+    if (window.OrbitDevice) {
+        try {
+            localStorage.setItem('orbit_device_notifications','true');
+            const allowed=await OrbitDevice('requestNotifications');
+            updateNotificationSettingsUI();
+            if(allowed)showToast('Android notification permission allowed.','info');
+            return allowed;
+        } catch(error) {showToast(error.message,'error');return false;}
+    }
     if (!('Notification' in window)) {
         showToast('This browser does not support device notifications.', 'error');
         return false;
@@ -1054,7 +1075,7 @@ async function requestNotificationPermission() {
         if (typeof enableOrbitBackgroundPush === 'function') await enableOrbitBackgroundPush(true);
         try { localStorage.setItem('orbit_device_notifications', 'true'); } catch(e) {}
         updateNotificationSettingsUI();
-        showToast(typeof orbitPushStatus!=='undefined'&&orbitPushStatus.startsWith('Background notifications connected.')?'Background notifications are connected.':'Notification permission is allowed. Check the background-alert status below.','info');
+        showToast(typeof orbitPushStatus!=='undefined'&&orbitPushStatus.startsWith('Background notifications connected')?'Background notifications are connected.':'Notification permission is allowed. Check the background-alert status below.','info');
         return true;
     }
     if (Notification.permission === 'denied') {
@@ -1064,9 +1085,9 @@ async function requestNotificationPermission() {
     try {
         const permission = await Notification.requestPermission();
         const granted = permission === 'granted';
-        if (granted && typeof enableOrbitBackgroundPush === 'function') await enableOrbitBackgroundPush(true);
         try { localStorage.setItem('orbit_device_notifications', granted ? 'true' : 'false'); } catch(e) {}
         if (granted && typeof initServiceWorker === 'function') await initServiceWorker();
+        if (granted && typeof enableOrbitBackgroundPush === 'function') await enableOrbitBackgroundPush(true);
         updateNotificationSettingsUI();
         showToast(granted ? 'Notification permission allowed. Check the background-alert status below.' : 'Notification permission was not granted.','info');
         return granted;
@@ -1077,6 +1098,13 @@ async function requestNotificationPermission() {
 }
 
 async function showNativeOrbitNotification(title, body, roomId, msgId) {
+    if (window.OrbitDevice) {
+        if(!notificationPreference('orbit_device_notifications',true))return false;
+        const kind=String(msgId||'').startsWith('test-')?'test':'message';
+        return OrbitDevice('showNotification',{kind,tag:`orbit-${msgId||roomId||'message'}`.slice(0,100),title,
+            body:kind==='test'?body:'You have a new message.',preview:notificationPreference('orbit_notification_previews',true),
+            silent:!notificationPreference('orbit_notification_sound',true)||!!_activeCallId}).catch(()=>false);
+    }
     if (!('Notification' in window) || Notification.permission !== 'granted' ||
         !notificationPreference('orbit_device_notifications', true)) return false;
     const showPreview = notificationPreference('orbit_notification_previews', true);
@@ -1117,6 +1145,11 @@ async function showNativeOrbitNotification(title, body, roomId, msgId) {
 }
 
 async function testNotificationLive() {
+    if(window.OrbitDevice){
+        if(!await requestNotificationPermission())return;
+        const shown=await showNativeOrbitNotification('Orbit Messenger','System notifications are ready on this device.',null,`test-${Date.now()}`);
+        showToast(shown?'Android test alert sent.':'Check Orbit’s notification channels in Android settings.',shown?'success':'error');return;
+    }
     if (!('Notification' in window)) {
         showToast('This browser does not support device notifications.', 'error');
         return;
@@ -1189,14 +1222,15 @@ function triggerMessageNotification(msg) {
     if (isVisibleChat) return;
     const muted = window.OrbitChatSelect?.getMutedRooms() || [];
     if (resolveRoomAliases(msg.room).some(room => muted.includes(room))) return;
-    if (!document.hidden) playNotificationChime();
-    if (!document.hidden) showDynamicIslandNotification(msg);
+    const hidden=document.hidden||window.OrbitAndroidBackground;
+    if (!hidden) playNotificationChime();
+    if (!hidden) showDynamicIslandNotification(msg);
     unreadRoomsSet.add(msg.room);
     updateTabUnreadBadges();
     {
         const sender = msg.username || 'New message';
         const body = msg.text || (msg.attachments?.length ? 'Sent an attachment' : 'You have a new message');
-        if (document.hidden || !document.hasFocus()) showNativeOrbitNotification(sender, body, msg.room, msg.id);
+        if (hidden || !document.hasFocus()) showNativeOrbitNotification(sender, body, msg.room, msg.id);
     }
 }
 

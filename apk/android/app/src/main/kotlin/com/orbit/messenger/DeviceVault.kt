@@ -70,9 +70,11 @@ internal class DeviceVault(context: Context) {
     fun clearFailures() { state.edit().remove("failures").remove("blockedUntil").commit() }
 
     fun remember(account: String, identity: JSONObject) {
-        val entry = JSONObject().put("record", identity.getJSONObject("record"))
-            .put("backup", identity.getJSONObject("backup")).put("passphrase", identity.getString("passphrase"))
-            .put("savedAt", System.currentTimeMillis())
+        val record = identity.getJSONObject("record")
+        val box = identity.getJSONObject("deviceIdentity")
+        require(record.getString("user_id") == account && box.getInt("version") == 1)
+        require(box.getString("secret").length == 43 && box.getString("iv").length == 16 && box.getString("ciphertext").length in 1..68000)
+        val entry = JSONObject().put("record", record).put("deviceIdentity", box)
         val cipher = cipher(Cipher.ENCRYPT_MODE, account)
         val bytes = entry.toString().toByteArray()
         try {
@@ -84,6 +86,7 @@ internal class DeviceVault(context: Context) {
         val saved = state.getString("chat-$account", null)?.split('.', limit = 2) ?: return null
         val bytes = cipher(Cipher.DECRYPT_MODE, account, decode(saved[0])).doFinal(decode(saved[1]))
         val entry = try { JSONObject(String(bytes)) } finally { bytes.fill(0) }
+        if (entry.has("deviceIdentity")) return entry
         val age = System.currentTimeMillis() - entry.getLong("savedAt")
         if (age < 0 || age >= 7 * 24 * 60 * 60 * 1000L) {
             forget(account)

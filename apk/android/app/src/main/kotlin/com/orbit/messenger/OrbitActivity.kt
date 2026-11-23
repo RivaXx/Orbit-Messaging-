@@ -41,11 +41,14 @@ class OrbitActivity : FlutterFragmentActivity() {
         const val ORIGIN = "https://appassets.androidplatform.net"
         const val APP_PAGE = "/assets/index.html"
         const val INVITE = "https://orbit-messaging.vercel.app/"
-        const val RELEASES = "https://github.com/RivaXx/Orbit-Messaging-/releases/download/"
     }
     private val vault by lazy { DeviceVault(this) }
     private val shares by lazy { GalleryShare(this) }
     private val work = Executors.newSingleThreadExecutor()
+    private val updateWork = Executors.newSingleThreadExecutor()
+    private val updater: OrbitUpdater by lazy { OrbitUpdater(this, updateWork) { updatePermission.launch(it) } }
+    private val notifications by lazy { OrbitNotifications(this) }
+    private var notificationPermissionResult: ((Boolean) -> Unit)? = null
     private var page: WebView? = null
     @Volatile private var unlocked = false
     private var stoppedAt = 0L
@@ -68,6 +71,11 @@ class OrbitActivity : FlutterFragmentActivity() {
         permissionResult?.invoke()
         permissionResult = null
     }
+    private val updatePermission = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { updater.resumePermission() }
+    private val requestNotification = registerForActivityResult(ActivityResultContracts.RequestPermission()) {
+        notificationPermissionResult?.invoke(notifications.enabled())
+        notificationPermissionResult = null
+    }
 
     override fun onCreate(savedInstanceState: android.os.Bundle?) {
         super.onCreate(savedInstanceState)
@@ -84,7 +92,14 @@ class OrbitActivity : FlutterFragmentActivity() {
 
     override fun onStop() {
         stoppedAt = SystemClock.elapsedRealtime()
+        page?.evaluateJavascript("window.OrbitAndroidBackground=true", null)
         super.onStop()
+    }
+
+    override fun onDestroy() {
+        work.shutdownNow()
+        updateWork.shutdownNow()
+        super.onDestroy()
     }
 
     override fun onStart() {
@@ -94,6 +109,7 @@ class OrbitActivity : FlutterFragmentActivity() {
             lock()
         }
         stoppedAt = 0L
+        page?.evaluateJavascript("window.OrbitAndroidBackground=false; if(window.OrbitDevice)window.dispatchEvent(new Event('orbit-android-resume'))", null)
     }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
@@ -204,10 +220,23 @@ class OrbitActivity : FlutterFragmentActivity() {
         }
         if (WebViewFeature.isFeatureSupported(WebViewFeature.WEB_MESSAGE_LISTENER)) {
             WebViewCompat.addWebMessageListener(this, "OrbitDevicePort", setOf(ORIGIN)) { view, message, _, mainFrame, reply ->
-                if (!mainFrame || !unlocked || changingPin || Uri.parse(view.url.orEmpty()).path != APP_PAGE) return@addWebMessageListener
+                if (!mainFrame || Uri.parse(view.url.orEmpty()).path != APP_PAGE) return@addWebMessageListener
                 val request = runCatching { JSONObject(message.data ?: "") }.getOrNull() ?: return@addWebMessageListener
+                val method = request.optString("method")
+                if ((!unlocked || changingPin) && method !in setOf("showNotification", "clearNotification")) return@addWebMessageListener
                 val answer = JSONObject().put("id", request.optInt("id"))
-                try { answer.put("value", handlePageRequest(request) ?: JSONObject.NULL) }
+                try {
+                    if (method == "requestNotifications") {
+                        check(notificationPermissionResult == null) { "Android is already checking notification permission." }
+                        notifications.request({ permission ->
+                            notificationPermissionResult = { allowed -> reply.postMessage(answer.put("value", allowed).toString()) }
+                            try { requestNotification.launch(permission) }
+                            catch (failure: Exception) { notificationPermissionResult = null; throw failure }
+                        }) { allowed -> reply.postMessage(answer.put("value", allowed).toString()) }
+                        return@addWebMessageListener
+                    }
+                    answer.put("value", handlePageRequest(request) ?: JSONObject.NULL)
+                }
                 catch (failure: Exception) { answer.put("error", failure.message ?: "Android could not complete the request.") }
                 reply.postMessage(answer.toString())
             }
@@ -297,6 +326,7 @@ class OrbitActivity : FlutterFragmentActivity() {
             "remember" -> vault.remember(account(), args)
             "restore" -> vault.restore(account())
             "forget" -> vault.forget(account())
+            "lockChats" -> lock()
             "versionCode" -> installedVersionCode()
             "changePin" -> {
                 changingPin = true
@@ -310,11 +340,11 @@ class OrbitActivity : FlutterFragmentActivity() {
                 type = "text/plain"
                 putExtra(Intent.EXTRA_TEXT, "Join me on Orbit Messenger. $INVITE")
             }, "Invite to Orbit"))
-            "openUpdate" -> {
-                val url = args.getString("url")
-                require(url.startsWith(RELEASES) && Regex("v[0-9.]+/Orbit-Messenger-v[0-9.]+\\.apk").matches(url.removePrefix(RELEASES)))
-                openExternal(Uri.parse(url))
-            }
+            "downloadUpdate" -> updater.start(args)
+            "notificationStatus" -> notifications.enabled()
+            "showNotification" -> notifications.show(args, unlocked && !changingPin)
+            "clearNotification" -> notifications.clear(args.getString("tag"))
+            "clearNotifications" -> notifications.clearAll()
             else -> error("Unknown Android action.")
         }.let { if (it == Unit) null else it }
     }

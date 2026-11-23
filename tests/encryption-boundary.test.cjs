@@ -5,8 +5,8 @@ const pass='synthetic-only separate recovery passphrase 2026';
 let pgp,createOrbitCryptoEngine,a,b,c,database;
 class Element{
  constructor(tag,doc){this.tagName=tag;this.doc=doc;this.children=[];this.textContent='';this.value='';this.classList={add(){},remove(){}};this.dataset={};}
- append(...items){for(const item of items){this.children.push(item);if(item.id)this.doc.ids.set(item.id,item);}}
- addEventListener(){} remove(){this.doc.ids.delete(this.id);} showModal(){} close(){} querySelector(){return null;}
+ append(...items){for(const item of items){item.parent=this;this.children.push(item);if(item.id)this.doc.ids.set(item.id,item);}}
+ addEventListener(){} remove(){this.doc.ids.delete(this.id);if(this.parent)this.parent.children=this.parent.children.filter(item=>item!==this);} showModal(){} close(){} querySelector(){return null;}
 }
 function mockClient(db,id){
  const from=table=>{
@@ -120,9 +120,12 @@ test('recipient roster changes require a visible participant review before text 
  database.members=[A,B,C];a.sandbox.currentRoom=ROOM;
  try{
   const blocked=await a.client.from('messages').insert(message(crypto.randomUUID()));assert.match(blocked.error.message,/Review the participant list/);
-  await a.crypto.open();const approve=a.elements().find(e=>e.textContent==='Approve these participants');assert.ok(approve);approve.onclick();
+  await a.crypto.open();assert.ok(!a.elements().some(e=>e.textContent==='Approve these participants'));
+  await a.elements().find(e=>e.textContent==='Verify conversation participants').onclick();
+  const approve=a.elements().find(e=>e.textContent==='Approve these participants');assert.ok(approve);approve.onclick();
   const id=crypto.randomUUID();assert.equal((await a.client.from('messages').insert(message(id))).error,null);assert.ok(database.tables.messages.get(id).e2ee_recipients.includes(C));
-  delete database.members;await a.crypto.open();const removal=a.elements().find(e=>e.textContent==='Approve these participants');assert.ok(removal);removal.onclick();
+  delete database.members;await a.crypto.open();await a.elements().find(e=>e.textContent==='Verify conversation participants').onclick();
+  const removal=a.elements().find(e=>e.textContent==='Approve these participants');assert.ok(removal);removal.onclick();
  }finally{delete database.members;delete a.sandbox.currentRoom;}
 });
 test('signed five-minute location expiry survives manipulated server expiry metadata',async()=>{

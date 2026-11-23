@@ -35,7 +35,7 @@
  async function call(method,...args){
   const idOwner=syncOwner();if(!idOwner)throw error('Sign in before opening encrypted chats');
   if(!worker){
-   worker=new Worker('js/e2ee-worker.mjs',{type:'module',name:'Orbit encryption'});
+   worker=new Worker('js/e2ee-worker.mjs?v=orbit-1.2.0',{type:'module',name:'Orbit encryption'});
    worker.onmessage=({data})=>{const task=pending.get(data.id);if(!task)return;pending.delete(data.id);clearTimeout(task.timer);
     if(task.epoch!==epoch||task.owner!==uid())task.reject(error('The account changed'));
     else data.error?task.reject(error(data.error)):task.resolve(data.result);};
@@ -351,72 +351,143 @@
    }catch{ /* Reopening the chat reloads confirmed encrypted events. */ }
   }).subscribe();
  }
+ async function rememberDevice(id,record,backup,passphrase){
+  if(!window.OrbitDevice)return window.OrbitTrustedDevice.remember(id,record,backup,passphrase);
+  const deviceIdentity=await call('exportDeviceIdentity');
+  checkOwner(id);return OrbitDevice('remember',{account:id,record,deviceIdentity});
+ }
+ function fingerprint(value){return value.match(/.{1,8}/g).join(' ');}
+ function addButton(parent,label,action){
+  const button=document.createElement('button');button.type='button';button.textContent=label;button.onclick=action;parent.append(button);return button;
+ }
+ function addVerification(dialog,id,room,peer){
+  if(!room&&!peer)return;
+  const detail=document.createElement('section');
+  const review=addButton(dialog,room&&unlocked?'Verify conversation participants':'Verify contact fingerprint',async()=>{
+   review.disabled=true;detail.textContent='Loading fingerprints…';
+   try{
+    const members=room&&unlocked?await result(rawRpc('orbit_encryption_members',{chat_room:room})):[peer];
+    checkOwner(id);
+    if(!Array.isArray(members)||!members.length||members.length>100)throw error('No participants are available to verify.');
+    const keys=await result(rawFrom('orbit_encryption_keys').select('*').in('user_id',members));
+    checkOwner(id);if(document.getElementById(dialog.id)!==dialog)return;
+    const byId=new Map((keys||[]).map(key=>[key.user_id,key]));
+    detail.textContent='';
+    addText(detail,'p','Compare these fingerprints with the people in this chat over another trusted channel.');
+    let eligible=true;
+    for(const member of members){
+     const contact=typeof globalUsersMap!=='undefined'?globalUsersMap.get(member):null;
+     addText(detail,'small',(member===id?'You':contact?.display_name||'Account')+' · '+member);
+     const key=byId.get(member),pin=localStorage.getItem('orbit_key_pin_'+id+'_'+member);
+     if(key?.fingerprint&&(!pin||pin===key.fingerprint)){
+      if(!pin)localStorage.setItem('orbit_key_pin_'+id+'_'+member,key.fingerprint);
+      addText(detail,'code',fingerprint(key.fingerprint));
+     }
+     else{eligible=false;addText(detail,'small',key?'Encryption identity changed. Verify it before continuing.':'Encryption identity is unavailable.');}
+    }
+    if(room&&unlocked&&eligible){
+     const rosterKey='orbit_recipient_roster_'+id+'_'+room,roster=JSON.stringify([...members].sort());
+     const previous=localStorage.getItem(rosterKey);
+     if(previous&&previous!==roster){const approve=addButton(detail,'Approve these participants',()=>{
+      checkOwner(id);if(currentRoom!==room)return;
+      localStorage.setItem(rosterKey,roster);approve.disabled=true;approve.textContent='Participant list approved';
+     });}
+    }
+   }catch(e){detail.textContent=e.message;review.disabled=false;}
+  });
+  dialog.append(detail);
+ }
  async function open(){
-  if(restoring)await restoring;
   if(modalBusy)return;
-  syncOwner();if(!owner){showToast('Sign in first.');return;}
+  const id=syncOwner(),operationEpoch=epoch;if(!id){showToast('Sign in first.');return;}
+  const room=typeof currentRoom!=='undefined'?currentRoom:null;
+  const peer=typeof activeChatPeerId!=='undefined'&&activeChatPeerId!==id?activeChatPeerId:null;
   document.getElementById('orbit-security-modal')?.remove();
   const dialog=document.createElement('dialog');dialog.id='orbit-security-modal';dialog.className='orbit-security-modal';
   dialog.setAttribute?.('aria-label','Chat security');
-  dialog.addEventListener('cancel',event=>{if(modalBusy)event.preventDefault();});
-  addText(dialog,'h2','Chat security');const close=document.createElement('button');close.type='button';close.className='orbit-security-close';close.textContent='Close';close.onclick=()=>{if(!modalBusy){dialog.close();dialog.remove();}};dialog.append(close);
-  const status=addText(dialog,'p','Checking your encryption identity…');document.body.append(dialog);dialog.showModal();
+  dialog.addEventListener('cancel',event=>{if(modalBusy)event.preventDefault();else dialog.remove();});
+  addText(dialog,'h2','Chat security');
+  const close=addButton(dialog,'Close',()=>{if(!modalBusy){dialog.close();dialog.remove();}});close.className='orbit-security-close';
+  const status=addText(dialog,'p',unlocked?'Encrypted chats are unlocked.':'Checking chat security…');
+  status.setAttribute?.('role','status');document.body.append(dialog);dialog.showModal();
+  const stillOpen=()=>epoch===operationEpoch&&document.getElementById(dialog.id)===dialog;
   try{
-   const id=owner,record=await result(rawFrom('orbit_encryption_keys').select('*').eq('user_id',id).maybeSingle());checkOwner(id);
-   status.textContent=unlocked?'Encrypted chats are unlocked on this tab.':record?'Unlock your encrypted chats with your separate recovery passphrase.':'Set up end-to-end encrypted chats. Choose a separate recovery passphrase of at least 20 characters.';
-   if(record){addText(dialog,'small','Your identity fingerprint');addText(dialog,'code',record.fingerprint.match(/.{1,8}/g).join(' '));}
-   if(typeof activeChatPeerId!=='undefined'&&activeChatPeerId&&activeChatPeerId!==id){
-    try{const peer=await keyFor(activeChatPeerId,true);checkOwner(id);
-     addText(dialog,'small','Contact fingerprint · compare with your contact over another trusted channel');
-     addText(dialog,'code',peer.fingerprint.match(/.{1,8}/g).join(' '));
-     addText(dialog,'p','An encrypted connection does not by itself verify who owns a first-contact key. Compare both full fingerprints before sharing sensitive information.');
-    }catch(e){addText(dialog,'p',e.message);}
+   if(restoring&&!unlocked)await restoring;
+   if(!stillOpen())return;
+   const record=records.get(id)||await result(rawFrom('orbit_encryption_keys').select('*').eq('user_id',id).maybeSingle());
+   if(!stillOpen())return;checkOwner(id);
+   const android=!!window.OrbitDevice;
+   status.textContent=unlocked?'Encrypted chats are unlocked.':record?'Enter your recovery passphrase to restore chats on this device.':'Set up encrypted chats.';
+   if(record){addText(dialog,'small','Your identity fingerprint');addText(dialog,'code',fingerprint(record.fingerprint));}
+   addVerification(dialog,id,unlocked?room:null,peer);
+   if(unlocked){
+    if(android)addText(dialog,'p','Your Orbit PIN or biometrics unlock the chat key stored on this phone.');
+    addButton(dialog,'Lock encrypted chats',async()=>{
+     const input=document.getElementById('msg-input');if(input?.value&&room)await saveDraft(room,input.value);
+     if(typeof _persistMessageOutbox==='function')await _persistMessageOutbox(id);
+     try{
+      if(android){await OrbitDevice('lockChats');return;}
+      await window.OrbitTrustedDevice?.forget(id);
+      reset();dialog.close();dialog.remove();
+     }catch{showToast('Orbit could not lock chat access. Try again.','error');}
+    });
+    return;
    }
-   if(unlocked&&typeof currentRoom!=='undefined'&&currentRoom){
-    const room=currentRoom,memberIds=await result(rawRpc('orbit_encryption_members',{chat_room:room}));checkOwner(id);
-    const rosterKey=`orbit_recipient_roster_${id}_${room}`,roster=JSON.stringify([...memberIds].sort()),previous=localStorage.getItem(rosterKey);
-    addText(dialog,'h3','Conversation participants');
-    addText(dialog,'p','Compare this list and the fingerprints with the people you intend to message. Membership changes block sending until you review them.');
-    for(const member of memberIds){
-     const contact=typeof globalUsersMap!=='undefined'?globalUsersMap.get(member):null;
-     addText(dialog,'small',(member===id?'You':contact?.display_name||'Account')+' · '+member);
-     try{const key=await keyFor(member,true);addText(dialog,'code',key.fingerprint.match(/.{1,8}/g).join(' '));}catch(e){addText(dialog,'small',e.message);}
-    }
-    if(previous&&previous!==roster){const approve=document.createElement('button');approve.type='button';approve.textContent='Approve these participants';approve.onclick=()=>{checkOwner(id);localStorage.setItem(rosterKey,roster);approve.disabled=true;approve.textContent='Participant list approved';};dialog.append(approve);}
+   if(android)addText(dialog,'p','After setup, your Orbit PIN or biometrics unlock chats on this phone. Save the recovery code for a new device or reinstall.');
+   else addText(dialog,'p','Keep your recovery passphrase somewhere safe so you can restore your encrypted chats.');
+   const label=addText(dialog,'label',android&&!record?'Recovery code':'Recovery passphrase');
+   const input=document.createElement('input');input.type='password';input.autocomplete=record?'current-password':'new-password';input.minLength=20;input.maxLength=256;label.append(input);
+   let confirmInput,savedCode;
+   if(android&&!record){
+    input.value=Array.from(crypto.getRandomValues(new Uint8Array(24)),value=>value.toString(16).padStart(2,'0')).join('');
+    input.type='text';input.readOnly=true;input.setAttribute('aria-label','Generated recovery code');input.spellcheck=false;
+    const copy=addButton(dialog,'Copy recovery code',async()=>{
+     try{await navigator.clipboard.writeText(input.value);copy.textContent='Recovery code copied';}
+     catch{input.focus();input.select();status.textContent='Select and copy the recovery code.';}
+    });
+    const savedLabel=addText(dialog,'label','I saved the recovery code');savedCode=document.createElement('input');savedCode.type='checkbox';savedLabel.append(savedCode);
+   }else if(!record){
+    const confirmLabel=addText(dialog,'label','Confirm recovery passphrase');
+    confirmInput=document.createElement('input');confirmInput.type='password';confirmInput.autocomplete='new-password';confirmLabel.append(confirmInput);
    }
-   addText(dialog,'p','Keep the recovery passphrase safe. Orbit cannot recover encrypted history if you lose it. Your login password is separate. Old chat history remains server-readable.');
-   if(unlocked){const lock=document.createElement('button');lock.type='button';lock.textContent='Lock encrypted chats';lock.onclick=async()=>{
-    const input=document.getElementById('msg-input');if(input?.value&&typeof currentRoom!=='undefined'&&currentRoom)await saveDraft(currentRoom,input.value);
-    if(typeof _persistMessageOutbox==='function')await _persistMessageOutbox(id);
-    try{await window.OrbitTrustedDevice?.forget(id);}catch{showToast('Orbit could not remove remembered chat access. Try again.','error');return;}
-    reset();dialog.close();dialog.remove();
-   };dialog.append(lock);return;}
-   const label=addText(dialog,'label','Recovery passphrase');const input=document.createElement('input');input.type='password';input.autocomplete=record?'current-password':'new-password';input.minLength=20;input.maxLength=256;label.append(input);
-   let confirmInput;if(!record){const confirmLabel=addText(dialog,'label','Confirm recovery passphrase');confirmInput=document.createElement('input');confirmInput.type='password';confirmInput.autocomplete='new-password';confirmLabel.append(confirmInput);}
-   const trustLabel=addText(dialog,'label',window.OrbitDevice?'Unlock with your Orbit PIN or biometrics for seven days':'Remember chat access on this trusted browser for seven days');
-   const trust=document.createElement('input');trust.type='checkbox';trust.checked=!!window.OrbitDevice;trustLabel.append(trust);
-   const submit=document.createElement('button');submit.type='button';submit.textContent=record?'Unlock chats':'Create encrypted backup';dialog.append(submit);
-   submit.onclick=async()=>{
-    if(modalBusy)return;const passphrase=input.value;if(passphrase.length<20||passphrase.length>256){status.textContent='Use a recovery passphrase of 20 to 256 characters.';return;}
+   let trust;
+   if(!android){
+    const trustLabel=addText(dialog,'label','Remember chat access on this trusted browser for seven days');
+    trust=document.createElement('input');trust.type='checkbox';trustLabel.append(trust);
+   }
+   const submit=addButton(dialog,record?'Unlock chats':'Create encrypted backup',async()=>{
+    if(modalBusy)return;const passphrase=input.value;
+    if(passphrase.length<20||passphrase.length>256){status.textContent='Use a recovery passphrase of 20 to 256 characters.';return;}
+    if(savedCode&&!savedCode.checked){status.textContent='Save the recovery code to continue.';return;}
     if(confirmInput&&passphrase!==confirmInput.value){status.textContent='The recovery passphrases do not match.';return;}
-    const operationEpoch=epoch;
-    modalBusy=true;submit.disabled=true;close.disabled=true;input.value='';if(confirmInput)confirmInput.value='';status.textContent='Protecting your encryption identity…';
+    modalBusy=true;submit.disabled=true;close.disabled=true;
+    status.textContent=record?'Restoring encrypted chats…':'Creating your encrypted backup…';
     try{
      let identity=record,backup;
-     if(record){backup=(await result(rawFrom('orbit_encryption_backups').select('backup').eq('user_id',id).single())).backup;await call('unlock',id,record,backup,passphrase);}
-     else{const saved=await call('generate',id,passphrase);checkOwner(id);await result(rawRpc('orbit_register_encryption',{key_fingerprint:saved.fingerprint,key_public:saved.public_key,key_backup:saved.backup}));identity={user_id:id,fingerprint:saved.fingerprint,public_key:saved.public_key};backup=saved.backup;}
-     checkOwner(id);
-     if(trust.checked)try{await window.OrbitTrustedDevice.remember(id,identity,backup,passphrase);}catch{showToast('Chats unlocked for this session. Orbit could not remember this device.','info');}
-     checkOwner(id);dialog.close();dialog.remove();await finishUnlock(id,identity);
-    }catch(e){if(operationEpoch!==epoch)return;unlocked=false;await call('lock').catch(()=>{});status.textContent=e.message||'Could not unlock encrypted chats.';submit.disabled=false;close.disabled=false;}
-    finally{if(operationEpoch===epoch)modalBusy=false;}
-   };
-  }catch(e){status.textContent=e.message||'Chat security could not load.';}
+     if(record){
+      backup=(await result(rawFrom('orbit_encryption_backups').select('backup').eq('user_id',id).single())).backup;
+      checkOwner(id);await call('unlock',id,record,backup,passphrase);
+     }else{
+      const saved=await call('generate',id,passphrase);checkOwner(id);
+      await result(rawRpc('orbit_register_encryption',{key_fingerprint:saved.fingerprint,key_public:saved.public_key,key_backup:saved.backup}));
+      identity={user_id:id,fingerprint:saved.fingerprint,public_key:saved.public_key};backup=saved.backup;
+     }
+     if(!stillOpen())return;checkOwner(id);
+     input.value='';if(confirmInput)confirmInput.value='';
+     if(android||trust?.checked)try{await rememberDevice(id,identity,backup,passphrase);}catch{showToast('Chats unlocked. Orbit could not save this device’s chat key.','info');}
+     if(!stillOpen())return;checkOwner(id);dialog.close();dialog.remove();await finishUnlock(id,identity);
+    }catch(e){
+     if(!stillOpen())return;unlocked=false;await call('lock').catch(()=>{});
+     status.textContent=e.message||'Could not unlock encrypted chats.';submit.disabled=false;close.disabled=false;
+    }finally{if(operationEpoch===epoch)modalBusy=false;}
+   });
+  }catch(e){if(stillOpen())status.textContent=e.message||'Chat security could not load.';}
  }
  async function finishUnlock(id,record){
   checkOwner(id);records.set(id,record);unlocked=true;watchEvents();
   if(typeof messageCache!=='undefined')messageCache.clear();document.dispatchEvent(new CustomEvent('orbit-encryption-unlocked'));
-  if(typeof _hydrateAndResumeMessageOutbox==='function')await _hydrateAndResumeMessageOutbox(id).catch(()=>{});
+  const resume=typeof _hydrateAndResumeMessageOutbox==='function'?_hydrateAndResumeMessageOutbox(id).catch(()=>{}):null;
+  if(!window.OrbitDevice)await resume;
   if(!unlocked||id!==uid()||id!==owner)return;
   if(typeof currentRoom!=='undefined'&&currentRoom&&typeof fetchFreshRoomMessages==='function')fetchFreshRoomMessages(currentRoom);
   if(typeof loadMainChats==='function')loadMainChats();
@@ -429,7 +500,12 @@
    try{
     const saved=await window.OrbitTrustedDevice.restore(id);
     if(!saved||requestedEpoch!==epoch)return false;
-    checkOwner(id);await call('unlock',id,saved.record,saved.backup,saved.passphrase);
+    checkOwner(id);
+    if(saved.deviceIdentity)await call('unlockDevice',id,saved.record,saved.deviceIdentity);
+    else{
+     await call('unlock',id,saved.record,saved.backup,saved.passphrase);
+     if(window.OrbitDevice&&requestedEpoch===epoch)await rememberDevice(id,saved.record,saved.backup,saved.passphrase).catch(()=>{});
+    }
     if(requestedEpoch!==epoch)return false;
     await finishUnlock(id,saved.record);return requestedEpoch===epoch&&unlocked;
    }catch{return false;}finally{if(requestedEpoch===epoch)restoring=null;}
