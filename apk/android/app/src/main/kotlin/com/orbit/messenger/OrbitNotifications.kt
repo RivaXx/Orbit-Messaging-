@@ -95,14 +95,29 @@ internal class OrbitNotifications(private val activity: Activity) {
             return PendingIntent.getActivity(activity, number, target, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
         }
         val view = action("view", 1)
+        val decline = action("decline", 2)
+        val answer = action("answer", 3)
         val person = Person.Builder().setName(caller).setImportant(true).build()
-        val builder = NotificationCompat.Builder(activity, channel).setSmallIcon(R.drawable.orbit_notification)
+        val canOpenFullScreen = !silent && (Build.VERSION.SDK_INT < 34 || manager.canUseFullScreenIntent())
+        val base = NotificationCompat.Builder(activity, channel).setSmallIcon(R.drawable.orbit_notification)
             .setContentTitle(caller).setContentText("Incoming Orbit call").setContentIntent(view)
-            .setStyle(NotificationCompat.CallStyle.forIncomingCall(person, action("decline", 2), action("answer", 3)))
             .setCategory(NotificationCompat.CATEGORY_CALL).setPriority(NotificationCompat.PRIORITY_HIGH)
             .setVisibility(NotificationCompat.VISIBILITY_PRIVATE).setOngoing(true).setTimeoutAfter(remaining)
-        if (Build.VERSION.SDK_INT < 26 && !silent) builder.setDefaults(NotificationCompat.DEFAULT_ALL)
-        if (!silent && (Build.VERSION.SDK_INT < 34 || manager.canUseFullScreenIntent())) builder.setFullScreenIntent(view, true)
-        manager.notify("orbit-call-$id", 0, builder.build())
+        if (Build.VERSION.SDK_INT < 26 && !silent) base.setDefaults(NotificationCompat.DEFAULT_ALL)
+        val tag = "orbit-call-$id"
+        // Android requires a full-screen intent or foreground service for CallStyle.
+        if (canOpenFullScreen || Build.VERSION.SDK_INT < 31) {
+            try {
+                if (canOpenFullScreen) base.setFullScreenIntent(view, true)
+                base.setStyle(NotificationCompat.CallStyle.forIncomingCall(person, decline, answer))
+                manager.notify(tag, 0, base.build())
+                return
+            } catch (_: IllegalArgumentException) {
+                base.setStyle(null).setFullScreenIntent(null, false)
+            }
+        }
+        base.addAction(android.R.drawable.ic_menu_close_clear_cancel, "Decline", decline)
+            .addAction(android.R.drawable.sym_action_call, "Answer", answer)
+        manager.notify(tag, 0, base.build())
     }
 }
