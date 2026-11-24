@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'dart:convert';
+import 'dart:ui' show FlutterView;
 
 import 'chat_picker.dart';
 import 'incoming_call.dart';
@@ -34,7 +35,7 @@ class OrbitHome extends StatefulWidget {
   State<OrbitHome> createState() => _OrbitHomeState();
 }
 
-class _OrbitHomeState extends State<OrbitHome> {
+class _OrbitHomeState extends State<OrbitHome> with WidgetsBindingObserver {
   final _pin = TextEditingController();
   final _focus = FocusNode();
   _Gate _gate = _Gate.loading;
@@ -45,12 +46,38 @@ class _OrbitHomeState extends State<OrbitHome> {
   String? _error;
   Map<dynamic, dynamic>? _incoming;
   BuildContext? _pickerContext;
+  FlutterView? _window;
+  int? _lastVisibleHeight;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _device.setMethodCallHandler(_handleDeviceEvent);
     _readDeviceState();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _window = View.of(context);
+  }
+
+  @override
+  void didChangeMetrics() => _syncKeyboardViewport();
+
+  void _syncKeyboardViewport({bool force = false}) {
+    final view = _window;
+    if (!_hasStartedWeb || view == null) return;
+    final inset = view.viewInsets.bottom;
+    final height = inset > 0
+        ? ((view.physicalSize.height - inset - view.viewPadding.top) /
+                  view.devicePixelRatio)
+              .floor()
+        : 0;
+    if (!force && _lastVisibleHeight == height) return;
+    _lastVisibleHeight = height;
+    _device.invokeMethod<void>('keyboardViewport', height);
   }
 
   Future<void> _readDeviceState() async {
@@ -214,6 +241,7 @@ class _OrbitHomeState extends State<OrbitHome> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _device.setMethodCallHandler(null);
     _pin.dispose();
     _focus.dispose();
@@ -233,11 +261,17 @@ class _OrbitHomeState extends State<OrbitHome> {
       }
     },
     child: Scaffold(
+      resizeToAvoidBottomInset: _gate != _Gate.open,
       body: SafeArea(
         child: Stack(
           fit: StackFit.expand,
           children: [
-            if (_hasStartedWeb) const AndroidView(viewType: 'orbit-messaging'),
+            if (_hasStartedWeb)
+              AndroidView(
+                viewType: 'orbit-messaging',
+                onPlatformViewCreated: (_) =>
+                    _syncKeyboardViewport(force: true),
+              ),
             if (_gate != _Gate.open)
               ColoredBox(
                 color: Theme.of(context).scaffoldBackgroundColor,

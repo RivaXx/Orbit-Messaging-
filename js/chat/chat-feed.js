@@ -1150,18 +1150,14 @@ function handleSearch(query) {
 function handleInputResize(textarea) {
     if (!textarea) return;
     textarea.style.height = 'auto';
-    textarea.style.height = `${Math.min(textarea.scrollHeight, 120)}px`;
-    textarea.style.overflowY = textarea.scrollHeight > 120 ? 'auto' : 'hidden';
-    textarea.closest('.input-glass-pill')?.classList.toggle('composer-multiline',textarea.scrollHeight>48);
-    
-    // Auto-capitalize first character if user starts typing
-    if (textarea.value.length === 1 && textarea.value !== textarea.value.toUpperCase()) {
-        textarea.value = textarea.value.toUpperCase();
-    }
+    const height = textarea.scrollHeight;
+    textarea.style.height = `${Math.min(height, 120)}px`;
+    textarea.style.overflowY = height > 120 ? 'auto' : 'hidden';
+    textarea.closest('.input-glass-pill')?.classList.toggle('composer-multiline',height>48);
 }
 
 function handleInputKeyDown(e) {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    if (e.key === 'Enter' && !e.shiftKey && !e.isComposing && e.keyCode !== 229) {
         e.preventDefault();
         sendMessage();
     }

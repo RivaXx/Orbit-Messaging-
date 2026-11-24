@@ -35,7 +35,7 @@
  async function call(method,...args){
   const idOwner=syncOwner();if(!idOwner)throw error('Sign in before opening encrypted chats');
   if(!worker){
-   worker=new Worker('js/e2ee-worker.mjs?v=orbit-1.3.1',{type:'module',name:'Orbit encryption'});
+   worker=new Worker('js/e2ee-worker.mjs?v=orbit-1.3.2',{type:'module',name:'Orbit encryption'});
    worker.onmessage=({data})=>{const task=pending.get(data.id);if(!task)return;pending.delete(data.id);clearTimeout(task.timer);
     if(task.epoch!==epoch||task.owner!==uid())task.reject(error('The account changed'));
     else data.error?task.reject(error(data.error)):task.resolve(data.result);};

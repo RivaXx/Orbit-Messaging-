@@ -1,4 +1,29 @@
 .orbit-android-only { display: none !important; }
+html.orbit-visual-keyboard #app-viewport {
+    height: var(--orbit-keyboard-height);
+    max-height: 100%;
+    top: var(--orbit-keyboard-top);
+}
+.orbit-android.orbit-visual-keyboard body { align-items: flex-start; }
+:is(.orbit-android, .orbit-visual-keyboard) #screen-chat #chat-feed {
+    margin-block: 0;
+    padding-block: 12px;
+    scroll-padding-block: 12px;
+    scroll-behavior: auto;
+    overscroll-behavior: contain;
+}
+:is(.orbit-android, .orbit-visual-keyboard) #screen-chat .chat-target-status {
+    white-space: nowrap;
+    overflow: hidden;
+    display: block;
+    text-overflow: ellipsis;
+}
+.orbit-visual-keyboard #screen-chat .chat-input-bar { flex-shrink: 0; }
+.orbit-visual-keyboard #screen-chat :is(.chat-nav-bar,.chat-input-bar)::before {
+    inset: 0;
+    mask-image: none;
+    -webkit-mask-image: none;
+}
 .orbit-android .orbit-android-only { display: inline-flex !important; }
 .orbit-android .orbit-web-alert-help { display: none; }
 .orbit-android .glass-modal-overlay,

@@ -164,6 +164,11 @@ class OrbitActivity : FlutterFragmentActivity() {
                         result.success(unlocked)
                     }
                     "biometrics" -> authenticateBiometric(result)
+                    "keyboardViewport" -> {
+                        val height = (call.arguments as? Int ?: 0).coerceIn(0, 10000)
+                        page?.evaluateJavascript("window.OrbitAndroidVisibleHeight=$height; window.orbitUpdateChatViewport?.()", null)
+                        result.success(null)
+                    }
                     "callAction" -> {
                         val action = call.argument<String>("action") ?: ""
                         val id = call.argument<String>("id") ?: ""
