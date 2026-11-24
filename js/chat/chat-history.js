@@ -407,7 +407,7 @@ function persistRoomHistory(roomId, aliases, messages) {
     });
 }
 function prefetchOlderRoomPage(client, roomId, aliases, cursor, signal) {
-    if (!cursor || signal?.aborted) return;
+    if (window.OrbitDevice || !cursor || signal?.aborted) return;
     const key = `${cursor.created_at}|${cursor.id}`;
     const previous = olderPageCache.get(roomId);
     if (previous?.key === key && previous.signal === signal) return;
@@ -469,7 +469,8 @@ async function fetchFreshRoomMessages(roomId, peerUserId = activeChatPeerId, vie
         const existing = filterRoomHistory(messageCache.get(roomId), aliases, peerUserId, selfId);
         // Preserve sends and realtime inserts that arrived after this request started.
         const oldestFresh = fresh.length ? Math.min(...fresh.map(m => Date.parse(m.created_at))) : null;
-        const retained = existing.filter(m => !fresh.some(d => d.id === m.id) &&
+        const freshIds = new Set(fresh.map(message => message.id));
+        const retained = existing.filter(m => !freshIds.has(m.id) &&
             (['sending','queued','failed'].includes(m.status) || Date.parse(m.created_at) >= startedAt ||
              (oldestFresh !== null && Date.parse(m.created_at) < oldestFresh)));
         if(typeof orbitAcknowledgeDelivery==='function')orbitAcknowledgeDelivery(fresh);

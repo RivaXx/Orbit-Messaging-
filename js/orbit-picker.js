@@ -6,7 +6,7 @@
     const key=(account,part)=>`orbit_picker_${account}_${part}`;
     function bump(account,part,id){const storage=key(account,part);localStorage.setItem(storage,JSON.stringify([id,...stored(storage).filter(item=>item!==id)].slice(0,28)));}
     const localAsset=path=>new URL(path,location.href).href;
-    let catalog, config, database, active=null;
+    let catalog, config, database, nativeLoops, active=null;
 
     function sourceData(){
         return catalog ||= Promise.all(['emoji','loops'].map(name=>fetch(`assets/picker/${name}.json`).then(response=>{
@@ -94,7 +94,7 @@
     async function edit(session,file){
         await OrbitCrypto.requireUnlocked();
         if(!same(session))return;
-        const {openStickerEditor}=await import('./sticker-editor.mjs?v=orbit-1.3.0');
+        const {openStickerEditor}=await import('./sticker-editor.mjs?v=orbit-1.3.1');
         await openStickerEditor(file,(output,preview)=>saveSticker(session,output,preview));
     }
     function showImport(session){
@@ -152,18 +152,21 @@
         const session={account:currentUser.id,room:currentRoom,token:crypto.randomUUID(),caret:{start:composer.selectionStart,end:composer.selectionEnd}};
         active=session;composer.blur();
         try{
-            const [[categories,loops], custom, secret]=await Promise.all([sourceData(),stickers(session.account).catch(()=>[]),giphyKey()]);
+            const [[categories,loops], custom]=await Promise.all([sourceData(),stickers(session.account).catch(()=>[])]);
             if(active!==session||!same(session))return;
             session.stickers=custom;session.loops=loops.map(loop=>({...loop,url:localAsset(`assets/picker/${loop.id}.gif`)}));
             session.symbols=new Set(categories.flatMap(group=>group.items.map(item=>item[0])));
             const payload={token:session.token,tab,categories,pack,stickers:custom.map(({id,label,preview,glyph})=>({id,label,preview,glyph})),
                 recent:stored(key(session.account,'emoji')),stickersRecent:stored(key(session.account,'sticker')), favorites:stored(key(session.account,'fav')),
-                gifKey:secret,light:document.body.classList.contains('light-mode'),loops:session.loops};
+                light:document.body.classList.contains('light-mode'),loops:session.loops};
             if(window.OrbitDevice){
-                payload.loops=await Promise.all(session.loops.map(async loop=>({id:loop.id,title:loop.title,preview:await toDataURL(await loopFile(loop.id,session.loops))})));
-                if(active===session&&same(session)&&await OrbitDevice('openChatPicker',payload))return;
+                nativeLoops??=Promise.all(session.loops.map(async loop=>({id:loop.id,title:loop.title,preview:await toDataURL(await loopFile(loop.id,session.loops))})))
+                    .catch(error=>{nativeLoops=null;throw error;});
+                payload.loops=await nativeLoops;
+                if(active!==session||!same(session))return;
+                if(await OrbitDevice('openChatPicker',payload))return;
             }
-            showWeb(payload,session);
+            if(active===session&&same(session))showWeb(payload,session);
         }catch(error){if(active===session){close();showToast(error.message,'error');}}
     }
     function toDataURL(blob){return new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=()=>reject(reader.error);reader.readAsDataURL(blob);});}
@@ -214,10 +217,12 @@
                 const section=(title,ids)=>{if(!ids.length)return;const heading=document.createElement('h3');heading.textContent=title;grid.append(heading);stickerButtons(grid,ids);};
                 section('Favorites',model.favorites);section('Orbit',model.pack);section('My Stickers',model.stickers.map(item=>item.id));return;
             }
-            if(model.gifKey){
+            const gifKey=await giphyKey();
+            if(span!==version||!dialog.open)return;
+            if(gifKey){
                 status.textContent='Powered by GIPHY · Loading…';
                 try{
-                    const data=await getGifs(model.gifKey,query);
+                    const data=await getGifs(gifKey,query);
                     if(span!==version||!dialog.open)return;
                     for(const gif of data||[]){const preview=gif.images?.fixed_width_small_still?.url;
                         if(validGifId(gif.id)&&validMediaUrl(preview))appendButton(grid,gif.title||'GIF',()=>call('sendGiphy',gif.id),preview);

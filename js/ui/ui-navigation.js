@@ -6,7 +6,7 @@ async function _prewarmRecentMessages() {
     try {
         const selfId = currentUser?.id;
         if (!selfId) return;
-        if (isOrbitSlowConnection() || currentRoom || (typeof _messageDeliveryActive !== 'undefined' && _messageDeliveryActive.size)) return;
+        if (window.OrbitDevice || isOrbitSlowConnection() || currentRoom || (typeof _messageDeliveryActive !== 'undefined' && _messageDeliveryActive.size)) return;
         const recent = JSON.parse(localStorage.getItem(`orbit_recent_chats_v27_${selfId}`) || '[]');
         const ids = Array.from(new Set([...recent.map(item => item.roomId), ...allRoomsMap.keys()])).filter(Boolean).slice(0, 6);
         if (!ids.length || Date.now() - (roomPrewarmLastAt.get(selfId) || 0) < 30000) return;
@@ -72,9 +72,6 @@ async function launchApp({introduction=false,forceIntroduction=false}={}) {
     }
 
     // Immediately trigger pre-warming of recent messages at 250ms for instant 0ms chat opening
-    setTimeout(() => {
-        if (typeof _prewarmRecentMessages === 'function') _prewarmRecentMessages();
-    }, 2000);
 
     // Setup global realtime message listener so peer messages are delivered instantly regardless of current tab/room
     if (typeof setupGlobalRealtimeMessageListener === 'function') {
@@ -108,7 +105,7 @@ async function launchApp({introduction=false,forceIntroduction=false}={}) {
         loadFriendRequestsCount(),
     ]);
     setTimeout(() => {
-        if (isOrbitSlowConnection() || currentRoom) return;
+        if (window.OrbitDevice || isOrbitSlowConnection() || currentRoom) return;
         if (typeof _bgFetchGlobalUsers === 'function') _bgFetchGlobalUsers();
         if (typeof _prewarmRecentMessages === 'function') _prewarmRecentMessages();
     }, 3000);

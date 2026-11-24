@@ -282,8 +282,8 @@ function renderRecentChatsFromCache(cachedItems, list) {
             saved.dp_url ||= item.dp_url;
         }
     }
-    let excluded=[];try{excluded=[...JSON.parse(localStorage.getItem(`orbit_hidden_rooms_${currentUser.id}`)||'[]'),...JSON.parse(localStorage.getItem(`orbit_archived_rooms_${currentUser.id}`)||'[]')];}catch(_){}
-    [...conversations.values()].filter(item=>!resolveRoomAliases(item.roomId,item.peerUserId).some(id=>excluded.includes(id))).forEach(item => {
+    const excluded=new Set();try{for(const kind of ['hidden','archived'])for(const id of JSON.parse(localStorage.getItem(`orbit_${kind}_rooms_${currentUser.id}`)||'[]'))excluded.add(id);}catch(_){}
+    [...conversations.values()].filter(item=>!excluded.size||!resolveRoomAliases(item.roomId,item.peerUserId).some(id=>excluded.has(id))).forEach(item => {
         const card = document.createElement('div');
         card.className = 'contact-glass-card touch-fix';
         // Always stamp roomId so retroactive long-press attachment in chat-select.js can find it
@@ -292,7 +292,7 @@ function renderRecentChatsFromCache(cachedItems, list) {
             if (window.isInChatSelectionMode && window.isInChatSelectionMode()) return;
             if (typeof unreadRoomsSet !== 'undefined') unreadRoomsSet.delete(item.roomId);
             if (typeof openChatRoom === 'function') {
-                openChatRoom(item.roomId, item.title, item.dp_url || null, !!item.isGroup, item.peerUserId || null);
+                openChatRoom(item.roomId, item.title, item.dp_url || null, false, item.peerUserId || null);
             }
         };
         orbitRenderConversationCard(card,item);

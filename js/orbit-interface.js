@@ -19,7 +19,7 @@ function orbitConversationPreview(message,isGroup=false){
  if(!text)text='Message';
  return isGroup&&message.sender_id!==currentUser?.id&&message.username?`${message.username}: ${text}`:message.sender_id===currentUser?.id?`You: ${text}`:text;
 }
-function orbitPaintAvatar(container, title, urls, group = false) {
+function orbitPaintAvatar(container, title, urls, group = false, lazy = false) {
  if (!container) return;
  const sources = [...new Set(urls.filter(Boolean).map(formatMediaUrl).filter(Boolean))];
  const fallback = document.createElement(group ? 'i' : 'span');
@@ -29,6 +29,7 @@ function orbitPaintAvatar(container, title, urls, group = false) {
  if (!sources.length) return;
  const image = document.createElement('img');
  image.alt = ''; image.decoding = 'async'; image.dataset.orbitAvatar = 'true';
+ if(lazy)image.loading='lazy';
  let source = sources.shift(), triedSigned = false;
  image.onerror = async () => {
   if (image.parentNode !== container) return;
@@ -52,7 +53,7 @@ function orbitRenderConversationCard(card,item){
  card.dataset.roomId=item.roomId;card.dataset.peerId=item.peerUserId||'';card.dataset.group=String(!!item.isGroup);
  card.classList.toggle('orbit-chat-unread',!!isUnread);
  card.innerHTML=`<div class="c-av-wrap"></div><div class="c-info-wrap"><div class="c-top-row"><span class="c-name">${escapeHtml(item.title)}</span><span class="c-time">${escapeHtml(item.timeDisplay||'')}</span></div><div class="c-preview-row"><span class="c-last-msg">${escapeHtml(item.msgPreview||'Message')}</span><span class="orbit-chat-markers">${muted?'<i class="fa-solid fa-bell-slash" title="Muted"></i>':''}${item.isPinned?'<i class="fa-solid fa-thumbtack" title="Pinned"></i>':''}<span class="orbit-chat-count${isUnread?'':' hide'}" aria-label="${count?`${count} unread messages`:'Unread messages'}">${count?count>99?'99+':count:'•'}</span></span></div><div class="c-presence-line${presence==='Online'?' is-online':''}">${escapeHtml(presence)}</div></div>`;
- orbitPaintAvatar(card.querySelector('.c-av-wrap'), item.title, [globalUsersMap.get(item.peerUserId)?.dp_url, item.dp_url], item.isGroup);
+ orbitPaintAvatar(card.querySelector('.c-av-wrap'), item.title, [globalUsersMap.get(item.peerUserId)?.dp_url, item.dp_url], item.isGroup, true);
 }
 function orbitRefreshChatPresence(){
  if(document.hidden)return;

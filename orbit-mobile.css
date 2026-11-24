@@ -11,6 +11,20 @@
 .orbit-android #screen-chat { scroll-behavior: auto; }
 .orbit-android .celestial-canvas,
 .orbit-android #celestial-canvas { display: none !important; }
+.orbit-android body.orbit-battery-saver :is(.ambient-glow, .ambient-glow-2) {
+    filter: none;
+    animation: none;
+}
+.orbit-android body.orbit-battery-saver :is(#screen-dash, #screen-chat, #modal-settings) *,
+.orbit-android body.orbit-battery-saver :is(#screen-dash, #screen-chat, #modal-settings) *::before,
+.orbit-android body.orbit-battery-saver :is(#screen-dash, #screen-chat, #modal-settings) *::after {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+}
+.orbit-android body.orbit-battery-saver #main-chats-list > .contact-glass-card {
+    content-visibility: auto;
+    contain-intrinsic-block-size: auto 76px;
+}
 .orbit-sticker-toggle { color: var(--text-muted); min-width: 40px; min-height: 44px; font-size: 18px; }
 .orbit-sticker-picker, .orbit-invite { box-sizing: border-box; color: var(--text-primary); background: var(--bg-color, #171923); }
 .orbit-sticker-picker { inset: auto 0 0; margin: 0 auto; width: min(100%, 430px); max-height: 65dvh; padding: 18px max(16px, env(safe-area-inset-right)) max(16px, env(safe-area-inset-bottom)); border: 1px solid var(--glass-border); border-radius: 18px 18px 0 0; }

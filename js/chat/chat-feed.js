@@ -3,6 +3,7 @@
 // reaction pickers, swipe-to-reply gestures, context menus, and pinned banner.
 
 let chatFeedRenderGeneration = 0;
+const orbitMessageClock = new Intl.DateTimeFormat(undefined,{hour:'2-digit',minute:'2-digit'});
 function renderMessageFeed(msgs, shouldScrollBottom = true) {
     msgs=msgs.filter(message=>!window.orbitMessageWasCleared?.(message));
     const generation = ++chatFeedRenderGeneration;
@@ -17,7 +18,7 @@ function renderMessageFeed(msgs, shouldScrollBottom = true) {
     const priorScrollBehavior = feed.style.scrollBehavior;
     feed.style.scrollBehavior = 'auto';
 
-    const hadMessages = feed.querySelectorAll('.msg-bubble-row').length > 0;
+    const hadMessages = !!feed.querySelector('.msg-bubble-row');
     const prevScrollBottomDist = feed.scrollHeight - feed.scrollTop;
     // A background refresh should keep the newest messages visible when the
     // reader was already near the bottom; otherwise preserve their read spot.
@@ -29,9 +30,14 @@ function renderMessageFeed(msgs, shouldScrollBottom = true) {
     let scrollAnchorTop = 0;
     if (!shouldScrollBottom && hadMessages) {
         const feedTop = feed.getBoundingClientRect().top;
-        const visibleAnchor = Array.from(feed.querySelectorAll('.msg-bubble-row')).find(node =>
-            node.getBoundingClientRect().bottom > feedTop + 1
-        );
+        const rows = feed.querySelectorAll('.msg-bubble-row');
+        let low = 0, high = rows.length;
+        while(low < high) {
+            const mid = (low + high) >>> 1;
+            if(rows[mid].getBoundingClientRect().bottom > feedTop + 1)high = mid;
+            else low = mid + 1;
+        }
+        const visibleAnchor = rows[low];
         if (visibleAnchor) {
             scrollAnchorId = visibleAnchor.dataset.msgId || visibleAnchor.id.replace(/^msg-/, '');
             scrollAnchorTop = visibleAnchor.getBoundingClientRect().top - feedTop;
@@ -377,7 +383,7 @@ function createMessageDOMNode(msg, isConsecutive = false) {
         });
 
         const d = new Date(msg.created_at || Date.now());
-        const timeFormatted = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        const timeFormatted = Number.isFinite(d.getTime()) ? orbitMessageClock.format(d) : '';
 
         let replyHtml = '';
         let replyObj = msg.reply_to;

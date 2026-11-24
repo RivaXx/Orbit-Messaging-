@@ -1,14 +1,14 @@
 {
   "appName": "Orbit Messenger",
-  "versionName": "1.3.0",
-  "versionCode": 130,
-  "downloadUrl": "https://github.com/RivaXx/Orbit-Messaging-/releases/download/v1.3.0/Orbit-Messenger-v1.3.0.apk",
-  "summary": "Android call controls, quicker Gallery sharing, and a new chat picker",
+  "versionName": "1.3.1",
+  "versionCode": 131,
+  "downloadUrl": "https://github.com/RivaXx/Orbit-Messaging-/releases/download/v1.3.1/Orbit-Messenger-v1.3.1.apk",
+  "summary": "Faster picker, lighter Android rendering, and less work at startup",
   "changes": [
-    "Answer or decline incoming calls from an Android notification while Orbit is connected",
-    "Find recent chats and review photos shared from Gallery",
-    "Search emoji and Orbit GIFs, and send stickers from the new chat picker",
-    "Crop, trim, and save photos, GIFs, and short videos to My Stickers"
+    "Reduce background network requests at startup on Android",
+    "Render fewer off-screen chat cards and use lighter effects in battery saver mode",
+    "Open the emoji picker immediately without waiting for the GIF provider",
+    "Reduce layout work when refreshing conversations"
   ],
-  "sha256": "838a4261960c3c211f2836a9aafe3f88295af5fe59d8e8b1afeef84c7e69404a"
+  "sha256": "d4eab93b527a05f0acf6ec20efd928d758657375f0665927f7b91d5070608446"
 }

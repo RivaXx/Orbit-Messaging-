@@ -21,6 +21,7 @@ class OrbitChatPicker extends StatefulWidget {
 }
 
 class _OrbitChatPickerState extends State<OrbitChatPicker> {
+  static Future<String?>? _keyRequest;
   final _input = TextEditingController();
   final _images = <String, Uint8List>{};
   final _client = HttpClient()..connectionTimeout = const Duration(seconds: 5);
@@ -38,7 +39,7 @@ class _OrbitChatPickerState extends State<OrbitChatPicker> {
           .toList();
   List<String> _strings(String field) =>
       (widget.model[field] as List).cast<String>();
-  String? get _gifKey => widget.model['gifKey'] as String?;
+  String? _gifKey;
   bool get _isLight => widget.model['light'] == true;
 
   @override
@@ -71,9 +72,37 @@ class _OrbitChatPickerState extends State<OrbitChatPicker> {
     if (tab == 'gif') _searchGiphy();
   }
 
+  static Future<String?> _loadGifKey() async {
+    final client = HttpClient()..connectionTimeout = const Duration(seconds: 2);
+    try {
+      final request = await client.getUrl(
+        Uri.https('orbit-messaging.vercel.app', '/api/gif-config'),
+      );
+      final response = await request.close().timeout(
+        const Duration(seconds: 2),
+      );
+      if (response.statusCode != 200) return null;
+      final result = jsonDecode(
+        await response
+            .transform(utf8.decoder)
+            .join()
+            .timeout(const Duration(seconds: 2)),
+      );
+      final key = result['key'];
+      return key is String && RegExp(r'^[A-Za-z0-9]{16,80}$').hasMatch(key)
+          ? key
+          : null;
+    } catch (_) {
+      return null;
+    } finally {
+      client.close(force: true);
+    }
+  }
+
   Future<void> _searchGiphy() async {
-    final key = _gifKey;
-    if (key == null) return;
+    final key = await (_keyRequest ??= _loadGifKey());
+    if (key == null || !mounted || _tab != 'gif') return;
+    _gifKey = key;
     final query = _input.text.trim(), generation = ++_queryVersion;
     setState(() {
       _loading = true;
