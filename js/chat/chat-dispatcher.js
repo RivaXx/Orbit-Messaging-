@@ -525,7 +525,8 @@ setTimeout(() => {
 }, 0);
 
 async function sendMessage(sticker = null) {
-    if (sticker && !window.OrbitStickers?.valid(sticker)) return false;
+    const remoteGif=window.OrbitPicker?.isRemoteGif(sticker);
+    if (sticker && !remoteGif && !window.OrbitStickers?.valid(sticker)) return false;
     if (typeof orbitEditingMessage !== "undefined" && orbitEditingMessage) {
         if (!sticker) return orbitSaveEdit();
         showToast('Finish editing before sending a sticker.','info');return false;
@@ -534,7 +535,7 @@ async function sendMessage(sticker = null) {
     if (_isSendingMessage) return;
 
     const input = document.getElementById('msg-input');
-    const text = sticker ? (sticker.emoji || 'Sticker') : input?.value.trim() || '';
+    const text = sticker ? (remoteGif ? 'GIF' : sticker.emoji || 'Sticker') : input?.value.trim() || '';
     if (!text && pendingAttachments.length === 0) return;
     if (!currentRoom) return;
     // Bind this send to the room visible at click time. Network responses may
@@ -622,7 +623,7 @@ async function sendMessage(sticker = null) {
         text: text || null,
         type: attData[0]?.type || 'text',
         attachments: attData,
-        ...(sticker ? {metadata:{orbit_sticker:sticker}} : {}),
+        ...(sticker ? {metadata:remoteGif?{orbit_gif:sticker}:{orbit_sticker:sticker}} : {}),
         reply_to: replyTargetMessage ? { id: replyTargetMessage.id, username: replyTargetMessage.username, text: replyTargetMessage.text } : null,
         created_at: new Date().toISOString()
     };
@@ -695,6 +696,7 @@ async function queueMediaMessage(items, caption = '', messageType = null, target
     await OrbitCrypto.requireUnlocked();
     const roomAtSend = targetContext?.roomId || currentRoom;
     const userAtSend = targetContext?.userId || currentUser.id;
+    const pickerMedia = ['gif','sticker'].includes(targetContext?.pickerMedia) ? targetContext.pickerMedia : null;
     if (currentRoom !== roomAtSend || currentUser.id !== userAtSend) {
         throw new Error('Chat changed before the media was queued. Reopen the original chat and try again.');
     }
@@ -757,7 +759,7 @@ async function queueMediaMessage(items, caption = '', messageType = null, target
         const name = item.name || file.name || `media-${index + 1}`;
         const previewUrl = (file instanceof Blob || file instanceof File) ? URL.createObjectURL(item.previewFile || file) : (item.url || '');
         item.file = file;
-        mediaUploadInfo.push({ index, name, type, mime: file.type || 'application/octet-stream', rotation: Number(item.rotation || 0), hdQuality: !!isPreviewHdQuality, originalQuality: !!item.originalQuality, subfolder: type === 'image' ? 'images' : type === 'video' ? 'videos' : 'documents' });
+        mediaUploadInfo.push({ index, name, type, mime: file.type || 'application/octet-stream', rotation: Number(item.rotation || 0), hdQuality: !!isPreviewHdQuality, originalQuality: !!item.originalQuality, preserveAnimation:!!pickerMedia, subfolder: type === 'image' ? 'images' : type === 'video' ? 'videos' : 'documents' });
         return { name, url: previewUrl, type, quality: type === 'image' ? (item.originalQuality ? 'original' : isPreviewHdQuality ? 'hd' : 'sd') : undefined, size: file.size, upload_pending: true, view_once: !!item.viewOnce };
     });
     const payload = {
@@ -768,6 +770,7 @@ async function queueMediaMessage(items, caption = '', messageType = null, target
         text: String(caption || '').trim() || null,
         type: messageType || attachments[0]?.type || 'file',
         attachments,
+        ...(pickerMedia ? {metadata:{orbit_media:pickerMedia}} : {}),
         reply_to: replyTargetMessage ? { id: replyTargetMessage.id, username: replyTargetMessage.username, text: replyTargetMessage.text } : null,
         created_at: new Date().toISOString()
     };
@@ -791,8 +794,10 @@ async function queueMediaMessage(items, caption = '', messageType = null, target
     const feed = document.getElementById('chat-feed');
     if (!feed || feed.scrollHeight - feed.scrollTop - feed.clientHeight < 220) scrollFeedToBottom(true);
     const input = document.getElementById('msg-input');
-    if (input) { input.value = ''; input.style.height = 'auto'; }
-    OrbitCrypto.clearDraft(roomAtSend);
+    if (!pickerMedia) {
+        if (input) { input.value = ''; input.style.height = 'auto'; }
+        OrbitCrypto.clearDraft(roomAtSend);
+    }
     if (replyTargetMessage) {
         replyTargetMessage = null;
         document.getElementById('reply-preview-bar')?.classList.add('hide');
@@ -872,7 +877,7 @@ async function _uploadQueuedMedia(item) {
             if (rotated?.startsWith('data:image/')) uploadBody = rotated;
         }
 
-        if (!info.prepared && !info.originalQuality && info.type === 'image' && !/image\/(gif|svg\+xml)/i.test(info.mime) && typeof compressImageForUpload === 'function') {
+        if (!info.prepared && !info.originalQuality && !info.preserveAnimation && info.type === 'image' && !/image\/(gif|svg\+xml)/i.test(info.mime) && typeof compressImageForUpload === 'function') {
             const isHd = info.hdQuality;
             const slowLink = ['slow-2g', '2g', '3g'].includes(navigator.connection?.effectiveType) || navigator.connection?.saveData;
             const targetDim = isHd ? 2560 : slowLink ? 720 : 1080;

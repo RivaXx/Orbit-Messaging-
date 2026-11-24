@@ -9,7 +9,11 @@ import android.graphics.Color
 import android.net.Uri
 import android.os.Build
 import android.os.SystemClock
+import android.os.Handler
+import android.os.Looper
+import android.app.KeyguardManager
 import android.view.View
+import android.view.inputmethod.InputMethodManager
 import android.webkit.GeolocationPermissions
 import android.webkit.PermissionRequest
 import android.webkit.ValueCallback
@@ -35,6 +39,7 @@ import io.flutter.plugin.platform.PlatformViewFactory
 import org.json.JSONObject
 import java.io.ByteArrayInputStream
 import java.util.concurrent.Executors
+import java.util.UUID
 
 class OrbitActivity : FlutterFragmentActivity() {
     private companion object {
@@ -55,6 +60,12 @@ class OrbitActivity : FlutterFragmentActivity() {
     private var picker: ValueCallback<Array<Uri>>? = null
     private var permissionResult: (() -> Unit)? = null
     private var channel: MethodChannel? = null
+    private data class Incoming(val id: String, val name: String, val preview: Boolean, val expires: Long, val token: String)
+    private var incoming: Incoming? = null
+    private var answerOnUnlock = false
+    private var fullCallPresentation = false
+    private val callHandler = Handler(Looper.getMainLooper())
+    private val expireCall = Runnable { clearIncomingCall() }
     private val assetLoader by lazy {
         WebViewAssetLoader.Builder().addPathHandler("/assets/", WebViewAssetLoader.AssetsPathHandler(this)).build()
     }
@@ -88,6 +99,7 @@ class OrbitActivity : FlutterFragmentActivity() {
         super.onNewIntent(intent)
         setIntent(intent)
         captureShare(intent)
+        handleCallIntent(intent)
     }
 
     override fun onStop() {
@@ -97,6 +109,7 @@ class OrbitActivity : FlutterFragmentActivity() {
     }
 
     override fun onDestroy() {
+        callHandler.removeCallbacks(expireCall)
         work.shutdownNow()
         updateWork.shutdownNow()
         super.onDestroy()
@@ -110,6 +123,7 @@ class OrbitActivity : FlutterFragmentActivity() {
         }
         stoppedAt = 0L
         page?.evaluateJavascript("window.OrbitAndroidBackground=false; if(window.OrbitDevice)window.dispatchEvent(new Event('orbit-android-resume'))", null)
+        incoming?.let { if (!answerOnUnlock) paintIncoming(it, fullCallPresentation) }
     }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
@@ -150,6 +164,18 @@ class OrbitActivity : FlutterFragmentActivity() {
                         result.success(unlocked)
                     }
                     "biometrics" -> authenticateBiometric(result)
+                    "callAction" -> {
+                        val action = call.argument<String>("action") ?: ""
+                        val id = call.argument<String>("id") ?: ""
+                        result.success(handleCallAction(id, action))
+                    }
+                    "pickerAction" -> {
+                        val action = call.arguments as? String ?: "{}"
+                        if (!unlocked || page == null || action.length > 1000) { result.success(false); return@setMethodCallHandler }
+                        val payload = JSONObject(action).toString()
+                        page?.evaluateJavascript("window.OrbitPicker?.action(JSON.parse(${JSONObject.quote(payload)}))", null)
+                        result.success(true)
+                    }
                     "back" -> {
                         val view = page
                         if (!unlocked || view == null) { result.success(false); return@setMethodCallHandler }
@@ -175,6 +201,67 @@ class OrbitActivity : FlutterFragmentActivity() {
         if (changingPin) return
         page?.visibility = View.VISIBLE
         page?.evaluateJavascript("window.OrbitCrypto?.restoreTrusted(); window.dispatchEvent(new Event('orbit-android-share'))", null)
+        if (answerOnUnlock) incoming?.let { handleCallAction(it.id, "answer") }
+    }
+
+    private fun showIncomingCall(args: JSONObject): Boolean {
+        val id = UUID.fromString(args.getString("id")).toString()
+        val remaining = (args.getLong("expires") - System.currentTimeMillis()).coerceAtMost(47_000)
+        if (remaining <= 0) return false
+        if (incoming?.id != id) { clearIncomingCall(); incoming = Incoming(id, args.optString("title", "Orbit caller").take(80), args.optBoolean("preview"), SystemClock.elapsedRealtime() + remaining, UUID.randomUUID().toString()) }
+        val call = incoming ?: return false
+        callHandler.removeCallbacks(expireCall)
+        callHandler.postDelayed(expireCall, (call.expires - SystemClock.elapsedRealtime()).coerceAtLeast(1))
+        if (!args.optBoolean("background")) paintIncoming(call, false)
+        val title = if (unlocked && call.preview) call.name else "Orbit caller"
+        if (args.optBoolean("notify")) runCatching { notifications.incomingCall(id, title, call.token, args.optBoolean("silent"), remaining) }
+        return true
+    }
+
+    private fun paintIncoming(call: Incoming, full: Boolean) {
+        fullCallPresentation = full
+        if (full && Build.VERSION.SDK_INT >= 27) { setShowWhenLocked(true); setTurnScreenOn(true) }
+        val locked = getSystemService(KeyguardManager::class.java).isKeyguardLocked
+        channel?.invokeMethod("incomingCall", mapOf("id" to call.id, "title" to if (unlocked && !locked && call.preview) call.name else "Orbit caller", "full" to full))
+    }
+
+    private fun handleCallIntent(intent: Intent) {
+        val call = incoming ?: return
+        val path = intent.data?.pathSegments ?: return
+        if (intent.action != "com.orbit.messenger.CALL" || intent.getStringExtra("orbit-call-token") != call.token || path.size != 2 || path[0] != call.id) return
+        if (path[1] == "view") paintIncoming(call, true) else handleCallAction(call.id, path[1])
+    }
+
+    private fun handleCallAction(id: String, action: String): Boolean {
+        val call = incoming ?: return false
+        if (id != call.id || call.expires <= SystemClock.elapsedRealtime() || action !in setOf("answer", "decline")) return false
+        val keyguard = getSystemService(KeyguardManager::class.java)
+        if (action == "answer" && Build.VERSION.SDK_INT >= 26 && keyguard.isKeyguardLocked) {
+            keyguard.requestDismissKeyguard(this, object : KeyguardManager.KeyguardDismissCallback() {
+                override fun onDismissSucceeded() { handleCallAction(id, action) }
+            })
+            return true
+        }
+        if (action == "answer" && !unlocked) {
+            answerOnUnlock = true
+            channel?.invokeMethod("incomingCallCleared", null)
+            return true
+        }
+        val view = page ?: return false
+        view.evaluateJavascript("window.orbitHandleAndroidCall?.(${JSONObject.quote(id)},${JSONObject.quote(action)})", null)
+        clearIncomingCall()
+        return true
+    }
+
+    private fun clearIncomingCall() {
+        val call = incoming ?: return
+        callHandler.removeCallbacks(expireCall)
+        incoming = null
+        answerOnUnlock = false
+        fullCallPresentation = false
+        notifications.clear("orbit-call-" + call.id)
+        channel?.invokeMethod("incomingCallCleared", null)
+        if (Build.VERSION.SDK_INT >= 27) { setShowWhenLocked(false); setTurnScreenOn(false) }
     }
 
     private fun authenticateBiometric(result: MethodChannel.Result) {
@@ -223,7 +310,7 @@ class OrbitActivity : FlutterFragmentActivity() {
                 if (!mainFrame || Uri.parse(view.url.orEmpty()).path != APP_PAGE) return@addWebMessageListener
                 val request = runCatching { JSONObject(message.data ?: "") }.getOrNull() ?: return@addWebMessageListener
                 val method = request.optString("method")
-                if ((!unlocked || changingPin) && method !in setOf("showNotification", "clearNotification")) return@addWebMessageListener
+                if ((!unlocked || changingPin) && method !in setOf("showNotification", "clearNotification", "incomingCall")) return@addWebMessageListener
                 val answer = JSONObject().put("id", request.optInt("id"))
                 try {
                     if (method == "requestNotifications") {
@@ -342,8 +429,23 @@ class OrbitActivity : FlutterFragmentActivity() {
             }, "Invite to Orbit"))
             "downloadUpdate" -> updater.start(args)
             "notificationStatus" -> notifications.enabled()
+            "fullScreenCallSettings" -> {
+                if (Build.VERSION.SDK_INT >= 34) startActivity(Intent(android.provider.Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT, Uri.parse("package:$packageName")))
+                else Toast.makeText(this, "Incoming call display uses your notification settings.", Toast.LENGTH_SHORT).show()
+            }
             "showNotification" -> notifications.show(args, unlocked && !changingPin)
-            "clearNotification" -> notifications.clear(args.getString("tag"))
+            "incomingCall" -> showIncomingCall(args)
+            "openChatPicker" -> {
+                val payload = args.toString()
+                check(payload.length <= 1_500_000) { "The picker list is too large." }
+                page?.let { getSystemService(InputMethodManager::class.java).hideSoftInputFromWindow(it.windowToken, 0) }
+                channel?.invokeMethod("openChatPicker", payload)
+                channel != null
+            }
+            "clearNotification" -> {
+                val tag = args.getString("tag")
+                if (tag == "orbit-call-" + incoming?.id) clearIncomingCall() else notifications.clear(tag)
+            }
             "clearNotifications" -> notifications.clearAll()
             else -> error("Unknown Android action.")
         }.let { if (it == Unit) null else it }

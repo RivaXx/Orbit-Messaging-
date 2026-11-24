@@ -17,18 +17,26 @@
  const status=(box,text)=>{box.textContent=text;};
  function targets(){
   const rows=new Map();
+  let recent=[];try{recent=JSON.parse(localStorage.getItem(`orbit_recent_chats_v27_${account()}`)||'[]');}catch(_){}
+  const rank=new Map(recent.map((item,index)=>[item.roomId,index]));
+  const add=(key,row)=>{
+   const old=rows.get(key), score=rank.get(row.id)??Infinity;
+   if(!old||Number(old.id.startsWith('dm_'))>Number(row.id.startsWith('dm_'))||
+       old.id.startsWith('dm_')===row.id.startsWith('dm_')&&score<old.rank)rows.set(key,{...row,rank:Math.min(old?.rank??Infinity,score)});
+   else old.rank=Math.min(score,old.rank);
+  };
   if(typeof allRoomsMap!=='undefined')allRoomsMap.forEach(room=>{
    if(!room?.participants?.includes(account()))return;
    const peer=room.is_direct?room.participants.find(id=>id!==account()):null;
    const user=typeof globalUsersMap!=='undefined'?globalUsersMap.get(peer):null;
-   rows.set(room.id,{id:room.id,title:user?.display_name||room.name||room.title||'Conversation',peer});
+   add(peer?`peer:${peer}`:`room:${room.id}`,{id:room.id,title:user?.display_name||room.name||room.title||'Conversation',peer,subtitle:peer?user?.username:'Group chat'});
   });
   if(typeof myFriendsSet!=='undefined'&&typeof globalUsersMap!=='undefined')myFriendsSet.forEach(id=>{
-   const user=globalUsersMap.get(id);if(!user||[...rows.values()].some(r=>r.peer===id))return;
-   rows.set('dm_'+id,{id:'dm_'+id,title:user.display_name||'Contact',peer:id});
+   const user=globalUsersMap.get(id);if(!user||rows.has(`peer:${id}`))return;
+   add(`peer:${id}`,{id:'dm_'+id,title:user.display_name||'Contact',peer:id,subtitle:user.username});
   });
-  if(account())rows.set('self_'+account(),{id:'self_'+account(),title:'Note to Self',isSelf:true});
-  return [...rows.values()].sort((a,b)=>a.title.localeCompare(b.title));
+  if(account())add('self',{id:'self_'+account(),title:'Note to Self',subtitle:'Private chat',isSelf:true});
+  return [...rows.values()].sort((a,b)=>(a.rank-b.rank)||a.title.localeCompare(b.title));
  }
  function saveBlob(blob,name){
   const url=URL.createObjectURL(blob),link=el('a');link.href=url;link.download=name.replace(/[\\/:*?"<>|]/g,'_');document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);
@@ -154,33 +162,51 @@
  async function composeShare(payload,id,owner,discard=null){
    check(owner);
    const box=panel('Send photos and files');if(!box){shareOpened=false;return;}
+   box.classList.add('orbit-share-sheet');active.classList.add('orbit-share-overlay');
    const epoch=selectionEpoch,checkSelection=()=>{check(owner);if(epoch!==selectionEpoch)throw Error('This selection was closed. Choose the files again.');};
-   box.append(el('p',payload.files.length?payload.files.length+' attachment(s) ready. Choose a chat, then review before sending.':'Choose a chat for the shared text.'));
+   const count=payload.files.length;
+   box.append(el('p',count?`${count} ${count===1?'attachment':'attachments'} · Choose a chat to review`:'Choose a chat for the shared text.','orbit-share-summary'));
    const text=[payload.title,payload.text,payload.url].filter(Boolean).join('\n').slice(0,20000);if(text)box.append(el('p',text.slice(0,300),'orbit-data-muted'));
    const search=el('input');search.type='search';search.placeholder='Search chats';search.setAttribute('aria-label','Find a recipient');box.append(search);
    const list=el('div',undefined,'orbit-share-targets');box.append(list);
+   const progress=el('p','','orbit-share-progress');progress.setAttribute('role','status');box.append(progress);
    const select=async target=>{
     if(busy)return;busy=true;
     try{
      checkSelection();
      if(document.getElementById('modal-media-preview')?.classList.contains('active'))throw Error('Finish or cancel the current attachment preview first.');
-     let room=target.id;if(target.peer)room=await resolveCanonicalRoomId(target.peer,target.title);checkSelection();
+     progress.textContent=`Opening ${target.title}…`;
+     let room=target.id;if(target.peer&&room.startsWith('dm_'))room=await resolveCanonicalRoomId(target.peer,target.title);checkSelection();
      if(!room)throw Error('Could not open that conversation.');
      await openChatRoom(room,target.title,null,!!target.isSelf,target.peer);checkSelection();
      if(currentRoom!==room)throw Error('The selected chat could not open.');
      const composer=document.getElementById('msg-input');if(composer&&text){composer.value=[composer.value,text].filter(Boolean).join('\n');composer.dispatchEvent(new Event('input',{bubbles:true}));}
      if(payload.files.length){
-      const previews=await prepareMediaPreviewItems(payload.files.map(file=>({file,name:file.name,type:file.type.startsWith('image/')?'image':file.type.startsWith('video/')?'video':file.type.startsWith('audio/')?'audio':'file'})));
+      const files=payload.load?await payload.load(checkSelection,progress):payload.files;
+      checkSelection();
+      const previews=await prepareMediaPreviewItems(files.map(file=>({file,name:file.name,type:file.type.startsWith('image/')?'image':file.type.startsWith('video/')?'video':file.type.startsWith('audio/')?'audio':'file'})),undefined,{fast:true});
       try{checkSelection();}catch(e){previews.forEach(releaseMediaPreviewItem);throw e;}
       openMediaPreviewScreen(previews);
      }
      if(id){await OrbitShareInbox.remove(id);clearShareUrl();}
      await discard?.();close();
-    }catch(e){showToast(e.message,'error');}finally{busy=false;}
+    }catch(e){if(epoch===selectionEpoch)progress.textContent=e.message;}finally{busy=false;}
    };
-   const render=()=>{list.replaceChildren();const rows=targets().filter(t=>t.title.toLowerCase().includes(search.value.toLowerCase()));rows.forEach(t=>list.append(button(t.title,()=>select(t))));if(!rows.length)list.append(el('p','No matching chats. Open or add your contact in Orbit, then try again.'));};
-   search.oninput=render;render();
-   if(typeof loadMainChats==='function')Promise.resolve(loadMainChats()).then(()=>{if(epoch===selectionEpoch)render();}).catch(()=>{});
+   let directory=targets(),limit=36;
+   const render=()=>{
+    list.replaceChildren();const query=search.value.trim().toLowerCase();
+    const rows=directory.filter(t=>`${t.title} ${t.subtitle||''}`.toLowerCase().includes(query));
+    for(const t of rows.slice(0,limit)){
+     const item=button('',()=>select(t));item.className='orbit-share-row';item.setAttribute('aria-label',t.title);
+     item.append(el('span',t.title.trim().slice(0,1).toUpperCase()||'O','orbit-share-avatar'));
+     const name=el('span',undefined,'orbit-share-name');name.append(el('strong',t.title));
+     if(t.subtitle)name.append(el('small',t.subtitle));item.append(name,el('span','›','orbit-share-arrow'));list.append(item);
+    }
+    if(rows.length>limit)list.append(button('Show more chats',()=>{limit+=36;render();}));
+    if(!rows.length)list.append(el('p','No matching chats.'));
+   };
+   search.oninput=()=>{limit=36;render();};render();
+   if(typeof loadMainChats==='function')Promise.resolve(loadMainChats()).then(()=>{if(epoch===selectionEpoch){directory=targets();render();}}).catch(()=>{});
    box.append(button('Discard selection',async()=>{if(id){await OrbitShareInbox.remove(id);clearShareUrl();}await discard?.();close();}));
  }
  async function receiveAndroidShare(){
@@ -189,13 +215,20 @@
   try{
    const batch=await OrbitDevice('pendingShare');check(owner);
    if(!batch){shareOpened=false;return;}
-   const files=[];
-   for(const item of batch.files){
-    const url=new URL(item.path,location.origin);if(url.origin!==location.origin||!url.pathname.startsWith('/_orbit-native-share/'))throw Error('Invalid Android share attachment.');
-    const response=await fetch(url,{cache:'no-store'});if(!response.ok)throw Error('The shared photo is no longer available. Share it again from Gallery.');
-    files.push(new File([await response.blob()],item.name,{type:item.type}));check(owner);
-   }
-   await composeShare({files},null,owner,()=>OrbitDevice('discardShare',{id:batch.id}));shareOpened=!!active;
+   const load=async(checkSelection,progress)=>{
+    const files=new Array(batch.files.length);let complete=0;
+    for(let offset=0;offset<batch.files.length;offset+=3){
+     await Promise.all(batch.files.slice(offset,offset+3).map(async(item,index)=>{
+      checkSelection();const url=new URL(item.path,location.origin);
+      if(url.origin!==location.origin||!/^\/_orbit-native-share\/[a-z0-9-]+$/i.test(url.pathname))throw Error('Invalid Android share attachment.');
+      const response=await fetch(url,{cache:'no-store'});if(!response.ok)throw Error('Share this photo again from Gallery.');
+      files[offset+index]=new File([await response.blob()],item.name,{type:item.type});
+      checkSelection();progress.textContent=`Preparing ${++complete} of ${files.length}…`;
+     }));
+    }
+    return files;
+   };
+   await composeShare({files:batch.files,load},null,owner,()=>OrbitDevice('discardShare',{id:batch.id}));shareOpened=!!active;
   }catch(e){shareOpened=false;showToast(e.message,'error');}
  }
  async function receiveShare(){

@@ -157,12 +157,12 @@ function releaseMediaPreviewItem(item) {
     for (const url of [item?.url, item?.thumbUrl]) if (url?.startsWith('blob:')) URL.revokeObjectURL(url);
 }
 
-async function prepareMediaPreviewItems(items, onProgress = () => {}) {
+async function prepareMediaPreviewItems(items, onProgress = () => {}, {fast=false}={}) {
     const prepared = [];
     for (const item of items) {
         onProgress(prepared.length + 1, items.length);
         let previewFile = null;
-        if (item.type === 'image' && typeof Image !== 'undefined') {
+        if (!fast && item.type === 'image' && typeof Image !== 'undefined') {
             try { previewFile = await compressImageForUpload(item.file, 160, 0.65); } catch (_) { /* Sending reports unsupported image formats. */ }
         }
         prepared.push({ ...item, url: URL.createObjectURL(item.file), previewFile, thumbUrl: previewFile ? URL.createObjectURL(previewFile) : '' });

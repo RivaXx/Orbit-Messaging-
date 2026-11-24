@@ -1,14 +1,14 @@
 {
   "appName": "Orbit Messenger",
-  "versionName": "1.2.0",
-  "versionCode": 120,
-  "downloadUrl": "https://github.com/RivaXx/Orbit-Messaging-/releases/download/v1.2.0/Orbit-Messenger-v1.2.0.apk",
-  "summary": "In-app Android updates, faster PIN-backed chat unlock, and animated weather",
+  "versionName": "1.3.0",
+  "versionCode": 130,
+  "downloadUrl": "https://github.com/RivaXx/Orbit-Messaging-/releases/download/v1.3.0/Orbit-Messenger-v1.3.0.apk",
+  "summary": "Android call controls, quicker Gallery sharing, and a new chat picker",
   "changes": [
-    "Download and verify APK updates inside Orbit before the Android installer opens",
-    "Unlock the saved chat key with the Android app PIN or biometrics",
-    "Explore day, evening and night weather with an hourly forecast and hidden animations",
-    "Receive native Android alerts while Orbit is connected"
+    "Answer or decline incoming calls from an Android notification while Orbit is connected",
+    "Find recent chats and review photos shared from Gallery",
+    "Search emoji and Orbit GIFs, and send stickers from the new chat picker",
+    "Crop, trim, and save photos, GIFs, and short videos to My Stickers"
   ],
-  "sha256": "a9304c9a5c4037ca8285a155d9bafb1b22802a3626b798d7dd2bff5ebcac6440"
+  "sha256": "86c42a6bef49b3c3bba04c35989ab397219cc1a85c36c847debee1a1282c6a0a"
 }

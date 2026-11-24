@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'dart:convert';
+
+import 'chat_picker.dart';
+import 'incoming_call.dart';
 
 const _device = MethodChannel('com.orbit.messenger/device');
 
@@ -16,6 +20,7 @@ class OrbitApp extends StatelessWidget {
       scaffoldBackgroundColor: const Color(0xff08080c),
       useMaterial3: true,
     ),
+    themeMode: ThemeMode.dark,
     home: const OrbitHome(),
   );
 }
@@ -38,6 +43,8 @@ class _OrbitHomeState extends State<OrbitHome> {
   bool _busy = false;
   String? _firstPin;
   String? _error;
+  Map<dynamic, dynamic>? _incoming;
+  BuildContext? _pickerContext;
 
   @override
   void initState() {
@@ -62,8 +69,58 @@ class _OrbitHomeState extends State<OrbitHome> {
 
   Future<void> _handleDeviceEvent(MethodCall call) async {
     if (!mounted) return;
-    if (call.method == 'locked') _show(_Gate.unlock);
+    if (call.method == 'locked') {
+      _dismissPicker();
+      _show(_Gate.unlock);
+    }
     if (call.method == 'changePin') _show(_Gate.verifyChange);
+    if (call.method == 'incomingCall') {
+      _dismissPicker();
+      setState(() => _incoming = call.arguments as Map);
+    }
+    if (call.method == 'incomingCallCleared') setState(() => _incoming = null);
+    if (call.method == 'openChatPicker' &&
+        _gate == _Gate.open &&
+        _incoming == null &&
+        _pickerContext == null) {
+      final model = Map<String, dynamic>.from(
+        jsonDecode(call.arguments as String) as Map,
+      );
+      if (!mounted) return;
+      await showModalBottomSheet<void>(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        useSafeArea: true,
+        builder: (sheet) {
+          _pickerContext = sheet;
+          return OrbitChatPicker(
+            model: model,
+            onAction: (action, id) {
+              final payload = jsonEncode({
+                'token': model['token'],
+                'action': action,
+                'id': id,
+              });
+              _device.invokeMethod<bool>('pickerAction', payload);
+            },
+          );
+        },
+      );
+      _pickerContext = null;
+      await _device.invokeMethod<bool>(
+        'pickerAction',
+        jsonEncode({'token': model['token'], 'action': 'closed'}),
+      );
+    }
+  }
+
+  void _dismissPicker() {
+    final sheet = _pickerContext;
+    if (sheet != null &&
+        sheet.mounted &&
+        ModalRoute.of(sheet)?.isCurrent == true)
+      Navigator.pop(sheet);
   }
 
   void _show(_Gate gate) {
@@ -196,6 +253,15 @@ class _OrbitHomeState extends State<OrbitHome> {
                     ),
                   ),
                 ),
+              ),
+            if (_incoming case final data?)
+              OrbitIncomingCall(
+                title: data['title'] as String,
+                full: data['full'] == true,
+                onAction: (action) => _device.invokeMethod<bool>('callAction', {
+                  'id': data['id'],
+                  'action': action,
+                }),
               ),
           ],
         ),

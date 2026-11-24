@@ -35,6 +35,10 @@
     {
       "source": "/api/news",
       "headers": [{"key":"Access-Control-Allow-Origin","value":"https://appassets.androidplatform.net"}]
+    },
+    {
+      "source": "/api/gif-config",
+      "headers": [{"key":"Access-Control-Allow-Origin","value":"https://appassets.androidplatform.net"}]
     }
   ]
 }

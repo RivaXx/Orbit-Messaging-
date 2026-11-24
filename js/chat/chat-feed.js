@@ -835,6 +835,8 @@ function createMessageDOMNode(msg, isConsecutive = false) {
             filesHtml = '';
             replyHtml = '';
             formattedTextHtml = `<div class="msg-deleted-bubble" style="display:flex; align-items:center; gap:6px; font-style:italic; opacity:0.68; color:var(--text-muted); font-size:13px; padding:3px 2px;"><i class="fa-solid fa-ban" style="font-size:12px;"></i> <span>${deletedNotice}</span></div>`;
+        } else if (window.OrbitPicker?.isRemoteGif(msg.metadata?.orbit_gif)) {
+            formattedTextHtml = window.OrbitPicker.gifMarkup(msg.metadata.orbit_gif);
         } else if (window.OrbitStickers?.valid(msg.metadata?.orbit_sticker)) {
             formattedTextHtml = window.OrbitStickers.markup(msg.metadata.orbit_sticker);
         } else if (msg.text && msg.type !== 'location' && msg.type !== 'poll' && msg.type !== 'contact' && msg.type !== 'call') {

@@ -7,11 +7,14 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.media.AudioAttributes
+import android.media.RingtoneManager
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
+import androidx.core.app.Person
 import androidx.core.content.ContextCompat
 import org.json.JSONObject
 
@@ -69,4 +72,37 @@ internal class OrbitNotifications(private val activity: Activity) {
 
     fun clear(tag: String) = manager.cancel(tag, 0)
     fun clearAll() = manager.cancelAll()
+
+    fun incomingCall(id: String, caller: String, token: String, silent: Boolean, remaining: Long) {
+        if (!enabled()) return
+        val channel = if (silent) "orbit-incoming-silent-v2" else "orbit-incoming-v2"
+        if (Build.VERSION.SDK_INT >= 26) {
+            val configured = NotificationChannel(channel, if (silent) "Silent incoming calls" else "Incoming calls", NotificationManager.IMPORTANCE_HIGH)
+            if (silent) {
+                configured.setSound(null, null)
+                configured.enableVibration(false)
+            } else {
+                configured.setSound(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE),
+                    AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_NOTIFICATION_RINGTONE).build())
+            }
+            manager.createNotificationChannel(configured)
+            if (manager.getNotificationChannel(channel)?.importance == NotificationManager.IMPORTANCE_NONE) return
+        }
+        fun action(kind: String, number: Int): PendingIntent {
+            val target = Intent(activity, OrbitActivity::class.java).setAction("com.orbit.messenger.CALL")
+                .setData(Uri.parse("orbit-call://incoming/$id/$kind"))
+                .putExtra("orbit-call-token", token).addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+            return PendingIntent.getActivity(activity, number, target, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
+        }
+        val view = action("view", 1)
+        val person = Person.Builder().setName(caller).setImportant(true).build()
+        val builder = NotificationCompat.Builder(activity, channel).setSmallIcon(R.drawable.orbit_notification)
+            .setContentTitle(caller).setContentText("Incoming Orbit call").setContentIntent(view)
+            .setStyle(NotificationCompat.CallStyle.forIncomingCall(person, action("decline", 2), action("answer", 3)))
+            .setCategory(NotificationCompat.CATEGORY_CALL).setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setVisibility(NotificationCompat.VISIBILITY_PRIVATE).setOngoing(true).setTimeoutAfter(remaining)
+        if (Build.VERSION.SDK_INT < 26 && !silent) builder.setDefaults(NotificationCompat.DEFAULT_ALL)
+        if (!silent && (Build.VERSION.SDK_INT < 34 || manager.canUseFullScreenIntent())) builder.setFullScreenIntent(view, true)
+        manager.notify("orbit-call-$id", 0, builder.build())
+    }
 }

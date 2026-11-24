@@ -34,23 +34,23 @@
     <!-- Font Awesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" media="print" onload="this.media='all'">
 
-    <script defer src="js/storage-recovery.js?v=orbit-1.2.0"></script>
+    <script defer src="js/storage-recovery.js?v=orbit-1.3.0"></script>
     <!-- Standalone Client-Side Error Logger (Captures all uncaught errors & rejections) -->
-    <script defer src="js/logger.js?v=orbit-1.2.0"></script>
+    <script defer src="js/logger.js?v=orbit-1.3.0"></script>
 
     <!-- Core Supabase Client -->
-    <script defer src="assets/vendor/supabase.min.js?v=orbit-1.2.0"></script>
+    <script defer src="assets/vendor/supabase.min.js?v=orbit-1.3.0"></script>
     <!-- Document, crop and resumable upload tools load only when needed. -->
 
-    <link rel="stylesheet" href="intro.css?v=orbit-1.2.0">
-    <script defer src="js/orbit-introduction.js?v=orbit-1.2.0"></script>
-    <link rel="stylesheet" href="style.css?v=orbit-1.2.0">
-    <link rel="stylesheet" href="tools.css?v=orbit-1.2.0">
-<link rel="stylesheet" href="chat-upgrades.css?v=orbit-1.2.0">
-<link rel="stylesheet" href="photo-weather.css?v=orbit-1.2.0">
-    <link rel="stylesheet" href="messaging-experience.css?v=orbit-1.2.0">
-    <link rel="stylesheet" href="app-polish.css?v=orbit-1.2.0">
-<link rel="stylesheet" href="notes.css?v=orbit-1.2.0">
+    <link rel="stylesheet" href="intro.css?v=orbit-1.3.0">
+    <script defer src="js/orbit-introduction.js?v=orbit-1.3.0"></script>
+    <link rel="stylesheet" href="style.css?v=orbit-1.3.0">
+    <link rel="stylesheet" href="tools.css?v=orbit-1.3.0">
+<link rel="stylesheet" href="chat-upgrades.css?v=orbit-1.3.0">
+<link rel="stylesheet" href="photo-weather.css?v=orbit-1.3.0">
+    <link rel="stylesheet" href="messaging-experience.css?v=orbit-1.3.0">
+    <link rel="stylesheet" href="app-polish.css?v=orbit-1.3.0">
+<link rel="stylesheet" href="notes.css?v=orbit-1.3.0">
 </head>
 <body>
 <script>try{document.body.classList.toggle('light-mode',localStorage.getItem('orbit_theme')==='light');}catch(_){}</script>
@@ -1255,8 +1255,7 @@
                 <!-- 2. Oblong Capsule Pill Input Field -->
                 <div class="input-glass-pill">
                     <textarea id="msg-input" class="msg-text-input" rows="1" placeholder="Message..." autocapitalize="sentences" autocorrect="on" spellcheck="true" oninput="handleInputResize(this); handleChatInputText(this);" onkeydown="handleInputKeyDown(event)"></textarea>
-                    <button type="button" class="btn-reset touch-fix orbit-sticker-toggle" onclick="OrbitStickers.open()" title="Stickers" aria-label="Stickers"><i class="fa-regular fa-note-sticky" aria-hidden="true"></i></button>
-                    <button type="button" class="btn-reset touch-fix pill-inner-icon-btn" onclick="toggleEmojiPicker()" title="Emoji" aria-label="Emoji">
+                    <button type="button" class="btn-reset touch-fix pill-inner-icon-btn" onpointerdown="event.preventDefault()" onclick="OrbitPicker.open()" title="Emoji, GIF and stickers" aria-label="Emoji, GIF and stickers">
                         <i class="fa-regular fa-face-smile"></i>
                     </button>
                 </div>
@@ -1594,6 +1593,7 @@
                 </button>
                 <div class="orbit-web-alert-help" style="font-size:10.5px; line-height:1.4; color:var(--text-muted); margin-top:8px;">Enable browser background alerts to receive messages when the web app is closed. Delivery depends on your browser and device notification settings.</div>
                 <div class="orbit-android-only" style="font-size:10.5px; line-height:1.4; color:var(--text-muted); margin-top:8px;">Orbit posts Android alerts while it is connected, including in the background. Android notification permissions and channel settings also apply.</div>
+                <button type="button" class="orbit-android-only glass-btn-secondary" onclick="OrbitDevice('fullScreenCallSettings').catch(e=>showToast(e.message,'error'))">Full-screen call settings</button>
             </div>
 
             </section>
@@ -2592,38 +2592,68 @@
     <input type="file" accept="image/*" hidden>
     <p role="status"></p>
 </dialog>
-<link rel="stylesheet" href="orbit-mobile.css?v=orbit-1.2.0">
-<script defer src="js/orbit-device.js?v=orbit-1.2.0"></script>
-<script defer src="js/orbit-stickers.js?v=orbit-1.2.0"></script>
-<script defer src="js/config.js?v=orbit-1.2.0"></script>
-<script defer src="js/orbit-encryption.js?v=orbit-1.2.0"></script>
-<link rel="stylesheet" href="encryption.css?v=orbit-1.2.0">
-<script defer src="js/rooms.js?v=orbit-1.2.0"></script>
-    <script defer src="js/chat-actions.js?v=orbit-1.2.0"></script>
-    <script defer src="js/actions/media-lightbox.js?v=orbit-1.2.0"></script>
-    <script defer src="js/media-source.js?v=orbit-1.2.0"></script>
-    <script defer src="js/actions/media-preview.js?v=orbit-1.2.0"></script>
-    <script defer src="js/actions/file-viewer.js?v=orbit-1.2.0"></script>
-    <script defer src="js/actions/voice-recorder.js?v=orbit-1.2.0"></script>
-    <script defer src="js/actions/chat-extras.js?v=orbit-1.2.0"></script>
-    <script defer src="js/messaging-notifications.js?v=orbit-1.2.0"></script>
-    <script defer src="js/chat-gestures.js?v=orbit-1.2.0"></script>
-    <script defer src="js/chat-select.js?v=orbit-1.2.0"></script>
-    <script defer src="js/chat-share.js?v=orbit-1.2.0"></script>
-    <script defer src="js/chat/message-controls.js?v=orbit-1.2.0"></script>
-<script defer src="js/chat/chat-history.js?v=orbit-1.2.0"></script>
-    <script defer src="js/chat/chat-feed.js?v=orbit-1.2.0"></script>
-    <script defer src="js/chat/chat-dispatcher.js?v=orbit-1.2.0"></script>
-    <script defer src="js/chat/chat-realtime.js?v=orbit-1.2.0"></script>
-    <script defer src="js/chat.js?v=orbit-1.2.0"></script>
-<script defer src="js/calculator.js?v=orbit-1.2.0"></script>
-    <script defer src="js/tools.js?v=orbit-1.2.0"></script>
-    <script defer src="js/celestial.js?v=orbit-1.2.0"></script>
-    <script defer src="js/ui/ui-auth.js?v=orbit-1.2.0"></script>
-    <script defer src="js/ui/ui-navigation.js?v=orbit-1.2.0"></script>
-    <script defer src="js/ui/ui-modals.js?v=orbit-1.2.0"></script>
-    <script defer src="js/ui/ui-notifications.js?v=orbit-1.2.0"></script>
-<script defer src="js/ui.js?v=orbit-1.2.0"></script>
+<dialog id="orbit-unified-picker" class="orbit-unified-picker" aria-label="Chat picker">
+    <header><input type="search" aria-label="Search chat picker" autocomplete="off"><form method="dialog"><button aria-label="Close chat picker">×</button></form></header>
+    <div data-categories></div><div data-recent></div><div data-grid></div><p role="status"></p>
+    <nav aria-label="Chat picker tabs"><button data-tab="emoji">Emoji</button><button data-tab="gif">GIF</button><button data-tab="stickers">Stickers</button></nav>
+</dialog>
+<dialog id="orbit-picker-menu" class="orbit-picker-mini" aria-label="Media actions">
+    <div data-actions></div><form method="dialog"><button>Cancel</button></form>
+</dialog>
+<dialog id="orbit-sticker-import" class="orbit-picker-mini" aria-label="Create a sticker">
+    <h2>Create a sticker</h2><p>Choose a photo, GIF, or video up to ten seconds long.</p>
+    <input type="file" accept="image/*,video/*" aria-label="Choose sticker media"><form method="dialog"><button>Cancel</button></form>
+</dialog>
+<dialog id="orbit-sticker-editor" class="orbit-sticker-editor" aria-label="Sticker editor">
+    <header><h2>Sticker editor</h2><button type="button" data-cancel>Cancel</button></header>
+    <canvas width="512" height="512" aria-label="Square sticker preview"></canvas>
+    <form onsubmit="event.preventDefault()">
+        <label>Zoom <input name="zoom" type="range" min="1" max="3" step=".05" value="1"></label>
+        <label>Horizontal crop <input name="horizontal" type="range" min="0" max="100" value="50"></label>
+        <label>Vertical crop <input name="vertical" type="range" min="0" max="100" value="50"></label>
+        <fieldset data-trim><legend>Trim <span data-duration></span></legend>
+            <label>Start <input name="start" type="range" min="0" step=".01" value="0"></label>
+            <label>End <input name="end" type="range" min="0" step=".01" value="0"></label>
+        </fieldset>
+        <label>Text or emoji <input name="label" type="text" maxlength="38" placeholder="Optional"></label>
+        <label><input name="background" type="checkbox"> Remove a solid background</label>
+    </form>
+    <p role="status"></p><button type="button" data-save class="glass-btn-primary">Save to My Stickers</button>
+</dialog>
+<link rel="stylesheet" href="orbit-picker.css?v=orbit-1.3.0">
+<script defer src="js/orbit-picker.js?v=orbit-1.3.0"></script>
+<link rel="stylesheet" href="orbit-mobile.css?v=orbit-1.3.0">
+<script defer src="js/orbit-device.js?v=orbit-1.3.0"></script>
+<script defer src="js/orbit-stickers.js?v=orbit-1.3.0"></script>
+<script defer src="js/config.js?v=orbit-1.3.0"></script>
+<script defer src="js/orbit-encryption.js?v=orbit-1.3.0"></script>
+<link rel="stylesheet" href="encryption.css?v=orbit-1.3.0">
+<script defer src="js/rooms.js?v=orbit-1.3.0"></script>
+    <script defer src="js/chat-actions.js?v=orbit-1.3.0"></script>
+    <script defer src="js/actions/media-lightbox.js?v=orbit-1.3.0"></script>
+    <script defer src="js/media-source.js?v=orbit-1.3.0"></script>
+    <script defer src="js/actions/media-preview.js?v=orbit-1.3.0"></script>
+    <script defer src="js/actions/file-viewer.js?v=orbit-1.3.0"></script>
+    <script defer src="js/actions/voice-recorder.js?v=orbit-1.3.0"></script>
+    <script defer src="js/actions/chat-extras.js?v=orbit-1.3.0"></script>
+    <script defer src="js/messaging-notifications.js?v=orbit-1.3.0"></script>
+    <script defer src="js/chat-gestures.js?v=orbit-1.3.0"></script>
+    <script defer src="js/chat-select.js?v=orbit-1.3.0"></script>
+    <script defer src="js/chat-share.js?v=orbit-1.3.0"></script>
+    <script defer src="js/chat/message-controls.js?v=orbit-1.3.0"></script>
+<script defer src="js/chat/chat-history.js?v=orbit-1.3.0"></script>
+    <script defer src="js/chat/chat-feed.js?v=orbit-1.3.0"></script>
+    <script defer src="js/chat/chat-dispatcher.js?v=orbit-1.3.0"></script>
+    <script defer src="js/chat/chat-realtime.js?v=orbit-1.3.0"></script>
+    <script defer src="js/chat.js?v=orbit-1.3.0"></script>
+<script defer src="js/calculator.js?v=orbit-1.3.0"></script>
+    <script defer src="js/tools.js?v=orbit-1.3.0"></script>
+    <script defer src="js/celestial.js?v=orbit-1.3.0"></script>
+    <script defer src="js/ui/ui-auth.js?v=orbit-1.3.0"></script>
+    <script defer src="js/ui/ui-navigation.js?v=orbit-1.3.0"></script>
+    <script defer src="js/ui/ui-modals.js?v=orbit-1.3.0"></script>
+    <script defer src="js/ui/ui-notifications.js?v=orbit-1.3.0"></script>
+<script defer src="js/ui.js?v=orbit-1.3.0"></script>
 
     <!-- WhatsApp View Once Fullscreen Viewer Modal -->
     <div id="modal-view-once-viewer" class="glass-modal-overlay view-once-modal-overlay hide" aria-hidden="true" onclick="closeViewOnceViewer()">
@@ -2656,8 +2686,8 @@
  <div id="orbit-editor-filters" class="hide"><button type="button" onclick="applyOrbitMediaFilter('vivid')">Vivid</button><button type="button" onclick="applyOrbitMediaFilter('mono')">Mono</button><button type="button" onclick="applyOrbitMediaFilter('warm')">Warm</button><button type="button" onclick="applyOrbitMediaFilter('bright')">Bright</button></div>
  <div class="orbit-editor-stage"><canvas id="orbit-editor-canvas"></canvas></div>
 </div>
-<script defer src="js/orbit-chat-services.js?v=orbit-1.2.0"></script>
-<script defer src="js/orbit-media-editor.js?v=orbit-1.2.0"></script>
+<script defer src="js/orbit-chat-services.js?v=orbit-1.3.0"></script>
+<script defer src="js/orbit-media-editor.js?v=orbit-1.3.0"></script>
 <div id="modal-orbit-weather" class="glass-modal-overlay orbit-weather-page" data-weather="idle" data-motion="live" data-phase="day">
  <div class="glass-modal-box orbit-forecast" role="dialog" aria-modal="true" aria-labelledby="orbit-weather-heading">
   <div class="orbit-weather-hero">
@@ -2702,15 +2732,15 @@
   </div>
  </div>
 </div>
-<script defer src="js/orbit-private-photos.js?v=orbit-1.2.0"></script>
-<script defer src="js/orbit-banner-weather.js?v=orbit-1.2.0"></script>
-<script defer src="js/liquid-glass.js?v=orbit-1.2.0"></script>
-    <script defer src="js/messaging-experience.js?v=orbit-1.2.0"></script>
-<script defer src="js/call-experience.js?v=orbit-1.2.0"></script>
-<script defer src="js/orbit-interface.js?v=orbit-1.2.0"></script>
-<script defer src="js/orbit-notes.js?v=orbit-1.2.0"></script>
-<link rel="stylesheet" href="chat-data.css?v=orbit-1.2.0">
+<script defer src="js/orbit-private-photos.js?v=orbit-1.3.0"></script>
+<script defer src="js/orbit-banner-weather.js?v=orbit-1.3.0"></script>
+<script defer src="js/liquid-glass.js?v=orbit-1.3.0"></script>
+    <script defer src="js/messaging-experience.js?v=orbit-1.3.0"></script>
+<script defer src="js/call-experience.js?v=orbit-1.3.0"></script>
+<script defer src="js/orbit-interface.js?v=orbit-1.3.0"></script>
+<script defer src="js/orbit-notes.js?v=orbit-1.3.0"></script>
+<link rel="stylesheet" href="chat-data.css?v=orbit-1.3.0">
 <script defer src="js/share-inbox.js"></script>
-<script defer src="js/chat-data.js?v=orbit-1.2.0"></script>
+<script defer src="js/chat-data.js?v=orbit-1.3.0"></script>
 </body>
 </html>
