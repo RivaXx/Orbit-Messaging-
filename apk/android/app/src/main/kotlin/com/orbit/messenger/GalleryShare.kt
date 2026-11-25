@@ -16,6 +16,23 @@ internal class GalleryShare(private val context: Context) {
     private val directory = File(context.cacheDir, "incoming-gallery")
     @Volatile private var pending: Batch? = null
     private val ttl = 15 * 60 * 1000L
+    private val imageTypes = setOf("image/jpeg", "image/png", "image/webp", "image/gif", "image/avif", "image/heic", "image/heif", "image/bmp", "image/tiff")
+
+    private fun detectPhoto(header: ByteArray): String? {
+        fun tag(offset: Int, value: String) = header.size >= offset + value.length &&
+            value.indices.all { header[offset + it].toInt() == value[it].code }
+        return when {
+            header.size >= 3 && (header[0].toInt() and 255) == 255 && (header[1].toInt() and 255) == 216 && (header[2].toInt() and 255) == 255 -> "image/jpeg"
+            header.size >= 8 && (header[0].toInt() and 255) == 137 && tag(1, "PNG\r\n\u001a\n") -> "image/png"
+            tag(0, "GIF87a") || tag(0, "GIF89a") -> "image/gif"
+            tag(0, "RIFF") && tag(8, "WEBP") -> "image/webp"
+            tag(0, "BM") -> "image/bmp"
+            tag(0, "II*\u0000") || tag(0, "MM\u0000*") -> "image/tiff"
+            tag(4, "ftyp") && (tag(8, "avif") || tag(8, "avis")) -> "image/avif"
+            tag(4, "ftyp") && (tag(8, "heic") || tag(8, "heix") || tag(8, "mif1")) -> "image/heic"
+            else -> null
+        }
+    }
 
     fun clearStaleFiles() {
         val now = System.currentTimeMillis()
@@ -26,9 +43,9 @@ internal class GalleryShare(private val context: Context) {
     fun capture(intent: Intent) {
         val uris = linkedSetOf<Uri>()
         if (intent.action == Intent.ACTION_SEND) {
-            intent.getParcelableExtra<Uri>(Intent.EXTRA_STREAM)?.let(uris::add)
+            runCatching { intent.getParcelableExtra<Uri>(Intent.EXTRA_STREAM) }.getOrNull()?.let(uris::add)
         } else if (intent.action == Intent.ACTION_SEND_MULTIPLE) {
-            intent.getParcelableArrayListExtra<Uri>(Intent.EXTRA_STREAM)?.let(uris::addAll)
+            runCatching { intent.getParcelableArrayListExtra<Uri>(Intent.EXTRA_STREAM) }.getOrNull()?.let(uris::addAll)
         } else return
         intent.clipData?.let { clip ->
             require(clip.itemCount <= 20) { "Choose at most 20 photos." }
@@ -44,10 +61,7 @@ internal class GalleryShare(private val context: Context) {
             for (uri in uris) {
                 require(uri.scheme == "content") { "Android could not open the shared photo." }
                 val resolver = context.contentResolver
-                val type = resolver.getType(uri) ?: intent.type.orEmpty()
-                require(Regex("image/(jpeg|png|webp|gif|avif|heic|heif|bmp|tiff)", RegexOption.IGNORE_CASE).matches(type)) {
-                    "The shared file is not a supported photo."
-                }
+                val declaredType = runCatching { resolver.getType(uri) }.getOrNull()?.substringBefore(';')?.trim()?.lowercase()
                 val name = runCatching {
                     resolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use {
                         if (it.moveToFirst()) it.getString(0) else null
@@ -55,19 +69,30 @@ internal class GalleryShare(private val context: Context) {
                 }.getOrNull()?.replace(Regex("[\\p{Cntrl}/\\\\]"), "_")?.take(128) ?: "Shared photo"
                 val key = UUID.randomUUID().toString()
                 val file = File(directory, key)
-                photos += Photo(key, file, name, type)
                 val stream = resolver.openInputStream(uri) ?: error("Android could not read the shared photo.")
-                stream.use { input ->
+                stream.buffered().use { input ->
+                    input.mark(32)
+                    val header = ByteArray(32)
+                    var count = 0
+                    while (count < header.size) {
+                        val read = input.read(header, count, header.size - count)
+                        if (read <= 0) break
+                        count += read
+                    }
+                    input.reset()
+                    val type = detectPhoto(header.copyOf(count)) ?: declaredType?.takeIf { it in imageTypes }
+                    require(type != null) { "The shared file is not a supported photo." }
+                    photos += Photo(key, file, name, type)
                     file.outputStream().use { output ->
                         val buffer = ByteArray(128 * 1024)
                         var size = 0L
                         while (true) {
-                            val count = input.read(buffer)
-                            if (count < 0) break
-                            size += count
-                            total += count
+                            val read = input.read(buffer)
+                            if (read < 0) break
+                            size += read
+                            total += read
                             require(size <= 49L*1024*1024 && total <= 50L*1024*1024) { "Share up to 50 MB of photos at once." }
-                            output.write(buffer, 0, count)
+                            output.write(buffer, 0, read)
                         }
                         require(size > 0) { "A shared photo was empty." }
                     }

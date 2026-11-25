@@ -2,11 +2,12 @@
 (()=>{
  'use strict';
  let active=null,archive=null,urls=[],busy=false,shareOpened=false,selectionEpoch=0;
+ let androidShareRequested=false,androidShareChecking=false,androidSharePresented=null;
  const account=()=>typeof currentUser!=='undefined'?currentUser?.id:null;
  const check=id=>{if(account()!==id)throw Error('The signed-in account changed. Please start again.');};
  const el=(tag,text,cls)=>{const node=document.createElement(tag);if(text!==undefined)node.textContent=text;if(cls)node.className=cls;return node;};
  const button=(label,fn)=>{const node=el('button',label);node.type='button';node.onclick=fn;return node;};
- function close(){selectionEpoch++;active?.remove();active=null;archive=null;shareOpened=false;urls.forEach(URL.revokeObjectURL);urls=[];}
+ function close(){selectionEpoch++;active?.remove();active=null;archive=null;shareOpened=false;urls.forEach(URL.revokeObjectURL);urls=[];if(androidShareRequested)queueMicrotask(drainAndroidShare);}
  function panel(title){
   if(busy)return null;close();
   const overlay=el('div',undefined,'orbit-data-overlay'),dialog=el('section',undefined,'orbit-data-dialog');
@@ -190,7 +191,7 @@
      }
      if(id){await OrbitShareInbox.remove(id);clearShareUrl();}
      await discard?.();close();
-    }catch(e){if(epoch===selectionEpoch)progress.textContent=e.message;}finally{busy=false;}
+    }catch(e){if(epoch===selectionEpoch)progress.textContent=e.message;}finally{busy=false;void drainAndroidShare();}
    };
    let directory=targets(),limit=36;
    const render=()=>{
@@ -209,12 +210,18 @@
    if(typeof loadMainChats==='function')Promise.resolve(loadMainChats()).then(()=>{if(epoch===selectionEpoch){directory=targets();render();}}).catch(()=>{});
    box.append(button('Discard selection',async()=>{if(id){await OrbitShareInbox.remove(id);clearShareUrl();}await discard?.();close();}));
  }
- async function receiveAndroidShare(){
-  const owner=account();if(!window.OrbitDevice||!owner||busy||shareOpened)return;
-  shareOpened=true;
+ function receiveAndroidShare(){
+  if(!window.OrbitDevice)return;
+  androidShareRequested=true;
+  return drainAndroidShare();
+ }
+ async function drainAndroidShare(){
+  const owner=account();if(!androidShareRequested||androidShareChecking||!owner||busy||active||shareOpened)return;
+  androidShareRequested=false;androidShareChecking=true;
   try{
    const batch=await OrbitDevice('pendingShare');check(owner);
-   if(!batch){shareOpened=false;return;}
+   if(!batch||batch.id===androidSharePresented)return;
+   if(busy||active||shareOpened){androidShareRequested=true;return;}
    const load=async(checkSelection,progress)=>{
     const files=new Array(batch.files.length);let complete=0;
     for(let offset=0;offset<batch.files.length;offset+=3){
@@ -228,8 +235,10 @@
     }
     return files;
    };
-   await composeShare({files:batch.files,load},null,owner,()=>OrbitDevice('discardShare',{id:batch.id}));shareOpened=!!active;
-  }catch(e){shareOpened=false;showToast(e.message,'error');}
+   await composeShare({files:batch.files,load},null,owner,()=>OrbitDevice('discardShare',{id:batch.id}));
+   if(active){shareOpened=true;androidSharePresented=batch.id;}
+  }catch(e){if(account()===owner)showToast(e.message,'error');}
+  finally{androidShareChecking=false;if(androidShareRequested&&!busy&&!active&&!shareOpened&&account())queueMicrotask(drainAndroidShare);}
  }
  async function receiveShare(){
   const id=new URL(location.href).searchParams.get('orbitShare');if(!id||!account()||shareOpened||busy)return;
@@ -260,7 +269,7 @@
    const files=await OrbitMediaSource.capture(input.files,(index,count)=>{progress.textContent='Reading '+index+' of '+count+'…';},()=>account()===owner&&selectionEpoch===epoch);
    check(owner);input.value='';busy=false;await composeShare({files},null,owner);
   }catch(e){if(selectionEpoch===epoch){progress.textContent=e.message;showToast(e.message,'error');}input.value='';}
-  finally{busy=false;input.disabled=false;}
+  finally{busy=false;input.disabled=false;void drainAndroidShare();}
  }
  function openGalleryHelp(){
   const box=panel('Gallery sharing');if(!box)return;

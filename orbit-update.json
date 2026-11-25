@@ -1,13 +1,14 @@
 {
   "appName": "Orbit Messenger",
-  "versionName": "1.3.2",
-  "versionCode": 132,
-  "downloadUrl": "https://github.com/RivaXx/Orbit-Messaging-/releases/download/v1.3.2/Orbit-Messenger-v1.3.2.apk",
-  "summary": "Keep the chat header and message bar visible while typing",
+  "versionName": "1.3.3",
+  "versionCode": 133,
+  "downloadUrl": "https://github.com/RivaXx/Orbit-Messaging-/releases/download/v1.3.3/Orbit-Messenger-v1.3.3.apk",
+  "summary": "Fix Gallery sharing on startup and prepare Orbit earlier",
   "changes": [
-    "Keep the message bar above the keyboard and the chat header visible",
-    "Restore the full conversation when the keyboard closes",
-    "Reduce composer layout work and respect keyboard text composition"
+    "Show the recipient picker when a Gallery share arrives during startup",
+    "Recognize supported photos reported with a generic media type",
+    "Prepare Android WebView during the PIN screen and load Orbit after unlock",
+    "Load Notes when opening Notes or Calendar"
   ],
-  "sha256": "4593d5e842e2a3d84d8450246a56a01971f20acfe433fe8b9cbae33b2a880149"
+  "sha256": "00301d1113bee468bbbbc411269c4fe54d18f7450b178bb4c2f841e32f9b91ca"
 }

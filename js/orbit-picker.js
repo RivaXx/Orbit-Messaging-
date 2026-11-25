@@ -94,7 +94,7 @@
     async function edit(session,file){
         await OrbitCrypto.requireUnlocked();
         if(!same(session))return;
-        const {openStickerEditor}=await import('./sticker-editor.mjs?v=orbit-1.3.2');
+        const {openStickerEditor}=await import('./sticker-editor.mjs?v=orbit-1.3.3');
         await openStickerEditor(file,(output,preview)=>saveSticker(session,output,preview));
     }
     function showImport(session){

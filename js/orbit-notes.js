@@ -221,7 +221,9 @@ const OrbitNotes=(()=>{
   if(el('tab-calendar')&&!el('tab-calendar').classList.contains('hide')&&typeof renderCalendarMonth==='function'){renderCalendarMonth();if(calViewMode==='agenda')renderCalendarAgendaView();else renderCalendarEvents(calSelectedDateStr);}
  }
  async function openLink(id){if(!validId(id))return;if(!currentUser?.id){window.orbitPendingNote=id;return;}await load();switchTab('notes');open(id);window.orbitPendingNote=null;}
- window.addEventListener('online',()=>{if(currentUser?.id)load();});
+ window.addEventListener('online',()=>{
+  if(currentUser?.id&&(state.owner===currentUser.id||['tab-notes','tab-calendar'].some(id=>el(id)?.classList.contains('hide')===false)))load();
+ });
  document.addEventListener('visibilitychange',()=>{if(!document.hidden&&currentUser?.id&&el('tab-notes')&&!el('tab-notes').classList.contains('hide'))load();});
  function stop(){clearTimeout(state.draftTimer);state.loadEpoch++;state.channel&&getSupabase()?.removeChannel(state.channel);state.channel=null;state.rows=[];state.owner=null;state.dirty=false;if(el('notes-list'))el('notes-list').innerHTML='';if(typeof userCalendarEvents!=='undefined')userCalendarEvents=userCalendarEvents.filter(row=>!row.noteId);}
  return {load,open,close,save,openLink,syncCalendar,action,task,stop,state};

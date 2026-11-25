@@ -51,7 +51,7 @@ async function launchApp({introduction=false,forceIntroduction=false}={}) {
         window.OrbitChatData?.receiveShare();
         window.OrbitChatData?.receiveAndroidShare();
         initOrbitWeather().catch(()=>{});
-        if(typeof OrbitNotes!=='undefined'){OrbitNotes.load();if(window.orbitPendingNote)orbitOpenNoteLink(window.orbitPendingNote);}
+        if(window.orbitPendingNote&&typeof orbitOpenNoteLink==='function')orbitOpenNoteLink(window.orbitPendingNote);
         initOrbitChatServices().catch(error=>console.warn('[Orbit Services]',error.message));
         if(typeof enableOrbitBackgroundPush==='function'&&notificationPreference('orbit_device_notifications',true))enableOrbitBackgroundPush();
     },0);
@@ -70,8 +70,6 @@ async function launchApp({introduction=false,forceIntroduction=false}={}) {
     if (typeof loadMainChats === 'function') {
         loadMainChats(true);
     }
-
-    // Immediately trigger pre-warming of recent messages at 250ms for instant 0ms chat opening
 
     // Setup global realtime message listener so peer messages are delivered instantly regardless of current tab/room
     if (typeof setupGlobalRealtimeMessageListener === 'function') {
@@ -638,7 +636,10 @@ function switchTab(tabKey) {
     else if (tabKey === 'notes') loadPersonalNotes();
     else if (tabKey === 'clock') initClockSuite();
     else if (tabKey === 'calculator') initCalculator();
-    else if (tabKey === 'calendar') initCalendar();
+    else if (tabKey === 'calendar') {
+        initCalendar();
+        loadPersonalNotes();
+    }
     else if (tabKey === 'compass') initCompassSuite();
     else if (tabKey === 'news') { loadNewsFeed(); refreshNewsFeed(); }
     else if (tabKey === 'trending') { loadTrendingTopics(); refreshTrendingFeed(); }

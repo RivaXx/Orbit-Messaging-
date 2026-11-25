@@ -55,6 +55,7 @@ class OrbitActivity : FlutterFragmentActivity() {
     private val notifications by lazy { OrbitNotifications(this) }
     private var notificationPermissionResult: ((Boolean) -> Unit)? = null
     private var page: WebView? = null
+    private var pageStarted = false
     @Volatile private var unlocked = false
     private var stoppedAt = 0L
     private var picker: ValueCallback<Array<Uri>>? = null
@@ -132,9 +133,15 @@ class OrbitActivity : FlutterFragmentActivity() {
             override fun create(context: Context, viewId: Int, args: Any?): PlatformView {
                 val view = createWebView()
                 page = view
+                pageStarted = false
+                view.visibility = if (unlocked) View.VISIBLE else View.INVISIBLE
+                if (unlocked) startPage(view)
                 return object : PlatformView {
                     override fun getView() = view
-                    override fun dispose() { if (page === view) page = null; view.destroy() }
+                    override fun dispose() {
+                        if (page === view) { page = null; pageStarted = false }
+                        view.destroy()
+                    }
                 }
             }
         })
@@ -204,9 +211,17 @@ class OrbitActivity : FlutterFragmentActivity() {
     private fun unlock() {
         unlocked = true
         if (changingPin) return
-        page?.visibility = View.VISIBLE
-        page?.evaluateJavascript("window.OrbitCrypto?.restoreTrusted(); window.dispatchEvent(new Event('orbit-android-share'))", null)
+        page?.let { view ->
+            view.visibility = View.VISIBLE
+            if (!pageStarted) startPage(view)
+            else view.evaluateJavascript("window.OrbitCrypto?.restoreTrusted(); window.dispatchEvent(new Event('orbit-android-share'))", null)
+        }
         if (answerOnUnlock) incoming?.let { handleCallAction(it.id, "answer") }
+    }
+
+    private fun startPage(view: WebView) {
+        pageStarted = true
+        view.loadUrl("$ORIGIN$APP_PAGE?android=${installedVersionCode()}")
     }
 
     private fun showIncomingCall(args: JSONObject): Boolean {
@@ -391,7 +406,6 @@ class OrbitActivity : FlutterFragmentActivity() {
                 }) callback.invoke(origin, false, false)
             }
         }
-        loadUrl("$ORIGIN$APP_PAGE?android=${installedVersionCode()}")
     }
 
     private fun granted(permission: String) = ContextCompat.checkSelfPermission(this, permission) == PackageManager.PERMISSION_GRANTED

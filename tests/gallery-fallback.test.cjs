@@ -4,7 +4,7 @@ function setup(){
  const ids=new Map(),opened=[],previews=[],toasts=[];
  const element=tag=>({tag,children:[],value:'',attributes:{},classList:{add(){},contains:()=>false},setAttribute(name,value){this.attributes[name]=value},focus(){},append(...nodes){this.children.push(...nodes)},replaceChildren(...nodes){this.children=nodes},remove(){this.removed=true},click(){this.clicked=true}});
  const body=element('body'),input=element('input');ids.set('inp-orbit-share-photos',input);
- const c=vm.createContext({File,Blob,URL,URLSearchParams,crypto,console,setTimeout,clearTimeout,location:{href:'https://orbit.example/'},history:{replaceState(){}},
+ const c=vm.createContext({File,Blob,URL,URLSearchParams,crypto,console,setTimeout,clearTimeout,queueMicrotask,location:{href:'https://orbit.example/'},history:{replaceState(){}},
   document:{body,createElement:element,getElementById:id=>ids.get(id)||null,addEventListener(){}},window:{},currentUser:{id:'owner'},currentRoom:null,
   allRoomsMap:new Map([['room',{id:'room',is_direct:true,participants:['owner','peer']}]]),globalUsersMap:new Map([['peer',{display_name:'Recipient'}]]),myFriendsSet:new Set(),
   showToast:message=>toasts.push(message),resolveCanonicalRoomId:async()=> 'room',prepareMediaPreviewItems:async items=>items,releaseMediaPreviewItem(){},openMediaPreviewScreen:items=>previews.push(items)});
@@ -19,6 +19,18 @@ test('Gallery fallback captures files, asks for destination and opens preview wi
  input.files=[new File(['one'],'one.jpg',{type:'image/jpeg'}),new File(['two'],'two.jpg',{type:'image/jpeg'})];input.value='selected';
  await c.window.OrbitChatData.photosPicked(input);assert.equal(input.value,'');assert.equal(previews.length,0);assert.equal(opened.length,0);
  await buttons().find(button=>button.attributes['aria-label']==='Recipient').onclick();assert.deepEqual(opened,['room']);assert.equal(previews.length,1);assert.equal(previews[0].length,2);assert.equal(await previews[0][1].file.text(),'two');
+});
+test('Android Gallery notification is retried when it arrives during an empty inbox check',async()=>{
+ const {c,buttons,previews}=setup();let resolveFirst,checks=0;
+ c.OrbitDevice=c.window.OrbitDevice=method=>{
+  assert.equal(method,'pendingShare');
+  if(++checks===1)return new Promise(resolve=>{resolveFirst=resolve});
+  return {id:'batch',files:[{name:'photo.png',type:'image/png',path:'/_orbit-native-share/photo-id'}]};
+ };
+ const pending=c.window.OrbitChatData.receiveAndroidShare();
+ c.window.OrbitChatData.receiveAndroidShare();
+ resolveFirst(null);await pending;await new Promise(resolve=>setImmediate(resolve));
+ assert.equal(checks,2);assert.ok(buttons().some(button=>button.attributes['aria-label']==='Recipient'));assert.equal(previews.length,0);
 });
 test('closing a Gallery selection during file copying cannot reopen a recipient picker',async()=>{
  const {c,input,buttons,previews}=setup();let release;const file=new File(['one'],'one.jpg');file.arrayBuffer=()=>new Promise(resolve=>release=resolve);input.files=[file];

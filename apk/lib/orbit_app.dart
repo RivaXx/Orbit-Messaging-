@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'dart:async';
 import 'dart:convert';
 import 'dart:ui' show FlutterView;
 
@@ -48,6 +49,7 @@ class _OrbitHomeState extends State<OrbitHome> with WidgetsBindingObserver {
   BuildContext? _pickerContext;
   FlutterView? _window;
   int? _lastVisibleHeight;
+  Timer? _webWarmup;
 
   @override
   void initState() {
@@ -89,6 +91,14 @@ class _OrbitHomeState extends State<OrbitHome> with WidgetsBindingObserver {
         _gate = state?['hasPin'] == true ? _Gate.unlock : _Gate.setup;
         _error = null;
       });
+      if (_gate == _Gate.unlock) {
+        _webWarmup?.cancel();
+        _webWarmup = Timer(const Duration(milliseconds: 250), () {
+          if (mounted && _gate == _Gate.unlock && !_hasStartedWeb) {
+            setState(() => _hasStartedWeb = true);
+          }
+        });
+      }
     } on PlatformException catch (error) {
       if (mounted) setState(() => _error = error.message);
     }
@@ -241,6 +251,7 @@ class _OrbitHomeState extends State<OrbitHome> with WidgetsBindingObserver {
 
   @override
   void dispose() {
+    _webWarmup?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     _device.setMethodCallHandler(null);
     _pin.dispose();
@@ -267,10 +278,13 @@ class _OrbitHomeState extends State<OrbitHome> with WidgetsBindingObserver {
           fit: StackFit.expand,
           children: [
             if (_hasStartedWeb)
-              AndroidView(
-                viewType: 'orbit-messaging',
-                onPlatformViewCreated: (_) =>
-                    _syncKeyboardViewport(force: true),
+              ExcludeSemantics(
+                excluding: _gate != _Gate.open,
+                child: AndroidView(
+                  viewType: 'orbit-messaging',
+                  onPlatformViewCreated: (_) =>
+                      _syncKeyboardViewport(force: true),
+                ),
               ),
             if (_gate != _Gate.open)
               ColoredBox(
