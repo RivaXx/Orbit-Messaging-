@@ -760,7 +760,7 @@ async function queueMediaMessage(items, caption = '', messageType = null, target
         const previewUrl = (file instanceof Blob || file instanceof File) ? URL.createObjectURL(item.previewFile || file) : (item.url || '');
         item.file = file;
         mediaUploadInfo.push({ index, name, type, mime: file.type || 'application/octet-stream', rotation: Number(item.rotation || 0), hdQuality: !!isPreviewHdQuality, originalQuality: !!item.originalQuality, preserveAnimation:!!pickerMedia, subfolder: type === 'image' ? 'images' : type === 'video' ? 'videos' : 'documents' });
-        return { name, url: previewUrl, type, quality: type === 'image' ? (item.originalQuality ? 'original' : isPreviewHdQuality ? 'hd' : 'sd') : undefined, size: file.size, upload_pending: true, view_once: !!item.viewOnce };
+        return { name, url: previewUrl, type, quality: type === 'image' ? (item.originalQuality ? 'original' : isPreviewHdQuality ? 'hd' : 'sd') : undefined, size: file.size, ...(pickerMedia && item.dimensions), upload_pending: true, view_once: !!item.viewOnce };
     });
     const payload = {
         id,
@@ -794,7 +794,7 @@ async function queueMediaMessage(items, caption = '', messageType = null, target
     const feed = document.getElementById('chat-feed');
     if (!feed || feed.scrollHeight - feed.scrollTop - feed.clientHeight < 220) scrollFeedToBottom(true);
     const input = document.getElementById('msg-input');
-    if (!pickerMedia) {
+    if (!pickerMedia && !targetContext?.preserveDraft) {
         if (input) { input.value = ''; input.style.height = 'auto'; }
         OrbitCrypto.clearDraft(roomAtSend);
     }
@@ -962,7 +962,7 @@ async function _uploadQueuedMedia(item) {
         if (attachment?.url?.startsWith('blob:')) {
             completedPreviewUrls.push(attachment.url);
         }
-        item.payload.attachments[info.index] = { name: info.name, url:attachment?.url||'', encrypted:true,digest:encryptedUpload.digest,recipient_keyset:encryptedUpload.recipientKeyset,mime:originalMime,storage_path: privatePhoto?.storage_path || getOrbitStorageObjectPath(url), storage_bucket: privatePhoto?.storage_bucket||'chat-assets', type: info.type, quality:attachment?.quality,size: attachment?.size || file.size, upload_pending: false, view_once: !!attachment?.view_once };
+        item.payload.attachments[info.index] = { name: info.name, url:attachment?.url||'', encrypted:true,digest:encryptedUpload.digest,recipient_keyset:encryptedUpload.recipientKeyset,mime:originalMime,storage_path: privatePhoto?.storage_path || getOrbitStorageObjectPath(url), storage_bucket: privatePhoto?.storage_bucket||'chat-assets', type: info.type, quality:attachment?.quality,size: attachment?.size || file.size, ...(attachment?.width && {width:attachment.width,height:attachment.height}), upload_pending: false, view_once: !!attachment?.view_once };
         
         // Persist completed URLs before starting the next file; keep blobs until delivery.
         _persistMessageOutbox(item.payload.sender_id);

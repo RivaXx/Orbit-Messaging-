@@ -27,6 +27,8 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricPrompt
 import androidx.core.content.ContextCompat
+import androidx.core.view.inputmethod.InputConnectionCompat
+import androidx.core.view.inputmethod.InputContentInfoCompat
 import androidx.webkit.WebViewAssetLoader
 import androidx.webkit.WebViewCompat
 import androidx.webkit.WebViewFeature
@@ -49,6 +51,7 @@ class OrbitActivity : FlutterFragmentActivity() {
     }
     private val vault by lazy { DeviceVault(this) }
     private val shares by lazy { GalleryShare(this) }
+    private val richContent by lazy { OrbitRichContent(this) }
     private val work = Executors.newSingleThreadExecutor()
     private val updateWork = Executors.newSingleThreadExecutor()
     private val updater: OrbitUpdater by lazy { OrbitUpdater(this, updateWork) { updatePermission.launch(it) } }
@@ -92,7 +95,7 @@ class OrbitActivity : FlutterFragmentActivity() {
     override fun onCreate(savedInstanceState: android.os.Bundle?) {
         super.onCreate(savedInstanceState)
         if (Build.VERSION.SDK_INT >= 33) setRecentsScreenshotEnabled(false)
-        work.execute { shares.clearStaleFiles() }
+        work.execute { shares.clearStaleFiles(); richContent.clearAfterProcessDeath() }
         if (savedInstanceState == null) captureShare(intent)
     }
 
@@ -110,6 +113,7 @@ class OrbitActivity : FlutterFragmentActivity() {
     }
 
     override fun onDestroy() {
+        richContent.clear()
         callHandler.removeCallbacks(expireCall)
         work.shutdownNow()
         updateWork.shutdownNow()
@@ -203,6 +207,8 @@ class OrbitActivity : FlutterFragmentActivity() {
 
     private fun lock(notify: Boolean = true) {
         unlocked = false
+        (page as? OrbitComposerWebView)?.composerToken = null
+        richContent.clear()
         page?.visibility = View.INVISIBLE
         page?.evaluateJavascript("window.OrbitCrypto?.lock()", null)
         if (notify) channel?.invokeMethod("locked", null)
@@ -313,8 +319,48 @@ class OrbitActivity : FlutterFragmentActivity() {
 
     private fun bundled(uri: Uri) = uri.scheme == "https" && uri.encodedAuthority == "appassets.androidplatform.net"
 
+    private fun receiveComposerContent(info: InputContentInfoCompat, flags: Int, token: String): Boolean {
+        if (!unlocked || changingPin || isDestroyed) return false
+        val uri = info.contentUri
+        if (uri.scheme != "content" || uri.authority.isNullOrEmpty() || uri.authority.orEmpty().startsWith(packageName)) return false
+        val mime = OrbitRichContent.mimeTypes.firstOrNull { info.description.hasMimeType(it) } ?: return false
+        if (!richContent.begin()) {
+            Toast.makeText(this, "Wait for the current keyboard media to load.", Toast.LENGTH_SHORT).show()
+            return true
+        }
+        val granted = flags and InputConnectionCompat.INPUT_CONTENT_GRANT_READ_URI_PERMISSION != 0
+        try {
+            if (granted) info.requestPermission()
+            work.execute {
+                val result = runCatching { richContent.copy(uri, mime) }
+                if (granted) runCatching { info.releasePermission() }
+                runOnUiThread {
+                    richContent.finish()
+                    val file = result.getOrNull()
+                    val view = page
+                    if (!unlocked || changingPin || view == null || isDestroyed) { file?.delete(); return@runOnUiThread }
+                    if (file == null) {
+                        val message = (result.exceptionOrNull() as? IllegalArgumentException)?.message
+                        Toast.makeText(this, message ?: "Orbit could not read the keyboard media.", Toast.LENGTH_SHORT).show()
+                        return@runOnUiThread
+                    }
+                    val id = richContent.stage(file, mime)
+                    val event = JSONObject().put("id", id).put("token", token)
+                    view.evaluateJavascript("window.OrbitRichInput?.receive($event)", null)
+                    callHandler.postDelayed({ richContent.discard(id) }, 30000)
+                }
+            }
+            return true
+        } catch (_: Exception) {
+            if (granted) runCatching { info.releasePermission() }
+            richContent.finish()
+            Toast.makeText(this, "Orbit could not access the keyboard media.", Toast.LENGTH_SHORT).show()
+            return true
+        }
+    }
+
     @SuppressLint("SetJavaScriptEnabled")
-    private fun createWebView() = WebView(this).apply {
+    private fun createWebView() = OrbitComposerWebView(this, ::receiveComposerContent).apply {
         setBackgroundColor(Color.rgb(8, 8, 12))
         isVerticalScrollBarEnabled = false
         settings.apply {
@@ -352,6 +398,9 @@ class OrbitActivity : FlutterFragmentActivity() {
             override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest): WebResourceResponse? {
                 val uri = request.url
                 if (!bundled(uri)) return null
+                if (uri.path.orEmpty().startsWith(OrbitRichContent.pathPrefix)) {
+                    return if (unlocked && !changingPin && !request.isForMainFrame) richContent.response(uri.path.orEmpty()) ?: missing() else missing()
+                }
                 if (uri.path.orEmpty().startsWith("/_orbit-native-share/")) {
                     return if (unlocked && !changingPin && !request.isForMainFrame) shares.response(uri.path.orEmpty()) ?: missing() else missing()
                 }
@@ -442,6 +491,12 @@ class OrbitActivity : FlutterFragmentActivity() {
             }
             "pendingShare" -> shares.list()
             "discardShare" -> shares.discard(args.getString("id"))
+            "richComposerFocus" -> {
+                val token = args.optString("token").takeIf { it.matches(Regex("[a-f0-9-]{36}")) }
+                (page as? OrbitComposerWebView)?.composerToken = token
+                null
+            }
+            "discardRichContent" -> richContent.discard(args.getString("id"))
             "shareInvite" -> startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).apply {
                 type = "text/plain"
                 putExtra(Intent.EXTRA_TEXT, "Join me on Orbit Messenger. $INVITE")

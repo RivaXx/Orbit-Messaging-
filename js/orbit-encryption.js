@@ -35,7 +35,7 @@
  async function call(method,...args){
   const idOwner=syncOwner();if(!idOwner)throw error('Sign in before opening encrypted chats');
   if(!worker){
-   worker=new Worker('js/e2ee-worker.mjs?v=orbit-1.3.3',{type:'module',name:'Orbit encryption'});
+   worker=new Worker('js/e2ee-worker.mjs?v=orbit-1.4.0',{type:'module',name:'Orbit encryption'});
    worker.onmessage=({data})=>{const task=pending.get(data.id);if(!task)return;pending.delete(data.id);clearTimeout(task.timer);
     if(task.epoch!==epoch||task.owner!==uid())task.reject(error('The account changed'));
     else data.error?task.reject(error(data.error)):task.resolve(data.result);};
@@ -286,7 +286,7 @@
  }
  function mediaNode(message,consecutive){
   const shell=createMessageDOMNode({...message,type:'text',attachments:[],text:message.text||'Encrypted attachments',_e2ee_media_pending:false},consecutive);
-  const button=document.createElement('button');button.type='button';button.className='glass-btn-primary';button.textContent=`Open ${message.attachments.length} encrypted attachment${message.attachments.length===1?'':'s'}`;
+  const button=document.createElement('button');button.type='button';button.className='glass-btn-primary';button.textContent=message.metadata?.orbit_media==='sticker'?'Open encrypted sticker':`Open ${message.attachments.length} encrypted attachment${message.attachments.length===1?'':'s'}`;
   button.onclick=()=>loadMedia(message.id,button);(shell.querySelector('.msg-bubble-card')||shell).append(button);
   if(typeof IntersectionObserver!=='undefined'&&message.attachments.every(a=>a.type==='image'&&!a.view_once)){
    const observer=new IntersectionObserver(entries=>{if(entries.some(e=>e.isIntersecting)){observer.disconnect();void loadMedia(message.id,button);}},{rootMargin:'120px'});observer.observe(button);

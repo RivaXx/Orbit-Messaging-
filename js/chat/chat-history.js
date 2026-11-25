@@ -21,6 +21,7 @@ function notifyFeedUserInteraction() {
 
 async function openChatRoom(roomId, roomTitle, avatarUrl, isSelf = false, peerUserId = null) {
     if (!roomId) return;
+    window.OrbitRichInput?.reset();
     if(typeof disposeOrbitTyping==='function')disposeOrbitTyping();
     if(typeof orbitCancelEdit==='function')orbitCancelEdit();
     // Inbox previews are speculative; the opened conversation has priority.

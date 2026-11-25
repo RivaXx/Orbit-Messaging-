@@ -29,6 +29,7 @@
             if (dialog.dispatchEvent(new Event('cancel', {cancelable:true}))) dialog.close();
             return true;
         }
+        if (window.OrbitRichInput?.cancel()) return true;
         if (document.querySelector('.orbit-data-overlay')) { window.OrbitChatData?.close(); return true; }
         if (document.querySelector('#modal-share-app.active')) { window.closeShareAppModal(); return true; }
         if (document.querySelector('#modal-orbit-weather.active')) { closeOrbitWeatherConsent(); return true; }

@@ -419,6 +419,7 @@ function createMessageDOMNode(msg, isConsecutive = false) {
         }
 
         // Separate Images from Non-Images for WhatsApp Photo Grid
+        const stickerMessage = !msg.is_deleted && msg.metadata?.orbit_media === 'sticker';
         const images = [];
         const files = [];
 
@@ -531,7 +532,9 @@ function createMessageDOMNode(msg, isConsecutive = false) {
         let mediaGridHtml = '';
         // Check for View Once Photo
         const hasViewOnce = orbitIsViewOnceMessage(msg);
-        if (hasViewOnce) {
+        if (stickerMessage && !hasViewOnce && images.length === 1) {
+            mediaGridHtml = `<div class="orbit-chat-sticker"><img src="${escapeHtml(images[0].url)}" alt="Sticker" width="144" height="144" loading="lazy" decoding="async">${mediaUploadOverlayHtml}</div>`;
+        } else if (hasViewOnce) {
             const voImg = images[0] || (Array.isArray(attList) ? attList.find(a => a && a.view_once) : null);
             const isOpened = localStorage.getItem(orbitViewOnceKey(msg.id)) === 'opened' || msg.view_status === 'opened';
             mediaGridHtml = `
@@ -906,7 +909,7 @@ function createMessageDOMNode(msg, isConsecutive = false) {
         row.innerHTML = `
             <div class="msg-bubble-wrap">
                 ${!isMsgDeleted ? '<div class="reply-slide-indicator"><i class="fa-solid fa-reply"></i></div>' : ''}
-                <div class="msg-bubble-card ${isMsgDeleted ? 'is-deleted-card' : ''} anim-pop">
+                <div class="msg-bubble-card ${isMsgDeleted ? 'is-deleted-card' : ''}${stickerMessage && !hasViewOnce ? ' orbit-chat-sticker-card' : ''} anim-pop">
                     ${forwardedHtml}
                     ${replyHtml}
                     ${mediaGridHtml}

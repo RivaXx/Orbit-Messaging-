@@ -26,9 +26,14 @@ async function loadMedia(file) {
             }, close(){video.removeAttribute('src');video.load();URL.revokeObjectURL(url);}};
         } catch (error) { URL.revokeObjectURL(url);throw error; }
     }
-    if (file.type === 'image/gif') {
-        if (!window.ImageDecoder || !await ImageDecoder.isTypeSupported('image/gif')) throw Error('Update Android System WebView or your browser to edit GIFs.');
-        const decoder=new ImageDecoder({data:await file.arrayBuffer(),type:'image/gif'});
+    let animated = file.type === 'image/gif';
+    if (file.type === 'image/webp') {
+        const header = new Uint8Array(await file.slice(12,21).arrayBuffer());
+        animated = header.length===9 && String.fromCharCode(...header.slice(0,4))==='VP8X' && !!(header[8]&2);
+    }
+    if (animated) {
+        if (!window.ImageDecoder || !await ImageDecoder.isTypeSupported(file.type)) throw Error('Update Android System WebView or your browser to edit animated media.');
+        const decoder=new ImageDecoder({data:await file.arrayBuffer(),type:file.type});
         try {
             await decoder.tracks.ready;await decoder.completed;
             const count=decoder.tracks.selectedTrack.frameCount, times=[];
@@ -67,12 +72,13 @@ function paint(canvas, frame, options) {
     }
 }
 
-export async function openStickerEditor(file, save) {
+export async function openStickerEditor(file, save, actionLabel='Save to My Stickers') {
     const dialog=document.getElementById('orbit-sticker-editor');
     if(dialog.open)return;
     const fields=Object.fromEntries([...dialog.querySelectorAll('[name]')].map(field=>[field.name,field]));
     const canvas=dialog.querySelector('canvas'), status=dialog.querySelector('[role=status]');
     const done=dialog.querySelector('[data-save]'), cancel=dialog.querySelector('[data-cancel]');
+    done.textContent=actionLabel;
     const trim=dialog.querySelector('[data-trim]');
     let source=null, disposed=false, rendering=false, saving=false, renderAgain=false;
     dialog.querySelector('form').reset();
