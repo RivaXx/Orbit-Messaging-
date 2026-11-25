@@ -310,6 +310,7 @@
                 read_by: [currentUser.id],
                 created_at: new Date().toISOString()
             };
+            if(window.OrbitPicker?.mediaKind?.(msg))payloadBase.metadata=msg.metadata;
 
             let sent=0;
             const failed=[];

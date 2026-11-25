@@ -1399,6 +1399,8 @@ function getMessageReactionsMap(msg) {
 }
 
 function showQuickReactionPicker(rowNode, msg, coords) {
+    const media = window.OrbitPicker?.mediaKind?.(msg);
+    if(media&&typeof orbitFindMessage==='function')msg=orbitFindMessage(msg.id)||msg;
     window.contextActiveMessage=msg;
     // Remove any existing reaction picker overlay
     document.querySelectorAll('.orbit-msg-overlay').forEach(el => el.remove());
@@ -1502,7 +1504,8 @@ function showQuickReactionPicker(rowNode, msg, coords) {
             icon: 'fa-solid fa-share',
             label: 'Forward',
             action: () => {
-                if (typeof openForwardModal === 'function') {
+                if(media&&window.OrbitPicker?.forwardMedia)void OrbitPicker.forwardMedia(msg);
+                else if (typeof openForwardModal === 'function') {
                     openForwardModal(msg);
                 } else {
                     showToast('Forwarding message...', 'info');
@@ -1534,6 +1537,7 @@ function showQuickReactionPicker(rowNode, msg, coords) {
             }
         }
     ];
+    if(media)menuItems.splice(1,0,...(window.OrbitPicker?.messageActions?.(msg)||[]));
 
     if (typeof orbitCanEditMessage === "function" && orbitCanEditMessage(msg)) {
         menuItems.unshift({icon:"fa-solid fa-pen", label:"Edit message", action:()=>orbitBeginEdit(msg)});
@@ -1551,10 +1555,10 @@ function showQuickReactionPicker(rowNode, msg, coords) {
     }
 
     menu.innerHTML = menuItems.map(item => `
-        <div class="msg-action-menu-item ${item.danger ? 'danger' : ''}">
+        <button type="button" class="msg-action-menu-item ${item.danger ? 'danger' : ''}">
             <i class="${item.icon}"></i>
             <span>${item.label}</span>
-        </div>
+        </button>
     `).join('');
 
     menu.querySelectorAll('.msg-action-menu-item').forEach((el, idx) => {

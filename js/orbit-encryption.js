@@ -35,7 +35,7 @@
  async function call(method,...args){
   const idOwner=syncOwner();if(!idOwner)throw error('Sign in before opening encrypted chats');
   if(!worker){
-   worker=new Worker('js/e2ee-worker.mjs?v=orbit-1.4.0',{type:'module',name:'Orbit encryption'});
+   worker=new Worker('js/e2ee-worker.mjs?v=orbit-1.5.0',{type:'module',name:'Orbit encryption'});
    worker.onmessage=({data})=>{const task=pending.get(data.id);if(!task)return;pending.delete(data.id);clearTimeout(task.timer);
     if(task.epoch!==epoch||task.owner!==uid())task.reject(error('The account changed'));
     else data.error?task.reject(error(data.error)):task.resolve(data.result);};
@@ -291,7 +291,11 @@
   if(typeof IntersectionObserver!=='undefined'&&message.attachments.every(a=>a.type==='image'&&!a.view_once)){
    const observer=new IntersectionObserver(entries=>{if(entries.some(e=>e.isIntersecting)){observer.disconnect();void loadMedia(message.id,button);}},{rootMargin:'120px'});observer.observe(button);
   }
-  shell.dataset.e2eeMessage='true';shell.oncontextmenu=e=>{e.preventDefault();showToast('Open the encrypted attachments before forwarding or downloading.');};return shell;
+  shell.dataset.e2eeMessage='true';shell.oncontextmenu=e=>{
+   e.preventDefault();
+   if(window.OrbitPicker?.mediaKind?.(message))openMsgContextMenu(e,message,shell);
+   else showToast('Open the encrypted attachments before forwarding or downloading.');
+  };return shell;
  }
  async function selfSeal(id,room,content){await mustUnlock();return {id,room,sender_id:owner,...await call('encrypt',{id,room,sender_id:owner,revision:1},content,[await keyFor(owner)])};}
  async function selfOpen(record){await mustUnlock();return call('decrypt',{id:record.id,room:record.room,sender_id:record.sender_id,revision:1},record.ciphertext,await keyFor(owner));}

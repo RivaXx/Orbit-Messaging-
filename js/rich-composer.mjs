@@ -98,7 +98,7 @@ sticker.onclick = async () => {
     if (!data || !same(data) || sticker.disabled) return;
     sticker.disabled = true;
     try {
-        const {openStickerEditor} = await import('./sticker-editor.mjs?v=orbit-1.4.0');
+        const {openStickerEditor} = await import('./sticker-editor.mjs?v=orbit-1.5.0');
         if (draft === data && same(data)) await openStickerEditor(data.file, file=>queue(data,file,'sticker'),'Send sticker');
     } catch (error) { showToast(error.message,'error'); }
     finally { sticker.disabled = false; }

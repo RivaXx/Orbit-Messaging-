@@ -52,6 +52,7 @@ class OrbitActivity : FlutterFragmentActivity() {
     private val vault by lazy { DeviceVault(this) }
     private val shares by lazy { GalleryShare(this) }
     private val richContent by lazy { OrbitRichContent(this) }
+    private val stickerShare by lazy { OrbitStickerShare(this) }
     private val work = Executors.newSingleThreadExecutor()
     private val updateWork = Executors.newSingleThreadExecutor()
     private val updater: OrbitUpdater by lazy { OrbitUpdater(this, updateWork) { updatePermission.launch(it) } }
@@ -207,6 +208,7 @@ class OrbitActivity : FlutterFragmentActivity() {
 
     private fun lock(notify: Boolean = true) {
         unlocked = false
+        stickerShare.cancel()
         (page as? OrbitComposerWebView)?.composerToken = null
         richContent.clear()
         page?.visibility = View.INVISIBLE
@@ -379,6 +381,30 @@ class OrbitActivity : FlutterFragmentActivity() {
                 if ((!unlocked || changingPin) && method !in setOf("showNotification", "clearNotification", "incomingCall")) return@addWebMessageListener
                 val answer = JSONObject().put("id", request.optInt("id"))
                 try {
+                    if (method in setOf("startStickerShare", "writeStickerShare", "finishStickerShare", "cancelStickerShare")) {
+                        val args = request.getJSONObject("args")
+                        work.execute {
+                            val result = runCatching {
+                                check(unlocked && !changingPin && !isDestroyed) { "Unlock Orbit to share this media." }
+                                when (method) {
+                                    "startStickerShare" -> stickerShare.start(args.getString("mime"), args.getLong("size"))
+                                    "writeStickerShare" -> stickerShare.append(args.getString("id"), args.getLong("offset"), args.getString("data"))
+                                    "finishStickerShare" -> stickerShare.finish(args.getString("id"))
+                                    else -> stickerShare.cancel(args.getString("id"))
+                                }
+                            }
+                            runOnUiThread {
+                                runCatching {
+                                    check(unlocked && !changingPin && !isDestroyed)
+                                    val value = result.getOrThrow()
+                                    if (value is Intent) startActivity(value)
+                                    answer.put("value", if (value is String) value else true)
+                                }.onFailure { answer.put("error", it.message ?: "Android could not share this media.") }
+                                reply.postMessage(answer.toString())
+                            }
+                        }
+                        return@addWebMessageListener
+                    }
                     if (method == "requestNotifications") {
                         check(notificationPermissionResult == null) { "Android is already checking notification permission." }
                         notifications.request({ permission ->
@@ -497,6 +523,15 @@ class OrbitActivity : FlutterFragmentActivity() {
                 null
             }
             "discardRichContent" -> richContent.discard(args.getString("id"))
+            "shareGiphyLink" -> {
+                val id = args.getString("id")
+                require(id.matches(Regex("[a-zA-Z0-9]{1,48}")))
+                startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).apply {
+                    type = "text/plain"
+                    putExtra(Intent.EXTRA_TEXT, "https://giphy.com/gifs/$id")
+                }, "Share GIF"))
+                true
+            }
             "shareInvite" -> startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).apply {
                 type = "text/plain"
                 putExtra(Intent.EXTRA_TEXT, "Join me on Orbit Messenger. $INVITE")

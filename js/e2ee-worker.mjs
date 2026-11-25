@@ -1,5 +1,5 @@
 import * as pgp from '../assets/vendor/openpgp.min.mjs';
-import {createOrbitCryptoEngine} from './e2ee-core.mjs?v=orbit-1.4.0';
+import {createOrbitCryptoEngine} from './e2ee-core.mjs?v=orbit-1.5.0';
 const engine=createOrbitCryptoEngine(pgp);
 const allowed=new Set(['generate','unlock','exportDeviceIdentity','unlockDevice','encrypt','decrypt','encryptFile','decryptFile','lock','status']);
 // Private keys live only in this worker. Serialize operations so account changes

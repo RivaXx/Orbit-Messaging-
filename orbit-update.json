@@ -1,14 +1,13 @@
 {
   "appName": "Orbit Messenger",
-  "versionName": "1.4.0",
-  "versionCode": 140,
-  "downloadUrl": "https://github.com/RivaXx/Orbit-Messaging-/releases/download/v1.4.0/Orbit-Messenger-v1.4.0.apk",
-  "summary": "Gboard GIFs and stickers in Orbit chat",
+  "versionName": "1.5.0",
+  "versionCode": 150,
+  "downloadUrl": "https://github.com/RivaXx/Orbit-Messaging-/releases/download/v1.5.0/Orbit-Messenger-v1.5.0.apk",
+  "summary": "Draw on stickers, search collections, and share media from chat",
   "changes": [
-    "Enable GIF, PNG, WebP and JPEG in Android chat keyboard input",
-    "Preview keyboard media and add an optional caption before sending",
-    "Send an animation or convert it to a 512 by 512 WebP sticker",
-    "Show sticker art with a transparent background and delivery status"
+    "Draw and undo strokes, adjust background sensitivity, and drag to crop",
+    "Search Recent, Favorites, My Stickers and Orbit Essentials",
+    "Long-press chat media to favorite, save, forward or share"
   ],
-  "sha256": "2d3c2527edd1583c4850128f3a0ded4f8b7541c51d955cbd1153f4970e2697b9"
+  "sha256": "2414b78873bf722c3bf1dda0b50b531491038fb68aa16ecb35a542b3397850e6"
 }

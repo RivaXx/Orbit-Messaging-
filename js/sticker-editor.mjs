@@ -64,7 +64,7 @@ function paint(canvas, frame, options) {
     const crop=Math.min(frame.width,frame.height)/options.zoom;
     const left=(frame.width-crop)*options.horizontal, top=(frame.height-crop)*options.vertical;
     ctx.drawImage(frame.image,left,top,crop,crop,inset,inset,length,length);
-    if(options.remove)removeBorderBackground(ctx);
+    if(options.remove)removeBorderBackground(ctx,side,options.tolerance);
     if(options.label){
         ctx.textAlign='center';ctx.textBaseline='bottom';ctx.font='700 42px system-ui, sans-serif';
         ctx.lineWidth=6;ctx.lineJoin='round';ctx.strokeStyle='#101525';ctx.fillStyle='#fff';
@@ -79,21 +79,68 @@ export async function openStickerEditor(file, save, actionLabel='Save to My Stic
     const canvas=dialog.querySelector('canvas'), status=dialog.querySelector('[role=status]');
     const done=dialog.querySelector('[data-save]'), cancel=dialog.querySelector('[data-cancel]');
     done.textContent=actionLabel;
+    dialog.querySelector('[data-sticker-name]').hidden=actionLabel!=='Save to My Stickers';
     const trim=dialog.querySelector('[data-trim]');
+    const ink=dialog.querySelector('[data-ink]'), pen=ink.getContext('2d');
+    const draw=dialog.querySelector('[data-draw]'), undo=dialog.querySelector('[data-undo-ink]'), clear=dialog.querySelector('[data-clear-ink]');
+    const sensitivity=dialog.querySelector('[data-background-detail]');
+    const strokes=[];
+    let pointer=null, drawing=false;
     let source=null, disposed=false, rendering=false, saving=false, renderAgain=false;
     dialog.querySelector('form').reset();
     done.disabled=true;status.textContent='Opening media…';canvas.getContext('2d').clearRect(0,0,side,side);
+    pen.clearRect(0,0,side,side);draw.setAttribute('aria-pressed','false');undo.disabled=clear.disabled=true;sensitivity.hidden=true;
     dialog.showModal();cancel.onclick=()=>dialog.close();
     dialog.onclose=()=>{disposed=true;source?.close();dialog.onclose=null;};
     function options() {
         return {zoom:Number(fields.zoom.value),horizontal:Number(fields.horizontal.value)/100,vertical:Number(fields.vertical.value)/100,
-            label:fields.label.value.trim().slice(0,38),remove:!source.duration&&fields.background.checked,animated:!!source.duration};
+            label:fields.label.value.trim().slice(0,38),remove:!source.duration&&fields.background.checked,tolerance:Number(fields.tolerance.value),animated:!!source.duration};
     }
     const value=time=>Math.min(time,Math.max(0,source.duration-.02));
     async function renderAt(time, crop) {
         const frame=await source.frame(value(time));
         try {if(!disposed)paint(canvas,frame,crop);} finally {frame.release();}
     }
+    function strokeLine(stroke, from, to) {
+        pen.strokeStyle=stroke.color;pen.lineWidth=stroke.width;pen.lineCap='round';
+        pen.beginPath();pen.moveTo(...from);pen.lineTo(to[0]+.01,to[1]);pen.stroke();
+    }
+    function repaintInk(){
+        pen.clearRect(0,0,side,side);
+        for(const stroke of strokes)stroke.points.forEach((point,index)=>strokeLine(stroke,stroke.points[index-1]||point,point));
+        undo.disabled=clear.disabled=!strokes.length;
+    }
+    draw.onclick=()=>{drawing=!drawing;draw.setAttribute('aria-pressed',String(drawing));};
+    undo.onclick=()=>{if(!saving&&!pointer){strokes.pop();repaintInk();}};
+    clear.onclick=()=>{if(!saving&&!pointer){strokes.length=0;repaintInk();}};
+    function position(event){
+        const box=ink.getBoundingClientRect();
+        return [Math.max(0,Math.min(side,(event.clientX-box.left)*side/box.width)),Math.max(0,Math.min(side,(event.clientY-box.top)*side/box.height))];
+    }
+    ink.onpointerdown=event=>{
+        if(!source||saving||pointer||event.button!==0)return;
+        if(drawing&&strokes.length>=80){status.textContent='Drawing is full. Undo a stroke to keep drawing.';return;}
+        ink.setPointerCapture(event.pointerId);
+        const point=position(event);
+        pointer={id:event.pointerId,point,x:Number(fields.horizontal.value),y:Number(fields.vertical.value)};
+        if(!drawing)return;
+        const stroke={color:dialog.querySelector('[data-ink-color]').value,width:Number(dialog.querySelector('[data-ink-width]').value),points:[point]};
+        pointer.stroke=stroke;strokes.push(stroke);strokeLine(stroke,point,point);undo.disabled=clear.disabled=false;
+    };
+    ink.onpointermove=event=>{
+        if(event.pointerId!==pointer?.id||saving)return;
+        const point=position(event);
+        if(pointer.stroke){
+            const stroke=pointer.stroke, previous=stroke.points.at(-1);
+            if(stroke.points.length>=240)return;
+            stroke.points.push(point);strokeLine(stroke,previous,point);
+        }else{
+            fields.horizontal.value=String(pointer.x+(pointer.point[0]-point[0])*100/side);
+            fields.vertical.value=String(pointer.y+(pointer.point[1]-point[1])*100/side);
+            void preview();
+        }
+    };
+    ink.onpointerup=ink.onpointercancel=ink.onlostpointercapture=event=>{if(event.pointerId===pointer?.id)pointer=null;};
     async function preview() {
         renderAgain=true;
         if(!source||rendering||saving)return;
@@ -112,6 +159,7 @@ export async function openStickerEditor(file, save, actionLabel='Save to My Stic
         fields.start.max=fields.end.max=String(source.duration);
         fields.start.value='0';fields.end.value=String(source.duration);
         for(const field of Object.values(fields))field.oninput=()=>{
+            sensitivity.hidden=!fields.background.checked;
             const start=Number(fields.start.value),end=Number(fields.end.value);
             if(source.duration&&start+.15>end){
                 if(field===fields.start)fields.start.value=String(Math.max(0,end-.15));
@@ -124,7 +172,7 @@ export async function openStickerEditor(file, save, actionLabel='Save to My Stic
         await preview();
     } catch(error){if(!disposed)status.textContent=error.message;return;}
     done.onclick=async()=>{
-        if(disposed||saving||rendering)return;
+        if(disposed||saving||rendering||pointer)return;
         saving=true;done.disabled=true;
         const crop=options(),start=Number(fields.start.value),end=Number(fields.end.value);
         try {
@@ -132,6 +180,7 @@ export async function openStickerEditor(file, save, actionLabel='Save to My Stic
             let output;
             if(!source.duration){
                 await renderAt(0,crop);
+                canvas.getContext('2d').drawImage(ink,0,0);
                 for(const quality of [.88,.74,.57,.40,.23,.08]){output=await encode(canvas,quality);if(output.size<=stillBudget)break;}
                 if(output.size>stillBudget)throw Error('This image is too detailed. Crop closer or use the background remover.');
             }else{
@@ -142,6 +191,7 @@ export async function openStickerEditor(file, save, actionLabel='Save to My Stic
                     let total=0;
                     for(let index=0;index<count&&!disposed;index++){
                         await renderAt(start+index*duration/count,crop);
+                        canvas.getContext('2d').drawImage(ink,0,0);
                         const encoded=await encode(canvas,quality);total+=encoded.size;
                         if(total>frameBudget)break;
                         frames.push({bytes:new Uint8Array(await encoded.arrayBuffer()),duration:duration*1000/count});
@@ -155,10 +205,11 @@ export async function openStickerEditor(file, save, actionLabel='Save to My Stic
             }
             if(disposed)return;
             await renderAt(start,crop);
+            canvas.getContext('2d').drawImage(ink,0,0);
             const thumb=document.createElement('canvas');thumb.width=thumb.height=64;thumb.getContext('2d').drawImage(canvas,0,0,64,64);
-            await save(new File([output],'Orbit sticker.webp',{type:'image/webp'}),thumb.toDataURL('image/webp',.5));
+            await save(new File([output],'Orbit sticker.webp',{type:'image/webp'}),thumb.toDataURL('image/webp',.5),fields.stickerName.value.trim());
             if(!disposed)dialog.close();
         } catch(error){if(!disposed)status.textContent=error.message;}
-        finally{saving=false;if(!disposed)done.disabled=false;}
+        finally{saving=false;if(!disposed&&dialog.open)void preview();}
     };
 }

@@ -28,7 +28,17 @@
 .orbit-picker-mini,.orbit-sticker-editor {width:min(92vw,420px);border-radius:18px;max-height:90dvh;}
 .orbit-picker-mini h2,.orbit-sticker-editor h2 {font-size:18px;margin:0;}
 .orbit-picker-mini [data-actions] {display:grid;gap:7px;margin-bottom:10px;}
-.orbit-sticker-editor canvas {width:min(50vw,210px);height:auto;aspect-ratio:1;display:block;margin:8px auto;background:repeating-conic-gradient(#80808033 0 25%,transparent 0 50%) 0 0/18px 18px;}
+.orbit-sticker-surface {position:relative;width:min(60vw,240px);aspect-ratio:1;margin:8px auto;background:repeating-conic-gradient(#80808033 0 25%,transparent 0 50%) 0 0/18px 18px;}
+.orbit-sticker-surface canvas {width:100%;height:100%;display:block;}
+.orbit-sticker-surface [data-ink] {position:absolute;inset:0;touch-action:none;cursor:crosshair;}
+.orbit-sticker-tools {display:flex;gap:6px;flex-wrap:wrap;align-items:center;}
+.orbit-sticker-tools button {min-height:48px;padding-inline:8px;}
+.orbit-sticker-tools label {max-width:110px;}
+.orbit-sticker-tools [aria-pressed=true],.orbit-unified-picker [data-categories] [aria-pressed=true] {background:var(--accent);color:var(--accent-on,#151526);}
+.orbit-sticker-editor label[hidden] {display:none;}
+#orbit-unified-picker:has([data-tab=stickers][aria-pressed=true]) [data-recent]::before {display:none;}
+.msg-bubble-action-menu button.msg-action-menu-item {font:inherit;width:100%;border:0;background:transparent;text-align:start;min-height:48px;}
+.msg-bubble-action-menu button.msg-action-menu-item:focus-visible {outline:2px solid var(--accent);outline-offset:-2px;}
 .orbit-sticker-editor form {display:grid;gap:4px;}
 .orbit-sticker-editor label {display:flex;gap:6px;min-height:24px;align-items:center;justify-content:space-between;font-size:13px;}
 .orbit-sticker-editor fieldset {border:1px solid var(--glass-border);border-radius:10px;margin:3px 0;}

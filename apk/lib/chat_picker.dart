@@ -26,6 +26,7 @@ class _OrbitChatPickerState extends State<OrbitChatPicker> {
   final _images = <String, Uint8List>{};
   final _client = HttpClient()..connectionTimeout = const Duration(seconds: 5);
   late String _tab;
+  String _stickerSection = 'My Stickers';
   late List<String> _recent;
   int _category = 0, _queryVersion = 0;
   List<Map<String, dynamic>> _gifs = [];
@@ -312,10 +313,25 @@ class _OrbitChatPickerState extends State<OrbitChatPicker> {
     final builtIn = _strings('pack'),
         favorites = _strings('favorites'),
         recent = _strings('stickersRecent');
+    final names = Map<String, dynamic>.from(
+      widget.model['packNames'] as Map? ?? {},
+    );
+    final query = _input.text.trim().toLowerCase();
+    const collections = ['Recent', 'Favorites', 'My Stickers', 'Packs'];
+    final collection = switch (_stickerSection) {
+      'Recent' => recent,
+      'Favorites' => favorites,
+      'Packs' => builtIn,
+      _ =>
+        custom.entries
+            .where((entry) => entry.value['favoriteOnly'] != true)
+            .map((entry) => entry.key)
+            .toList(),
+    };
     Widget tile(String id) {
       final item = custom[id];
       return _tile(
-        item?['label'] as String? ?? id,
+        item?['label'] as String? ?? names[id] as String? ?? id,
         _preview(
           item?['preview'] as String?,
           item?['glyph'] as String? ?? (item == null ? id : null),
@@ -325,36 +341,56 @@ class _OrbitChatPickerState extends State<OrbitChatPicker> {
           'favorite': favorites.contains(id)
               ? 'Remove from Favorites'
               : 'Mark as favorite',
-          if (item != null) 'delete': 'Delete from My Stickers',
+          if (item != null && item['favoriteOnly'] != true)
+            'delete': 'Delete from My Stickers',
         }, id),
       );
     }
 
-    List<Widget> section(String name, List<String> ids) {
-      final shown = ids
-          .where((id) => custom.containsKey(id) || builtIn.contains(id))
-          .toList();
-      return shown.isEmpty
-          ? []
-          : [_label(name), _grid(shown.map(tile).toList(), 5)];
-    }
+    final shown = collection.where((id) {
+      final item = custom[id];
+      if (item == null && !builtIn.contains(id)) return false;
+      return query.isEmpty ||
+          '$id ${item?['label'] ?? names[id]} ${item?['glyph'] ?? ''}'
+              .toLowerCase()
+              .contains(query);
+    }).toList();
 
     return [
-      Align(
-        alignment: Alignment.centerLeft,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          child: FilledButton.tonalIcon(
-            icon: const Icon(Icons.add_rounded),
-            label: const Text('Create sticker'),
-            onPressed: () => _action('create', ''),
-          ),
+      SizedBox(
+        height: 50,
+        child: ListView(
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.symmetric(horizontal: 10),
+          children: [
+            for (final section in collections)
+              Padding(
+                padding: const EdgeInsets.only(right: 6),
+                child: ChoiceChip(
+                  label: Text(section),
+                  selected: section == _stickerSection,
+                  onSelected: (_) => setState(() => _stickerSection = section),
+                ),
+              ),
+          ],
         ),
       ),
-      ...section('Recent', recent),
-      ...section('Favorites', favorites),
-      ...section('Orbit', builtIn),
-      ...section('My Stickers', custom.keys.toList()),
+      if (_stickerSection == 'My Stickers')
+        Align(
+          alignment: Alignment.centerLeft,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: FilledButton.tonalIcon(
+              icon: const Icon(Icons.add_rounded),
+              label: const Text('Create sticker'),
+              onPressed: () => _action('create', ''),
+            ),
+          ),
+        ),
+      if (_stickerSection == 'Packs') _label('Orbit Essentials'),
+      if (shown.isEmpty)
+        _label(query.isEmpty ? 'Nothing here yet.' : 'No matching stickers.'),
+      if (shown.isNotEmpty) _grid(shown.map(tile).toList(), 5),
     ];
   }
 
@@ -426,38 +462,39 @@ class _OrbitChatPickerState extends State<OrbitChatPicker> {
                       borderRadius: BorderRadius.circular(4),
                     ),
                   ),
-                  if (_tab != 'stickers')
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
-                      child: TextField(
-                        controller: _input,
-                        autofocus: false,
-                        onChanged: (_) {
-                          if (_tab == 'gif' && _gifKey != null) {
-                            _debounce?.cancel();
-                            _queryVersion++;
-                            _debounce = Timer(
-                              const Duration(milliseconds: 290),
-                              _searchGiphy,
-                            );
-                          } else {
-                            setState(() {});
-                          }
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
+                    child: TextField(
+                      controller: _input,
+                      autofocus: false,
+                      onChanged: (_) {
+                        if (_tab == 'gif' && _gifKey != null) {
+                          _debounce?.cancel();
+                          _queryVersion++;
+                          _debounce = Timer(
+                            const Duration(milliseconds: 290),
+                            _searchGiphy,
+                          );
+                        } else {
+                          setState(() {});
+                        }
+                      },
+                      decoration: InputDecoration(
+                        hintText: switch (_tab) {
+                          'gif' => 'Search GIFs',
+                          'stickers' => 'Search stickers',
+                          _ => 'Search emoji',
                         },
-                        decoration: InputDecoration(
-                          hintText: _tab == 'gif'
-                              ? 'Search GIFs'
-                              : 'Search emoji',
-                          prefixIcon: const Icon(Icons.search_rounded),
-                          filled: true,
-                          isDense: true,
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(18),
-                            borderSide: BorderSide.none,
-                          ),
+                        prefixIcon: const Icon(Icons.search_rounded),
+                        filled: true,
+                        isDense: true,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(18),
+                          borderSide: BorderSide.none,
                         ),
                       ),
                     ),
+                  ),
                   Expanded(
                     child: ListView(
                       key: ValueKey(_tab),

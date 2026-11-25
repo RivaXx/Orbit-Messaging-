@@ -52,11 +52,11 @@ export function animatedWebp(frames, side = edge) {
     return new Blob([header,...chunks], {type:'image/webp'});
 }
 
-export function removeBorderBackground(context, size = edge) {
+export function removeBorderBackground(context, size = edge, tolerance = 82) {
     const layer = context.getImageData(0,0,size,size);
     const pixels = layer.data;
     const indices = [0, size-1, size*(size-1), size*size-1];
-    const samples = indices.map(index => pixels.slice(index*4,index*4+3));
+    const samples = indices.filter(index=>pixels[index*4+3]>=128).map(index => pixels.slice(index*4,index*4+3));
     const points = new Uint32Array(size*size);
     const visited = new Uint8Array(size*size);
     let head = 0, tail = 0;
@@ -64,7 +64,7 @@ export function removeBorderBackground(context, size = edge) {
         if (visited[index]) return;
         visited[index] = 1;
         const at = index*4;
-        if (pixels[at+3] === 0 || samples.some(([r,g,b]) => Math.abs(r-pixels[at])+Math.abs(g-pixels[at+1])+Math.abs(b-pixels[at+2]) < 82)) {
+        if (pixels[at+3] === 0 || samples.some(([r,g,b]) => Math.abs(r-pixels[at])+Math.abs(g-pixels[at+1])+Math.abs(b-pixels[at+2]) < tolerance)) {
             points[tail++] = index;
         }
     }
