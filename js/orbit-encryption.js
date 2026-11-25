@@ -35,7 +35,7 @@
  async function call(method,...args){
   const idOwner=syncOwner();if(!idOwner)throw error('Sign in before opening encrypted chats');
   if(!worker){
-   worker=new Worker('js/e2ee-worker.mjs?v=orbit-1.5.0',{type:'module',name:'Orbit encryption'});
+   worker=new Worker('js/e2ee-worker.mjs?v=orbit-1.6.0',{type:'module',name:'Orbit encryption'});
    worker.onmessage=({data})=>{const task=pending.get(data.id);if(!task)return;pending.delete(data.id);clearTimeout(task.timer);
     if(task.epoch!==epoch||task.owner!==uid())task.reject(error('The account changed'));
     else data.error?task.reject(error(data.error)):task.resolve(data.result);};
@@ -277,6 +277,14 @@
   if(typeof messageCache!=='undefined')messageCache.forEach((rows,room)=>{messageCache.set(room,rows.map(row=>row.id===next.id?next:row));});
   for(const [key,row]of decoded)if(row.id===next.id)decoded.set(key,next);
   return next;
+ }
+ async function animationBlob(message){
+  const account=await mustUnlock(),attachment=message.attachments?.[0];
+  if(!attachment?.encrypted||attachment.view_once)throw error('This animation is unavailable.');
+  const {data:blob,error:failure}=await rawClient.storage.from(attachment.storage_bucket).download(attachment.storage_path);
+  if(failure)throw failure;
+  if(blob.size>14*1024*1024)throw error('This animation is too large to preview.');
+  const plain=await decryptAttachment(blob,attachment,message.sender_id);checkOwner(account);return plain;
  }
  async function loadMedia(id,button){
   const message=typeof orbitFindMessage==='function'?orbitFindMessage(id):null;if(!message)return;
@@ -520,7 +528,7 @@
   for(const [id,cls]of [['user-dropdown','dropdown-item'],['chat-options-dropdown','chat-option-item']]){const menu=document.getElementById(id);if(menu){const button=document.createElement('button');button.type='button';button.className=cls;button.textContent='🔒 Chat security';button.onclick=()=>{menu.classList.add('hide');void open();};menu.append(button);}}
  }
  function forgetBefore(cutoff){for(const [id,row]of wires)if(Date.parse(row.created_at)<cutoff)wires.delete(id);for(const [key,row]of decoded)if(Date.parse(row.created_at)<cutoff)decoded.delete(key);for(const url of blobs.values())URL.revokeObjectURL(url);blobs.clear();}
- window.OrbitCrypto={install,open,lock:reset,restoreTrusted,requireUnlocked:mustUnlock,seal,decode,decodeMany:mapData,encryptAttachment,decryptAttachment,materialize,mediaNode,selfSeal,selfOpen,saveDraft,readDraft,clearDraft,sealQueue,openQueue,sealLocalFile,openLocalFile,safeStorage,forgetBefore,wireFor:id=>wires.get(id),isUnlocked:()=>unlocked&&owner===uid()};
+ window.OrbitCrypto={install,open,lock:reset,restoreTrusted,requireUnlocked:mustUnlock,seal,decode,decodeMany:mapData,encryptAttachment,decryptAttachment,materialize,animationBlob,mediaNode,selfSeal,selfOpen,saveDraft,readDraft,clearDraft,sealQueue,openQueue,sealLocalFile,openLocalFile,safeStorage,forgetBefore,wireFor:id=>wires.get(id),isUnlocked:()=>unlocked&&owner===uid()};
  install(typeof getSupabase==='function'?getSupabase():null);
  document.addEventListener('DOMContentLoaded',setupUI);
  window.addEventListener('pagehide',reset);

@@ -18,7 +18,7 @@
         if(config!==undefined)return config;
         const origin=window.OrbitDevice?'https://orbit-messaging.vercel.app':location.origin;
         try{
-            const response=await fetch(`${origin}/api/gif-config`,{signal:AbortSignal.timeout(2200),cache:'no-store'});
+            const response=await fetch(`${origin}/api/gif-config?client=${window.OrbitDevice?'android':'web'}`,{signal:AbortSignal.timeout(2200),cache:'no-store'});
             const value=(await response.json()).key;
             config=/^[a-z0-9]{16,80}$/i.test(value||'')?value:null;
             return config;
@@ -38,16 +38,24 @@
 
     function openDB(){
         return database ||= new Promise((resolve,reject)=>{
-            const operation=indexedDB.open('orbit-custom-stickers-v1',1);
-            operation.onupgradeneeded=()=>operation.result.createObjectStore('stickers',{keyPath:'key'}).createIndex('account','account');
-            operation.onsuccess=()=>resolve(operation.result);operation.onerror=()=>{database=null;reject(operation.error);};
+            const operation=indexedDB.open('orbit-custom-stickers-v1',2);
+            operation.onupgradeneeded=()=>{
+                for(const name of ['stickers','packs'])if(!operation.result.objectStoreNames.contains(name))operation.result.createObjectStore(name,{keyPath:'key'}).createIndex('account','account');
+            };
+            operation.onsuccess=()=>{
+                const db=operation.result;
+                db.onversionchange=()=>{db.close();database=null;};
+                resolve(db);
+            };
+            operation.onerror=()=>{database=null;reject(operation.error);};
+            operation.onblocked=()=>{database=null;reject(Error('Close older Orbit tabs before upgrading sticker storage.'));};
         });
     }
-    async function store(action,argument){
+    async function store(action,argument,bucket='stickers'){
         const db=await openDB();
         return new Promise((resolve,reject)=>{
-            const transaction=db.transaction('stickers',action==='getAll'?'readonly':'readwrite');
-            const table=transaction.objectStore('stickers');
+            const transaction=db.transaction(bucket,action==='getAll'?'readonly':'readwrite');
+            const table=transaction.objectStore(bucket);
             const result=action==='getAll'?table.index('account').getAll(argument):table[action](argument);
             transaction.oncomplete=()=>resolve(result.result);transaction.onabort=()=>reject(transaction.error);
         });
@@ -89,7 +97,7 @@
         if(!same(session))throw Error('Open the original chat to save this sticker.');
         const rows=await store('getAll',session.account);
         if(source&&rows.some(row=>!row.favoriteOnly&&row.source===source)){showToast('Already in My Stickers.');return;}
-        if(rows.filter(row=>!row.favoriteOnly).length>=32)throw Error('My Stickers is full. Delete a sticker to add another.');
+        if(rows.filter(row=>!row.favoriteOnly).length>=120)throw Error('My Stickers is full. Delete a sticker to add another.');
         const id=crypto.randomUUID();
         const wrapped=await OrbitCrypto.sealLocalFile(file,id,0);
         const icon=await OrbitCrypto.selfSeal(id,'sticker-thumbnail',{image:preview,title});
@@ -100,7 +108,7 @@
     async function edit(session,file,source){
         await OrbitCrypto.requireUnlocked();
         if(!same(session))return;
-        const {openStickerEditor}=await import('./sticker-editor.mjs?v=orbit-1.5.0');
+        const {openStickerEditor}=await import('./sticker-editor.mjs?v=orbit-1.6.0');
         await openStickerEditor(file,(output,preview,title)=>saveSticker(session,output,preview,title,source));
     }
     function showImport(session){
@@ -122,6 +130,7 @@
         session.busy=true;
         try{
             if(action==='create'){close();showImport(session);return;}
+            if(action==='managePacks'){close();await openPackManager(session);return;}
             if(action==='saveGif'){close();await edit(session,await loopFile(id,session.loops));return;}
             if(action==='favorite'||action==='delete'){
                 const sticker=session.stickers.find(item=>item.id===id);
@@ -161,15 +170,15 @@
         const session={account:currentUser.id,room:currentRoom,token:crypto.randomUUID(),caret:{start:composer.selectionStart,end:composer.selectionEnd}};
         active=session;composer.blur();
         try{
-            const [[categories,loops], custom]=await Promise.all([sourceData(),stickers(session.account).catch(()=>[])]);
+            const [[categories,loops], custom, packs]=await Promise.all([sourceData(),stickers(session.account).catch(()=>[]),savedPacks(session.account).catch(()=>[])]);
             if(active!==session||!same(session))return;
-            session.stickers=custom;session.loops=loops.map(loop=>({...loop,url:localAsset(`assets/picker/${loop.id}.gif`)}));
+            session.stickers=custom;session.loops=loops.map(loop=>({...loop,url:localAsset(`assets/picker/${loop.id}.gif`),preview:localAsset(`assets/picker/${loop.id}.webp`)}));
             session.symbols=new Set(categories.flatMap(group=>group.items.map(item=>item[0])));
-            const payload={token:session.token,tab,categories,pack,packNames,stickers:custom.map(({id,label,preview,glyph,favoriteOnly})=>({id,label,preview,glyph,favoriteOnly})),
+            const payload={token:session.token,tab,categories,pack,packNames,packs,stickers:custom.map(({id,label,preview,glyph,favoriteOnly})=>({id,label,preview,glyph,favoriteOnly})),
                 recent:stored(key(session.account,'emoji')),stickersRecent:stored(key(session.account,'sticker')), favorites:stored(key(session.account,'fav')),
                 light:document.body.classList.contains('light-mode'),loops:session.loops};
             if(window.OrbitDevice){
-                nativeLoops??=Promise.all(session.loops.map(async loop=>({id:loop.id,title:loop.title,preview:await toDataURL(await loopFile(loop.id,session.loops))})))
+                nativeLoops??=Promise.all(session.loops.map(async loop=>({id:loop.id,title:loop.title,preview:await toDataURL(await fetch(loop.preview).then(response=>response.blob()))})))
                     .catch(error=>{nativeLoops=null;throw error;});
                 payload.loops=await nativeLoops;
                 if(active!==session||!same(session))return;
@@ -180,11 +189,129 @@
     }
     function toDataURL(blob){return new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=()=>reject(reader.error);reader.readAsDataURL(blob);});}
 
+    async function savedPacks(account){
+        if(!OrbitCrypto.isUnlocked())return [];
+        const rows=await store('getAll',account,'packs');
+        const results=await Promise.allSettled(rows.map(async row=>({id:row.id,...await OrbitCrypto.selfOpen(row.contents)})));
+        return results.filter(result=>result.status==='fulfilled').map(result=>result.value);
+    }
+    async function packRecord(account,id,details){
+        const contents=await OrbitCrypto.selfSeal(id,'sticker-pack',details);
+        return {key:`${account}:${id}`,account,id,contents};
+    }
+    async function importPack(session,file,packModule){
+        const data=await packModule.decodePack(file);
+        const existing=await store('getAll',session.account);
+        if(existing.filter(row=>!row.favoriteOnly).length+data.stickers.length>120)throw Error('Free up space in My Stickers before importing this pack.');
+        if((await store('getAll',session.account,'packs')).length>=12)throw Error('Remove a pack before adding another.');
+        const newRows=[];
+        for(const item of data.stickers){
+            if(!same(session)||!OrbitCrypto.isUnlocked())throw Error('The chat changed during import.');
+            const id=crypto.randomUUID(),asset=new File([item.file],'Imported sticker.webp',{type:'image/webp'});
+            const icon=await thumbnail(asset);
+            const [file,preview]=await Promise.all([OrbitCrypto.sealLocalFile(asset,id,0),OrbitCrypto.selfSeal(id,'sticker-thumbnail',{image:icon,title:item.title})]);
+            newRows.push({key:`${session.account}:${id}`,id,account:session.account,created:Date.now(),file,preview});
+        }
+        const pack=await packRecord(session.account,crypto.randomUUID(),{name:data.name,author:data.author,ids:newRows.map(row=>row.id),version:1});
+        const db=await openDB();
+        if(!same(session)||!OrbitCrypto.isUnlocked())throw Error('The chat changed during import.');
+        await new Promise((resolve,reject)=>{
+            const tx=db.transaction(['stickers','packs'],'readwrite');
+            for(const row of newRows)tx.objectStore('stickers').add(row);
+            tx.objectStore('packs').add(pack);tx.oncomplete=resolve;tx.onabort=()=>reject(tx.error);
+        });
+        return pack.id;
+    }
+    async function openPackManager(session){
+        await OrbitCrypto.requireUnlocked();
+        const packModule=await import('./sticker-packs.mjs');
+        let [packs,library]=await Promise.all([savedPacks(session.account),stickers(session.account)]);
+        if(!same(session))return;
+        const dialog=document.getElementById('orbit-pack-manager');
+        if(dialog.open)return;
+        const get=name=>dialog.querySelector(`[data-${name}]`);
+        const select=get('packs'),title=get('pack-name'),author=get('pack-author'),grid=get('pack-items');
+        const controls=['pack-save','pack-export','pack-delete','pack-import'].map(get);
+        const status=dialog.querySelector('[role=status]');
+        let ids=[],busy=false;
+        const eligible=()=>library.filter(item=>item.row&&!item.favoriteOnly);
+        function button(text,action,label=text){
+            const element=document.createElement('button');element.type='button';element.textContent=text;element.setAttribute('aria-label',label);element.onclick=action;return element;
+        }
+        function render(){
+            const items=new Map(eligible().map(item=>[item.id,item]));
+            ids=ids.filter(id=>items.has(id));
+            get('pack-count').textContent=`${ids.length} of 30 stickers`;
+            grid.replaceChildren();
+            for(const id of [...ids,...items.keys()].filter((value,index,all)=>all.indexOf(value)===index)){
+                const item=items.get(id),row=document.createElement('div'),name=document.createElement('span'),marked=ids.indexOf(id);
+                if(item.preview){const image=document.createElement('img');image.src=item.preview;image.alt='';image.loading='lazy';row.append(image);}
+                name.textContent=item.label;row.append(name);
+                row.append(button(marked<0?'Add':'Remove',()=>{
+                    if(marked<0&&ids.length>=packModule.packLimit){status.textContent='A pack can hold up to 30 stickers.';return;}
+                    ids=marked<0?[...ids,id]:ids.filter(value=>value!==id);render();
+                },`${marked<0?'Add':'Remove'} ${item.label}`));
+                for(const [offset,direction,symbol] of [[-1,'up','↑'],[1,'down','↓']])if(marked>=0){
+                    const move=button(symbol,()=>{[ids[marked],ids[marked+offset]]=[ids[marked+offset],ids[marked]];render();},`Move ${item.label} ${direction}`);
+                    move.disabled=marked+offset<0||marked+offset>=ids.length;row.append(move);
+                }
+                grid.append(row);
+            }
+            if(!items.size)grid.textContent='Create a sticker in My Stickers, then add it to a pack here.';
+        }
+        function pick(id){
+            select.replaceChildren(new Option('New pack',''),...packs.map(pack=>new Option(pack.name,pack.id)));
+            select.value=id;
+            const pack=packs.find(item=>item.id===id);
+            title.value=pack?.name||'';author.value=pack?.author||'';ids=[...(pack?.ids||[])];render();
+            get('pack-delete').disabled=get('pack-export').disabled=!pack;
+        }
+        const run=operation=>async()=>{
+            if(busy||!same(session))return;
+            busy=true;controls.forEach(control=>control.disabled=true);status.textContent='Working…';
+            try{await operation();}catch(error){status.textContent=error.message;}
+            finally{busy=false;controls.forEach(control=>control.disabled=false);get('pack-delete').disabled=get('pack-export').disabled=!select.value;}
+        };
+        select.onchange=()=>{if(!busy)pick(select.value);};
+        get('pack-save').onclick=run(async()=>{
+            const details={...packModule.packInfo({name:title.value,author:author.value}),ids:[...ids],version:1};
+            if(!details.ids.length)throw Error('Add at least one sticker.');
+            if(!select.value&&packs.length>=12)throw Error('Remove a pack before adding another.');
+            const id=select.value||crypto.randomUUID(),record=await packRecord(session.account,id,details);
+            if(!same(session))throw Error('The chat changed.');
+            await store('put',record,'packs');packs=await savedPacks(session.account);pick(id);status.textContent='Pack saved.';
+        });
+        get('pack-export').onclick=run(async()=>{
+            const pack=packs.find(item=>item.id===select.value),items=new Map(eligible().map(item=>[item.id,item]));
+            const rows=[];
+            for(const id of pack.ids)if(items.has(id)){
+                if(!same(session))throw Error('The chat changed.');
+                const item=items.get(id),file=await OrbitCrypto.openLocalFile(item.row.file);
+                rows.push({title:item.label,data:(await toDataURL(file)).split(',')[1]});
+            }
+            const file=new File([packModule.makePack(pack,rows)],'Orbit sticker pack.orbitstickers.json',{type:'application/json'});
+            if(!same(session))throw Error('The chat changed.');
+            if(window.OrbitDevice)await shareNative(file,session);
+            else{const url=URL.createObjectURL(file),link=document.createElement('a');link.href=url;link.download=file.name;link.click();setTimeout(()=>URL.revokeObjectURL(url),30000);}
+            status.textContent='Pack prepared for export.';
+        });
+        get('pack-delete').onclick=run(async()=>{
+            if(!select.value||!confirm('Delete this pack? Its stickers will remain in My Stickers.')){status.textContent='';return;}
+            await store('delete',`${session.account}:${select.value}`,'packs');packs=await savedPacks(session.account);pick('');status.textContent='Pack deleted.';
+        });
+        get('pack-import').onchange=run(async()=>{
+            const input=get('pack-import'),file=input.files[0];input.value='';
+            if(!file){status.textContent='';return;}
+            const id=await importPack(session,file,packModule);[packs,library]=await Promise.all([savedPacks(session.account),stickers(session.account)]);pick(id);status.textContent='Pack imported.';
+        });
+        status.textContent='';pick('');dialog.showModal();
+    }
+
     function showWeb(model,session){
         const dialog=document.getElementById('orbit-unified-picker'), grid=dialog.querySelector('[data-grid]');
         const nav=dialog.querySelector('[data-categories]'), input=dialog.querySelector('[type=search]');
         const recent=dialog.querySelector('[data-recent]'), status=dialog.querySelector('[role=status]');
-        let tab=model.tab,collection='My Stickers',category=0,version=0,searchTimer;
+        let tab=model.tab,collection='My Stickers',packId='',category=0,version=0,searchTimer;
         const call=(intent,id)=>action({token:model.token,action:intent,id});
         const appendButton=(parent,label,click,preview,hold)=>{
             const button=document.createElement('button');button.type='button';button.setAttribute('aria-label',label);
@@ -222,13 +349,21 @@
                 if(!data.length)status.textContent='No emoji found.';return;
             }
             if(tab==='stickers'){
-                const sections={'Recent':model.stickersRecent,'Favorites':model.favorites,'My Stickers':model.stickers.filter(item=>!item.favoriteOnly).map(item=>item.id),'Packs':model.pack};
+                const chosen=model.packs.find(item=>item.id===packId);
+                const sections={'Recent':model.stickersRecent,'Favorites':model.favorites,'My Stickers':model.stickers.filter(item=>!item.favoriteOnly).map(item=>item.id),'Packs':chosen?.ids||model.pack};
                 for(const section of Object.keys(sections)){
                     appendButton(nav,section,()=>{collection=section;render();});
                     nav.lastChild.setAttribute('aria-pressed',String(collection===section));
                 }
                 if(collection==='My Stickers')appendButton(recent,'＋ Create sticker',()=>call('create'));
-                if(collection==='Packs'){const heading=document.createElement('h3');heading.textContent='Orbit Essentials';grid.append(heading);}
+                if(collection==='Packs'){
+                    appendButton(recent,'Manage packs',()=>call('managePacks'));
+                    for(const option of [{id:'',name:'Orbit Essentials'},...model.packs]){
+                        appendButton(recent,option.name,()=>{packId=option.id;render();});
+                        recent.lastChild.setAttribute('aria-pressed',String(packId===option.id));
+                    }
+                    if(chosen?.author){const heading=document.createElement('h3');heading.textContent=`By ${chosen.author}`;grid.append(heading);}
+                }
                 const shown=sections[collection].filter(id=>{
                     const item=model.stickers.find(sticker=>sticker.id===id);
                     return (item||pack.includes(id))&&`${id} ${item?.label||packNames[id]||''} ${item?.glyph||''}`.toLowerCase().includes(query.toLowerCase());
@@ -239,6 +374,12 @@
             }
             const gifKey=await giphyKey();
             if(span!==version||!dialog.open)return;
+            const showLocal=()=>{
+                model.loops.filter(loop=>loop.title.toLowerCase().includes(query.toLowerCase())).forEach(loop=>appendButton(grid,loop.title,()=>call('sendGif',loop.id),loop.preview,()=>{
+                    const menu=document.getElementById('orbit-picker-menu'), actions=menu.querySelector('[data-actions]');actions.replaceChildren();
+                    appendButton(actions,'Save as sticker',()=>{menu.close();call('saveGif',loop.id);});menu.showModal();
+                }));
+            };
             if(gifKey){
                 status.textContent='Powered by GIPHY · Loading…';
                 try{
@@ -248,13 +389,10 @@
                         if(validGifId(gif.id)&&validMediaUrl(preview))appendButton(grid,gif.title||'GIF',()=>call('sendGiphy',gif.id),preview);
                     }
                     status.textContent=grid.children.length?'Powered by GIPHY':'No matching GIFs · Powered by GIPHY';
-                }catch(error){if(span===version)status.textContent=error.message;}
+                }catch(error){if(span===version){status.textContent='GIPHY unavailable · Orbit GIFs';showLocal();}}
             }else{
                 status.textContent='Orbit GIFs';
-                model.loops.filter(loop=>loop.title.toLowerCase().includes(query.toLowerCase())).forEach(loop=>appendButton(grid,loop.title,()=>call('sendGif',loop.id),loop.url,()=>{
-                    const menu=document.getElementById('orbit-picker-menu'), actions=menu.querySelector('[data-actions]');actions.replaceChildren();
-                    appendButton(actions,'Save as sticker',()=>{menu.close();call('saveGif',loop.id);});menu.showModal();
-                }));
+                showLocal();
             }
         }
         input.value='';input.oninput=()=>{clearTimeout(searchTimer);searchTimer=setTimeout(render,tab==='gif'?260:0);};
@@ -267,7 +405,7 @@
         if(!msg||msg.is_deleted||msg.deleted_at||msg._e2ee_locked||orbitIsViewOnceMessage(msg))return null;
         if(isRemoteGif(msg.metadata?.orbit_gif))return 'gif';
         if(window.OrbitStickers?.valid(msg.metadata?.orbit_sticker))return 'sticker';
-        return ['gif','sticker'].includes(msg.metadata?.orbit_media)?msg.metadata.orbit_media:null;
+        return ['gif','sticker'].includes(msg.metadata?.orbit_media)?msg.metadata.orbit_media:msg.attachments?.[0]?.mime==='image/gif'?'gif':null;
     }
     const messageScope=()=>({account:currentUser?.id,room:currentRoom});
     async function messageFile(msg,session){
@@ -276,6 +414,14 @@
             const canvas=document.createElement('canvas');canvas.width=canvas.height=512;
             const ctx=canvas.getContext('2d');ctx.font='355px system-ui';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(legacy.emoji,256,256);
             return new File([await new Promise(resolve=>canvas.toBlob(resolve))],'Orbit sticker.png',{type:'image/png'});
+        }
+        if(msg.attachments?.[0]?.encrypted&&!msg.attachments[0].url){
+            const blob=await OrbitCrypto.animationBlob(msg);
+            if(!same(session))throw Error('The chat changed.');
+            const {describeRichImage,limit}=await import('./rich-image.mjs');
+            if(blob.size>limit)throw Error('Choose media under 12 MB.');
+            const {mime}=describeRichImage(new Uint8Array(await blob.slice(0,256*1024).arrayBuffer()));
+            return new File([blob],`Orbit media.${mime.split('/')[1]}`,{type:mime});
         }
         const actual=msg._e2ee_media_pending?await OrbitCrypto.materialize(msg):msg;
         if(!same(session))throw Error('The chat changed. Open the original message again.');
@@ -327,7 +473,7 @@
                 const bytes=new Uint8Array(await file.slice(offset,offset+48*1024).arrayBuffer());
                 await OrbitDevice('writeStickerShare',{id,offset,data:btoa(String.fromCharCode(...bytes))});
             }
-            if(same(session))await OrbitDevice('finishStickerShare',{id});
+            if(same(session))await OrbitDevice(file.type==='application/json'?'finishStickerPackExport':'finishStickerShare',{id});
         }finally{await OrbitDevice('cancelStickerShare',{id}).catch(()=>{});}
     }
     async function shareMessage(msg,session){
@@ -386,7 +532,7 @@
             if(same(session))openForwardModal(result);
         }catch(error){if(same(session))showToast(error.message,'error');}
     }
-    function gifMarkup(gif){return `<button type="button" class="orbit-giphy-message" data-giphy-id="${gif.id}" onclick="OrbitPicker.playGif(this)">Play GIF <span>GIPHY</span></button>`;}
+    function gifMarkup(gif){return `<button type="button" class="orbit-giphy-message" data-giphy-id="${gif.id}" onclick="OrbitPicker.playGif(this)">Open GIF <span>GIPHY</span></button>`;}
     async function playGif(button){
         if(!validGifId(button.dataset.giphyId))return;
         button.disabled=true;
@@ -395,10 +541,12 @@
             const gif=await getGifs(secret,'',button.dataset.giphyId);
             const preview=gif.images?.fixed_width?.url;
             if(!validMediaUrl(preview))throw Error('This GIF is unavailable.');
+            const still=gif.images?.fixed_width_still?.url||gif.images?.fixed_width_small_still?.url;
+            if(window.OrbitAnimations){OrbitAnimations.showRemote(button,preview,validMediaUrl(still)?still:null);return;}
             const image=document.createElement('img');image.alt=gif.title||'GIF';image.src=preview;image.referrerPolicy='no-referrer';
             const credit=document.createElement('small');credit.textContent='Powered by GIPHY';button.replaceWith(image,credit);
         }catch(error){button.disabled=false;showToast(error.message,'error');}
     }
-    document.addEventListener('orbit-encryption-locked',()=>{close();for(const id of ['orbit-sticker-editor','orbit-sticker-import','orbit-picker-menu']){const dialog=document.getElementById(id);if(dialog?.open)dialog.close();}});
+    document.addEventListener('orbit-encryption-locked',()=>{close();for(const id of ['orbit-sticker-editor','orbit-sticker-import','orbit-picker-menu','orbit-pack-manager']){const dialog=document.getElementById(id);if(dialog?.open)dialog.close();}});
     window.OrbitPicker={open,action,isRemoteGif,gifMarkup,playGif,mediaKind,messageActions,forwardMedia};
 })();

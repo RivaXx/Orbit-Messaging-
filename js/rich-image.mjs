@@ -1,5 +1,15 @@
 export const limit = 12 * 1024 * 1024;
 
+export async function staticMediaPreview(blob,side=96){
+    const bitmap=await createImageBitmap(blob);
+    try{
+        const canvas=document.createElement('canvas');canvas.width=canvas.height=side;
+        const scale=Math.min(side/bitmap.width,side/bitmap.height),width=bitmap.width*scale,height=bitmap.height*scale;
+        canvas.getContext('2d').drawImage(bitmap,(side-width)/2,(side-height)/2,width,height);
+        return canvas.toDataURL('image/webp',.65);
+    }finally{bitmap.close();}
+}
+
 export function describeRichImage(bytes) {
     const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
     const tag = (offset, text) => offset + text.length <= bytes.length &&

@@ -27,6 +27,7 @@ class _OrbitChatPickerState extends State<OrbitChatPicker> {
   final _client = HttpClient()..connectionTimeout = const Duration(seconds: 5);
   late String _tab;
   String _stickerSection = 'My Stickers';
+  String _selectedPack = '';
   late List<String> _recent;
   int _category = 0, _queryVersion = 0;
   List<Map<String, dynamic>> _gifs = [];
@@ -35,7 +36,7 @@ class _OrbitChatPickerState extends State<OrbitChatPicker> {
   Timer? _debounce;
 
   List<Map<String, dynamic>> _maps(String field) =>
-      (widget.model[field] as List)
+      (widget.model[field] as List? ?? const [])
           .map((item) => Map<String, dynamic>.from(item as Map))
           .toList();
   List<String> _strings(String field) =>
@@ -77,7 +78,9 @@ class _OrbitChatPickerState extends State<OrbitChatPicker> {
     final client = HttpClient()..connectionTimeout = const Duration(seconds: 2);
     try {
       final request = await client.getUrl(
-        Uri.https('orbit-messaging.vercel.app', '/api/gif-config'),
+        Uri.https('orbit-messaging.vercel.app', '/api/gif-config', {
+          'client': 'android',
+        }),
       );
       final response = await request.close().timeout(
         const Duration(seconds: 2),
@@ -318,10 +321,17 @@ class _OrbitChatPickerState extends State<OrbitChatPicker> {
     );
     final query = _input.text.trim().toLowerCase();
     const collections = ['Recent', 'Favorites', 'My Stickers', 'Packs'];
+    final packs = {
+      for (final item in _maps('packs')) item['id'] as String: item,
+    };
+    final selectedPack = packs[_selectedPack];
     final collection = switch (_stickerSection) {
       'Recent' => recent,
       'Favorites' => favorites,
-      'Packs' => builtIn,
+      'Packs' =>
+        selectedPack == null
+            ? builtIn
+            : (selectedPack['ids'] as List).cast<String>(),
       _ =>
         custom.entries
             .where((entry) => entry.value['favoriteOnly'] != true)
@@ -387,7 +397,42 @@ class _OrbitChatPickerState extends State<OrbitChatPicker> {
             ),
           ),
         ),
-      if (_stickerSection == 'Packs') _label('Orbit Essentials'),
+      if (_stickerSection == 'Packs')
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          child: Row(
+            children: [
+              Expanded(
+                child: DropdownButton<String>(
+                  value: _selectedPack,
+                  isExpanded: true,
+                  items: [
+                    const DropdownMenuItem(
+                      value: '',
+                      child: Text('Orbit Essentials'),
+                    ),
+                    for (final pack in packs.entries)
+                      DropdownMenuItem(
+                        value: pack.key,
+                        child: Text(
+                          pack.value['name'] as String,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                  ],
+                  onChanged: (id) => setState(() => _selectedPack = id ?? ''),
+                ),
+              ),
+              TextButton(
+                onPressed: () => _action('managePacks', ''),
+                child: const Text('Manage packs'),
+              ),
+            ],
+          ),
+        ),
+      if (_stickerSection == 'Packs' &&
+          (selectedPack?['author'] as String? ?? '').isNotEmpty)
+        _label('By ${selectedPack!['author']}'),
       if (shown.isEmpty)
         _label(query.isEmpty ? 'Nothing here yet.' : 'No matching stickers.'),
       if (shown.isNotEmpty) _grid(shown.map(tile).toList(), 5),
@@ -395,7 +440,8 @@ class _OrbitChatPickerState extends State<OrbitChatPicker> {
   }
 
   List<Widget> _gif() {
-    final remote = _gifKey != null, query = _input.text.trim().toLowerCase();
+    final remote = _gifKey != null && _error == null,
+        query = _input.text.trim().toLowerCase();
     final rows = remote
         ? _gifs
         : _maps('loops')
@@ -409,8 +455,8 @@ class _OrbitChatPickerState extends State<OrbitChatPicker> {
       if (_loading) const LinearProgressIndicator(),
       if (_error != null)
         TextButton(onPressed: _searchGiphy, child: Text(_error!)),
-      if (rows.isEmpty && !_loading && _error == null) _label('No GIFs found.'),
-      if (!_loading && _error == null)
+      if (rows.isEmpty && !_loading) _label('No GIFs found.'),
+      if (!_loading)
         _grid(
           rows.map((row) {
             final id = row['id'] as String;

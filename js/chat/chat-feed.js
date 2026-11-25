@@ -339,7 +339,8 @@ window.toggleStarMessage = toggleStarMessage;
 
 function createMessageDOMNode(msg, isConsecutive = false) {
     if (typeof orbitNormalizeMessage === 'function') msg = orbitNormalizeMessage(msg);
-    if(msg?._e2ee_media_pending&&!msg.is_deleted)return OrbitCrypto.mediaNode(msg,isConsecutive);
+    const managedAnimation=window.OrbitAnimations?.supports(msg);
+    if(msg?._e2ee_media_pending&&!msg.is_deleted&&!managedAnimation)return OrbitCrypto.mediaNode(msg,isConsecutive);
     try {
         const isOwn = (!msg.sender_id && !msg.from_user) || (currentUser && msg.sender_id === currentUser.id);
         const row = document.createElement('div');
@@ -532,7 +533,9 @@ function createMessageDOMNode(msg, isConsecutive = false) {
         let mediaGridHtml = '';
         // Check for View Once Photo
         const hasViewOnce = orbitIsViewOnceMessage(msg);
-        if (stickerMessage && !hasViewOnce && images.length === 1) {
+        if (managedAnimation) {
+            mediaGridHtml = `<div class="orbit-motion-frame">${OrbitAnimations.markup(stickerMessage)}${mediaUploadOverlayHtml}</div>`;
+        } else if (stickerMessage && !hasViewOnce && images.length === 1) {
             mediaGridHtml = `<div class="orbit-chat-sticker"><img src="${escapeHtml(images[0].url)}" alt="Sticker" width="144" height="144" loading="lazy" decoding="async">${mediaUploadOverlayHtml}</div>`;
         } else if (hasViewOnce) {
             const voImg = images[0] || (Array.isArray(attList) ? attList.find(a => a && a.view_once) : null);
@@ -931,6 +934,7 @@ function createMessageDOMNode(msg, isConsecutive = false) {
         // ── Slide to Reply & Long-Press Reaction Gesture ────────────────
         if(msg._e2ee_locked&&!msg._e2ee_error){const unlock=document.createElement('button');unlock.type='button';unlock.className='glass-btn-primary';unlock.textContent='Unlock encrypted chat';unlock.onclick=()=>OrbitCrypto.open();row.querySelector('.msg-bubble-card')?.append(unlock);}
         syncMediaSendError(row, msg);
+        if(managedAnimation){const animation=row.querySelector('.orbit-chat-animation');if(animation)OrbitAnimations.register(animation,msg);}
         if (!isMsgDeleted) {
             attachSlideToReplyAndReactionGesture(row, msg);
         }

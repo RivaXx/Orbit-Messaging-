@@ -53,6 +53,19 @@ class OrbitActivity : FlutterFragmentActivity() {
     private val shares by lazy { GalleryShare(this) }
     private val richContent by lazy { OrbitRichContent(this) }
     private val stickerShare by lazy { OrbitStickerShare(this) }
+    private var packExport: java.io.File? = null
+    private val saveStickerPack = registerForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
+        val file = packExport ?: return@registerForActivityResult
+        packExport = null
+        work.execute {
+            val saved = uri != null && runCatching {
+                val output = contentResolver.openOutputStream(uri) ?: error("Could not create sticker pack file.")
+                output.use { stream -> file.inputStream().use { it.copyTo(stream) } }
+            }.isSuccess
+            file.delete()
+            if (uri != null) runOnUiThread { Toast.makeText(this, if (saved) "Sticker pack exported." else "Could not export the sticker pack.", Toast.LENGTH_SHORT).show() }
+        }
+    }
     private val work = Executors.newSingleThreadExecutor()
     private val updateWork = Executors.newSingleThreadExecutor()
     private val updater: OrbitUpdater by lazy { OrbitUpdater(this, updateWork) { updatePermission.launch(it) } }
@@ -109,7 +122,7 @@ class OrbitActivity : FlutterFragmentActivity() {
 
     override fun onStop() {
         stoppedAt = SystemClock.elapsedRealtime()
-        page?.evaluateJavascript("window.OrbitAndroidBackground=true", null)
+        page?.evaluateJavascript("window.OrbitAndroidBackground=true;window.dispatchEvent(new Event('orbit-android-pause'))", null)
         super.onStop()
     }
 
@@ -381,7 +394,7 @@ class OrbitActivity : FlutterFragmentActivity() {
                 if ((!unlocked || changingPin) && method !in setOf("showNotification", "clearNotification", "incomingCall")) return@addWebMessageListener
                 val answer = JSONObject().put("id", request.optInt("id"))
                 try {
-                    if (method in setOf("startStickerShare", "writeStickerShare", "finishStickerShare", "cancelStickerShare")) {
+                    if (method in setOf("startStickerShare", "writeStickerShare", "finishStickerShare", "finishStickerPackExport", "cancelStickerShare")) {
                         val args = request.getJSONObject("args")
                         work.execute {
                             val result = runCatching {
@@ -390,6 +403,7 @@ class OrbitActivity : FlutterFragmentActivity() {
                                     "startStickerShare" -> stickerShare.start(args.getString("mime"), args.getLong("size"))
                                     "writeStickerShare" -> stickerShare.append(args.getString("id"), args.getLong("offset"), args.getString("data"))
                                     "finishStickerShare" -> stickerShare.finish(args.getString("id"))
+                                    "finishStickerPackExport" -> stickerShare.takePack(args.getString("id"))
                                     else -> stickerShare.cancel(args.getString("id"))
                                 }
                             }
@@ -398,6 +412,12 @@ class OrbitActivity : FlutterFragmentActivity() {
                                     check(unlocked && !changingPin && !isDestroyed)
                                     val value = result.getOrThrow()
                                     if (value is Intent) startActivity(value)
+                                    if (value is java.io.File) {
+                                        if (packExport != null) { value.delete(); error("Finish the current export first.") }
+                                        packExport = value
+                                        try { saveStickerPack.launch("Orbit sticker pack.orbitstickers.json") }
+                                        catch (failure: Exception) { packExport = null; value.delete(); throw failure }
+                                    }
                                     answer.put("value", if (value is String) value else true)
                                 }.onFailure { answer.put("error", it.message ?: "Android could not share this media.") }
                                 reply.postMessage(answer.toString())

@@ -1,4 +1,4 @@
-import {describeRichImage, limit} from './rich-image.mjs';
+import {describeRichImage, limit, staticMediaPreview} from './rich-image.mjs';
 
 const input = document.getElementById('msg-input');
 const preview = document.getElementById('orbit-rich-preview');
@@ -44,10 +44,11 @@ async function validate(file, original) {
     const probe = new Image(); probe.src = url;
     try {
         await probe.decode();
+        const still=details.animated&&window.OrbitAnimations?.reduced()?await staticMediaPreview(normalized):null;
         if (!same(original)) throw new Error('The chat changed before the media was ready.');
         cancel();
         draft = {...original,file:normalized,url,details};
-        image.src = url;
+        image.src = still||url;
         info.textContent = (details.animated ? 'Animation' : 'Image')+' · '+details.width+' × '+details.height;
         send.textContent = details.animated ? 'Send as GIF' : 'Send image';
         preview.hidden = false;
@@ -98,7 +99,7 @@ sticker.onclick = async () => {
     if (!data || !same(data) || sticker.disabled) return;
     sticker.disabled = true;
     try {
-        const {openStickerEditor} = await import('./sticker-editor.mjs?v=orbit-1.5.0');
+        const {openStickerEditor} = await import('./sticker-editor.mjs?v=orbit-1.6.0');
         if (draft === data && same(data)) await openStickerEditor(data.file, file=>queue(data,file,'sticker'),'Send sticker');
     } catch (error) { showToast(error.message,'error'); }
     finally { sticker.disabled = false; }
