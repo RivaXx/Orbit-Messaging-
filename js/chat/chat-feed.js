@@ -1465,7 +1465,15 @@ function showQuickReactionPicker(rowNode, msg, coords) {
     // Override position to use fixed viewport coords — never clipped by overflow containers
     menu.style.cssText = 'position:static; margin-top:8px; min-width:190px; border-radius:16px;';
 
+    const privateMessage = orbitIsViewOnceMessage(msg) || msg._e2ee_locked || msg._e2ee_error;
+    const visibleText = rowNode.querySelector('.msg-text-content')?.textContent?.trim();
+    const noteText = msg.e2ee_version === 1 ? visibleText : msg.text;
     const menuItems = [
+        ...(!privateMessage && !msg.deleted_at && typeof noteText === 'string' && noteText.trim() && typeof OrbitNotes !== 'undefined' ? [{
+            icon:'fa-solid fa-note-sticky',label:'Save to Notes',action:() => {
+                if (msg.e2ee_version !== 1 || confirm('Save a decrypted copy of this message in your personal Notes?')) return OrbitNotes.saveChatMessage(msg,noteText);
+            }
+        }] : []),
         {
             icon: 'fa-solid fa-reply',
             label: 'Reply',

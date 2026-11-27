@@ -1,0 +1,6 @@
+Tesseract.js 6.0.1 and tesseract.js-core 6.0.0 are distributed under Apache-2.0.
+The English LSTM model is the best-int variant from @tesseract.js-data/eng 1.0.0,
+based on the Apache-2.0 Tesseract language data. The OCR engine runs locally.
+Sources: https://github.com/naptha/tesseract.js
+https://github.com/naptha/tesseract.js-core
+https://github.com/tesseract-ocr/tessdata_best

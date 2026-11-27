@@ -1,6 +1,6 @@
 // Orbit Messenger — messaging delivery and storage policy repair
 importScripts('./js/share-inbox.js');
-const CACHE_NAME = 'orbit-1.6.0';
+const CACHE_NAME = 'orbit-1.6.0-notes-3';
 const PRECACHE_URLS = [
     "./js/chat-animations.mjs?v=orbit-1.6.0",
     "./js/chat-animation-cache.mjs",
@@ -27,7 +27,7 @@ const PRECACHE_URLS = [
     "./assets/picker/sparkle.gif",
     "./assets/picker/wave.gif",
     "./orbit-mobile.css?v=orbit-1.6.0",
-    "./js/orbit-device.js?v=orbit-1.6.0",
+    "./js/orbit-device.js?v=notes-1",
     "./js/orbit-stickers.js?v=orbit-1.6.0",
     "./assets/orbit-invite-qr.png",
     "./assets/weather/orbit-valley.webp",
@@ -44,8 +44,19 @@ const PRECACHE_URLS = [
     "./js/e2ee-worker.mjs?v=orbit-1.6.0",
     "./assets/vendor/openpgp.min.mjs",
     "./js/storage-recovery.js?v=orbit-1.6.0",
-    "./notes.css?v=orbit-1.6.0",
-    "./js/orbit-notes.js?v=orbit-1.6.0",
+    "./notes.css?v=notes-3",
+    "./js/orbit-note-store.js?v=notes-3",
+    "./js/orbit-note-lock.js?v=notes-3",
+    "./js/orbit-note-media.js?v=notes-3",
+    "./js/orbit-note-portability.js?v=notes-3",
+    "./assets/vendor/notes-fflate.js",
+    "./assets/vendor/notes-jspdf.js",
+    "./js/orbit-note-media-ui.js?v=notes-3",
+    "./assets/notes-ocr/tesseract.min.js",
+    "./assets/notes-ocr/worker.min.js",
+    "./assets/notes-ocr/tesseract-core-lstm.wasm.js",
+    "./assets/notes-ocr/eng.traineddata.gz",
+    "./js/orbit-notes.js?v=notes-3",
     "./",
     "./index.html",
     "./intro.css?v=orbit-1.6.0",
@@ -79,7 +90,7 @@ const PRECACHE_URLS = [
     "./js/chat-share.js?v=orbit-1.6.0",
     "./js/chat/message-controls.js?v=orbit-1.6.0",
     "./js/chat/chat-history.js?v=orbit-1.6.0",
-    "./js/chat/chat-feed.js?v=orbit-1.6.0",
+    "./js/chat/chat-feed.js?v=notes-3",
     "./js/chat/chat-dispatcher.js?v=orbit-1.6.0",
     "./js/chat/chat-realtime.js?v=orbit-1.6.0",
     "./js/chat.js?v=orbit-1.6.0",

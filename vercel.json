@@ -1,7 +1,7 @@
 {
   "headers": [
     {
-      "source": "/(.*)",
+      "source": "/((?!assets/notes-ocr/worker[.]min[.]js$).*)",
       "headers": [
         {
           "key": "X-Content-Type-Options",
@@ -23,6 +23,13 @@
           "key": "Content-Security-Policy",
           "value": "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.sheetjs.com; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://fonts.googleapis.com; font-src 'self' https://cdnjs.cloudflare.com https://fonts.gstatic.com data:; img-src 'self' https: http: data: blob:; media-src 'self' https: http: data: blob:; connect-src 'self' blob: https: wss:; worker-src 'self' blob: https://cdnjs.cloudflare.com; frame-src https://www.openstreetmap.org; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests"
         }
+      ]
+    },
+    {
+      "source": "/assets/notes-ocr/worker.min.js",
+      "headers": [
+        {"key":"X-Content-Type-Options","value":"nosniff"},
+        {"key":"Content-Security-Policy","value":"default-src 'none'; script-src 'self' 'wasm-unsafe-eval'; connect-src 'self'; worker-src 'none'"}
       ]
     },
     {

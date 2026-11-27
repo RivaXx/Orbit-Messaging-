@@ -20,9 +20,13 @@ internal class OrbitStickerShare(private val activity: Activity) {
             "image/png" -> "png"
             "image/jpeg" -> "jpg"
             "application/json" -> "orbitstickers.json"
+            "application/zip" -> "zip"
+            "application/pdf" -> "pdf"
+            "text/plain" -> "txt"
+            "text/markdown" -> "md"
             else -> error("Unsupported share format.")
         }
-        val limit = (if (mime == "application/json") 21 else 12) * 1024 * 1024L
+        val limit = (if (mime.startsWith("image/")) 12 else 35) * 1024 * 1024L
         require(size in 1..limit) { "The file exceeds the export size limit." }
         cancel()
         directory.mkdirs()
@@ -44,7 +48,7 @@ internal class OrbitStickerShare(private val activity: Activity) {
 
     @Synchronized fun finish(id: String): Intent {
         val item = pending?.takeIf { it.id == id } ?: error("The share expired.")
-        check(item.mime != "application/json") { "Use Export pack to save this document." }
+        check(item.mime.startsWith("image/")) { "Use Export pack to save this document." }
         check(item.written == item.total) { "The media did not finish loading." }
         val uri = FileProvider.getUriForFile(activity, activity.packageName + ".updates", item.file)
         pending = null
@@ -56,8 +60,8 @@ internal class OrbitStickerShare(private val activity: Activity) {
         }, "Share Orbit media")
     }
 
-    @Synchronized fun takePack(id: String): File {
-        val item = pending?.takeIf { it.id == id && it.mime == "application/json" } ?: error("The export expired.")
+    @Synchronized fun takePack(id: String, mime: String = "application/json"): File {
+        val item = pending?.takeIf { it.id == id && it.mime == mime } ?: error("The export expired.")
         check(item.written == item.total) { "The pack did not finish loading." }
         pending = null
         return item.file

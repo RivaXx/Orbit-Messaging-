@@ -50,20 +50,23 @@ class OrbitActivity : FlutterFragmentActivity() {
         const val INVITE = "https://orbit-messaging.vercel.app/"
     }
     private val vault by lazy { DeviceVault(this) }
+    private val noteKeys by lazy { NoteKeyVault(this) }
     private val shares by lazy { GalleryShare(this) }
     private val richContent by lazy { OrbitRichContent(this) }
     private val stickerShare by lazy { OrbitStickerShare(this) }
-    private var packExport: java.io.File? = null
-    private val saveStickerPack = registerForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
-        val file = packExport ?: return@registerForActivityResult
-        packExport = null
+    private data class DocumentExport(val file: java.io.File, val label: String)
+    private var documentExport: DocumentExport? = null
+    private val saveOrbitDocument = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        val uri = if (result.resultCode == RESULT_OK) result.data?.data else null
+        val export = documentExport ?: return@registerForActivityResult
+        documentExport = null
         work.execute {
             val saved = uri != null && runCatching {
-                val output = contentResolver.openOutputStream(uri) ?: error("Could not create sticker pack file.")
-                output.use { stream -> file.inputStream().use { it.copyTo(stream) } }
+                val output = contentResolver.openOutputStream(uri) ?: error("Could not create the export file.")
+                output.use { stream -> export.file.inputStream().use { it.copyTo(stream) } }
             }.isSuccess
-            file.delete()
-            if (uri != null) runOnUiThread { Toast.makeText(this, if (saved) "Sticker pack exported." else "Could not export the sticker pack.", Toast.LENGTH_SHORT).show() }
+            export.file.delete()
+            if (uri != null) runOnUiThread { Toast.makeText(this, if (saved) "${export.label} exported." else "Could not export ${export.label.lowercase()}.", Toast.LENGTH_SHORT).show() }
         }
     }
     private val work = Executors.newSingleThreadExecutor()
@@ -72,6 +75,7 @@ class OrbitActivity : FlutterFragmentActivity() {
     private val notifications by lazy { OrbitNotifications(this) }
     private var notificationPermissionResult: ((Boolean) -> Unit)? = null
     private var page: WebView? = null
+    private var pendingNote: String? = null
     private var pageStarted = false
     @Volatile private var unlocked = false
     private var stoppedAt = 0L
@@ -110,6 +114,7 @@ class OrbitActivity : FlutterFragmentActivity() {
         super.onCreate(savedInstanceState)
         if (Build.VERSION.SDK_INT >= 33) setRecentsScreenshotEnabled(false)
         work.execute { shares.clearStaleFiles(); richContent.clearAfterProcessDeath() }
+        pendingNote = OrbitNoteAlarms.noteLink(this, intent)
         if (savedInstanceState == null) captureShare(intent)
     }
 
@@ -118,6 +123,7 @@ class OrbitActivity : FlutterFragmentActivity() {
         setIntent(intent)
         captureShare(intent)
         handleCallIntent(intent)
+        OrbitNoteAlarms.noteLink(this, intent)?.let { pendingNote = it; openPendingNote() }
     }
 
     override fun onStop() {
@@ -191,7 +197,7 @@ class OrbitActivity : FlutterFragmentActivity() {
                     "biometrics" -> authenticateBiometric(result)
                     "keyboardViewport" -> {
                         val height = (call.arguments as? Int ?: 0).coerceIn(0, 10000)
-                        page?.evaluateJavascript("window.OrbitAndroidVisibleHeight=$height; window.orbitUpdateChatViewport?.()", null)
+                        page?.evaluateJavascript("window.OrbitAndroidVisibleHeight=$height; window.orbitUpdateChatViewport?.(); window.orbitUpdateNotesViewport?.()", null)
                         result.success(null)
                     }
                     "callAction" -> {
@@ -237,12 +243,21 @@ class OrbitActivity : FlutterFragmentActivity() {
             if (!pageStarted) startPage(view)
             else view.evaluateJavascript("window.OrbitCrypto?.restoreTrusted(); window.dispatchEvent(new Event('orbit-android-share'))", null)
         }
+        openPendingNote()
         if (answerOnUnlock) incoming?.let { handleCallAction(it.id, "answer") }
     }
 
     private fun startPage(view: WebView) {
         pageStarted = true
         view.loadUrl("$ORIGIN$APP_PAGE?android=${installedVersionCode()}")
+    }
+
+    private fun openPendingNote() {
+        val id = pendingNote ?: return
+        if (!unlocked || !pageStarted) return
+        page?.evaluateJavascript(
+            "(function(id){if(!window.orbitOpenNoteLink)return false;window.orbitOpenNoteLink(id);return true})(" + JSONObject.quote(id) + ")",
+        ) { if (it == "true" && pendingNote == id) pendingNote = null }
     }
 
     private fun showIncomingCall(args: JSONObject): Boolean {
@@ -394,7 +409,17 @@ class OrbitActivity : FlutterFragmentActivity() {
                 if ((!unlocked || changingPin) && method !in setOf("showNotification", "clearNotification", "incomingCall")) return@addWebMessageListener
                 val answer = JSONObject().put("id", request.optInt("id"))
                 try {
-                    if (method in setOf("startStickerShare", "writeStickerShare", "finishStickerShare", "finishStickerPackExport", "cancelStickerShare")) {
+                    if (method == "rememberNoteKey" || method == "unlockNoteKey") {
+                        val args = request.getJSONObject("args")
+                        val key = if (method == "rememberNoteKey") args.getString("key").also { require(it.length == 44) } else null
+                        noteKeys.authenticate(args.getString("account"),args.getString("id"),key) { result ->
+                            if (!unlocked || changingPin || isDestroyed) answer.put("error","Orbit is locked.")
+                            else result.fold({ answer.put("value",it) },{ answer.put("error",it.message ?: "Biometric authorization failed.") })
+                            reply.postMessage(answer.toString())
+                        }
+                        return@addWebMessageListener
+                    }
+                    if (method in setOf("startStickerShare", "writeStickerShare", "finishStickerShare", "finishStickerPackExport", "finishNotesExport", "cancelStickerShare")) {
                         val args = request.getJSONObject("args")
                         work.execute {
                             val result = runCatching {
@@ -404,6 +429,7 @@ class OrbitActivity : FlutterFragmentActivity() {
                                     "writeStickerShare" -> stickerShare.append(args.getString("id"), args.getLong("offset"), args.getString("data"))
                                     "finishStickerShare" -> stickerShare.finish(args.getString("id"))
                                     "finishStickerPackExport" -> stickerShare.takePack(args.getString("id"))
+                                    "finishNotesExport" -> stickerShare.takePack(args.getString("id"),args.optString("mime","application/json"))
                                     else -> stickerShare.cancel(args.getString("id"))
                                 }
                             }
@@ -413,10 +439,18 @@ class OrbitActivity : FlutterFragmentActivity() {
                                     val value = result.getOrThrow()
                                     if (value is Intent) startActivity(value)
                                     if (value is java.io.File) {
-                                        if (packExport != null) { value.delete(); error("Finish the current export first.") }
-                                        packExport = value
-                                        try { saveStickerPack.launch("Orbit sticker pack.orbitstickers.json") }
-                                        catch (failure: Exception) { packExport = null; value.delete(); throw failure }
+                                        if (documentExport != null) { value.delete(); error("Finish the current export first.") }
+                                        val isNotes = method == "finishNotesExport"
+                                        documentExport = DocumentExport(value, if (isNotes) "Notes backup" else "Sticker pack")
+                                        try {
+                                            val mime = if (isNotes) args.optString("mime","application/json") else "application/json"
+                                            val suffix = mapOf("application/json" to "json","application/zip" to "zip","application/pdf" to "pdf",
+                                                "text/plain" to "txt","text/markdown" to "md")[mime] ?: error("Unsupported document type.")
+                                            saveOrbitDocument.launch(Intent(Intent.ACTION_CREATE_DOCUMENT).setType(mime)
+                                                .addCategory(Intent.CATEGORY_OPENABLE).putExtra(Intent.EXTRA_TITLE,
+                                                    if (isNotes) "Orbit notes.$suffix" else "Orbit sticker pack.orbitstickers.json"))
+                                        }
+                                        catch (failure: Exception) { documentExport = null; value.delete(); throw failure }
                                     }
                                     answer.put("value", if (value is String) value else true)
                                 }.onFailure { answer.put("error", it.message ?: "Android could not share this media.") }
@@ -452,6 +486,10 @@ class OrbitActivity : FlutterFragmentActivity() {
                 }
                 val response = assetLoader.shouldInterceptRequest(uri) ?: return missing()
                 if (uri.path.orEmpty().endsWith(".mjs")) response.mimeType = "text/javascript"
+                if (uri.path == "/assets/assets/notes-ocr/worker.min.js") response.responseHeaders = mapOf(
+                    "X-Content-Type-Options" to "nosniff",
+                    "Content-Security-Policy" to "default-src 'none'; script-src 'self' 'wasm-unsafe-eval'; connect-src 'self'; worker-src 'none'"
+                )
                 if (uri.path == APP_PAGE) response.responseHeaders = mapOf(
                     "Cache-Control" to "no-store", "X-Content-Type-Options" to "nosniff", "Referrer-Policy" to "no-referrer",
                     "Content-Security-Policy" to "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.sheetjs.com; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://fonts.googleapis.com; font-src 'self' https://cdnjs.cloudflare.com https://fonts.gstatic.com data:; img-src 'self' https: data: blob:; media-src 'self' https: data: blob:; connect-src 'self' blob: https: wss:; worker-src 'self' blob: https://cdnjs.cloudflare.com; frame-src https://www.openstreetmap.org; object-src 'none'; base-uri 'self'; form-action 'self'"
@@ -543,6 +581,13 @@ class OrbitActivity : FlutterFragmentActivity() {
                 null
             }
             "discardRichContent" -> richContent.discard(args.getString("id"))
+            "shareNoteText" -> {
+                val content = args.getString("text")
+                require(content.length in 1..52000)
+                startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).setType("text/plain")
+                    .putExtra(Intent.EXTRA_TEXT,content), "Share Orbit note"))
+                true
+            }
             "shareGiphyLink" -> {
                 val id = args.getString("id")
                 require(id.matches(Regex("[a-zA-Z0-9]{1,48}")))
@@ -557,6 +602,16 @@ class OrbitActivity : FlutterFragmentActivity() {
                 putExtra(Intent.EXTRA_TEXT, "Join me on Orbit Messenger. $INVITE")
             }, "Invite to Orbit"))
             "downloadUpdate" -> updater.start(args)
+            "pendingNoteReminder" -> pendingNote.also { pendingNote = null }
+            "scheduleNoteReminders" -> {
+                OrbitNoteAlarms.sync(this, account(), args.getJSONArray("rows"))
+                true
+            }
+            "cancelNoteReminders" -> { OrbitNoteAlarms.clear(this, account()); true }
+            "noteAlarmSettings" -> {
+                if (Build.VERSION.SDK_INT >= 31) startActivity(Intent(android.provider.Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, Uri.parse("package:$packageName")))
+                true
+            }
             "notificationStatus" -> notifications.enabled()
             "fullScreenCallSettings" -> {
                 if (Build.VERSION.SDK_INT >= 34) startActivity(Intent(android.provider.Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT, Uri.parse("package:$packageName")))

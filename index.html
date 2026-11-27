@@ -50,7 +50,7 @@
 <link rel="stylesheet" href="photo-weather.css?v=orbit-1.6.0">
     <link rel="stylesheet" href="messaging-experience.css?v=orbit-1.6.0">
     <link rel="stylesheet" href="app-polish.css?v=orbit-1.6.0">
-<link rel="stylesheet" href="notes.css?v=orbit-1.6.0">
+<link rel="stylesheet" href="notes.css?v=notes-3">
 </head>
 <body>
 <script>try{document.body.classList.toggle('light-mode',localStorage.getItem('orbit_theme')==='light');}catch(_){}</script>
@@ -501,13 +501,8 @@
 
         <!-- Tab 7: NOTES -->
         <div id="tab-notes" class="contact-feed hide">
-            <div style="display:flex; justify-content:space-between; align-items:center; padding:4px 8px 8px;">
-                <span style="font-size:11px; font-weight:800; color:var(--text-secondary); letter-spacing:1px;">PERSONAL NOTES</span>
-                <button class="glass-icon-btn touch-fix" onclick="openNewNoteModal()" style="width:auto; height:auto; padding:5px 14px; border-radius:20px; font-size:11px; font-weight:700; gap:5px;">
-                    <i class="fa-solid fa-plus" style="color:var(--accent);"></i> New Note
-                </button>
-            </div>
-            <div id="notes-list" style="display:flex; flex-direction:column; gap:8px;"></div>
+            <div class="notes-tab-heading"><h2>Notes</h2><button type="button" class="notes-create" onclick="openNewNoteModal()"><i class="fa-solid fa-plus" aria-hidden="true"></i> New note</button></div>
+            <div id="notes-list"></div>
         </div>
 
         <!-- Tab 8: iOS CLOCK SUITE (4-in-1: World Clock, Alarms, Stopwatch, Timer) -->
@@ -2182,18 +2177,7 @@
         </div>
     </div>
 
-    <!-- New Note Modal -->
-    <div id="modal-note" class="glass-modal-overlay">
-        <div class="glass-modal-box">
-            <div class="modal-header-row">
-                <div class="modal-title-text">Personal Note</div>
-                <button type="button" aria-label="Close note" class="btn-reset" onclick="closeNoteModal()" style="font-size:18px; color:var(--text-muted);"><i class="fa-solid fa-xmark"></i></button>
-            </div>
-            <input type="text" id="note-title-inp" class="glass-input" placeholder="Title">
-            <textarea id="note-body-inp" class="glass-input" rows="6" placeholder="Write here..."></textarea>
-            <button class="glass-btn-primary" onclick="savePersonalNote()">Save Note</button>
-        </div>
-    </div>
+    <div id="modal-note" class="glass-modal-overlay"><div class="glass-modal-box"></div></div>
 
     <!-- WhatsApp Style Attachment Sheet (7 Action Buttons) -->
     <div id="modal-attachment-sheet" class="glass-modal-overlay" onclick="closeAttachmentSheet(event)">
@@ -2662,7 +2646,7 @@
 <script defer type="module" src="js/chat-animations.mjs?v=orbit-1.6.0"></script>
 <link rel="stylesheet" href="orbit-mobile.css?v=orbit-1.6.0">
 <script defer src="js/chat-viewport.js?v=orbit-1.6.0"></script>
-<script defer src="js/orbit-device.js?v=orbit-1.6.0"></script>
+<script defer src="js/orbit-device.js?v=notes-1"></script>
 <script defer src="js/orbit-stickers.js?v=orbit-1.6.0"></script>
 <script defer src="js/config.js?v=orbit-1.6.0"></script>
 <script defer src="js/orbit-encryption.js?v=orbit-1.6.0"></script>
@@ -2681,7 +2665,7 @@
     <script defer src="js/chat-share.js?v=orbit-1.6.0"></script>
     <script defer src="js/chat/message-controls.js?v=orbit-1.6.0"></script>
 <script defer src="js/chat/chat-history.js?v=orbit-1.6.0"></script>
-    <script defer src="js/chat/chat-feed.js?v=orbit-1.6.0"></script>
+    <script defer src="js/chat/chat-feed.js?v=notes-3"></script>
     <script defer src="js/chat/chat-dispatcher.js?v=orbit-1.6.0"></script>
     <script defer src="js/chat/chat-realtime.js?v=orbit-1.6.0"></script>
     <script defer src="js/chat.js?v=orbit-1.6.0"></script>
@@ -2777,7 +2761,12 @@
     <script defer src="js/messaging-experience.js?v=orbit-1.6.0"></script>
 <script defer src="js/call-experience.js?v=orbit-1.6.0"></script>
 <script defer src="js/orbit-interface.js?v=orbit-1.6.0"></script>
-<script defer src="js/orbit-notes.js?v=orbit-1.6.0"></script>
+<script defer src="js/orbit-note-store.js?v=notes-3"></script>
+<script defer src="js/orbit-note-lock.js?v=notes-3"></script>
+<script defer src="js/orbit-note-media.js?v=notes-3"></script>
+<script defer src="js/orbit-note-portability.js?v=notes-3"></script>
+<script defer src="js/orbit-note-media-ui.js?v=notes-3"></script>
+<script defer src="js/orbit-notes.js?v=notes-3"></script>
 <link rel="stylesheet" href="chat-data.css?v=orbit-1.6.0">
 <script defer src="js/share-inbox.js"></script>
 <script defer src="js/chat-data.js?v=orbit-1.6.0"></script>

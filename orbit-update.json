@@ -1,14 +1,16 @@
 {
   "appName": "Orbit Messenger",
-  "versionName": "1.6.0",
-  "versionCode": 160,
-  "downloadUrl": "https://github.com/RivaXx/Orbit-Messaging-/releases/download/v1.6.0/Orbit-Messenger-v1.6.0.apk",
-  "summary": "Custom sticker packs and lighter animation playback",
+  "versionName": "1.7.0",
+  "versionCode": 170,
+  "downloadUrl": "https://github.com/RivaXx/Orbit-Messaging-/releases/download/v1.7.0/Orbit-Messenger-v1.7.0.apk",
+  "summary": "Offline Notes, media, reminders and note locks",
   "changes": [
-    "Create, rename, import or export sticker packs with up to 30 stickers",
-    "Pause off-screen GIFs and keep at most two chat animations playing at once",
-    "Show still GIFs and stickers with reduced motion enabled",
-    "Keep Orbit GIFs available when live search is offline"
+    "Open Notes offline and autosave edits",
+    "Add photos, voice recordings, drawings, stickers and GIFs",
+    "Extract English text from images on the device",
+    "Set recurring reminders and snooze them on Android",
+    "Lock notes, restore earlier versions, and save chat text to Notes",
+    "Import Google Keep and export notes and attachments"
   ],
-  "sha256": "a7851c4f6a9666a3e9a7ba6d781925f06e45376526683a0c2151b4d6fd8aab75"
+  "sha256": "cdbd1757791836609eee4be0e500b51aae2c5437e64e8a411426d39d87d9ec99"
 }

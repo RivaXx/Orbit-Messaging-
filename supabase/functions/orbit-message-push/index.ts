@@ -24,11 +24,17 @@ Deno.serve(async req=>{
     const ended=call.state!=='ringing'||Date.parse(call.created_at)<Date.now()-45000;
     alert={title:call.caller_name||'Orbit call',body:ended?(call.state==='connecting'||call.state==='connected'?'Call answered':'Missed or ended voice call'):'Incoming voice call · Open Orbit to answer',isCall:true,ended,callId:call.id,roomId:call.room,timestamp:Date.parse(ended?event.version:call.created_at),tag:'orbit-call-'+call.id};
    }else if(event.kind==='note'){
-    const {data:note}=await db.from('secure_notes').select('id,user_id,title,reminder_at,archived,deleted_at').eq('id',event.source_id).single();
-    if(!note||note.user_id!==event.user_id||note.archived||note.deleted_at||Date.parse(note.reminder_at)!==Date.parse(event.version)){
+    const {data:note}=await db.from('secure_notes').select('id,user_id,title,reminder_at,reminder_rule,archived,deleted_at,is_template').eq('id',event.source_id).single();
+    let validOccurrence=!!note&&Date.parse(note.reminder_at)===Date.parse(event.version);
+    if(note?.reminder_rule){
+     const {data,error}=await db.rpc('orbit_note_due',{anchor:note.reminder_at,rule:note.reminder_rule,reference_time:event.version});
+     if(error)throw error;
+     validOccurrence=Date.parse(data)===Date.parse(event.version);
+    }
+    if(!note||note.user_id!==event.user_id||note.archived||note.deleted_at||note.is_template||!validOccurrence){
      await db.from('orbit_notification_outbox').update({sent_at:new Date().toISOString()}).eq('id',event.id);return Response.json({sent:0});
     }
-    recipients=[note.user_id];alert={title:'Note reminder',body:note.title||'Your note is due',noteId:note.id,timestamp:Date.parse(note.reminder_at),tag:'orbit-note-'+event.id};
+    recipients=[note.user_id];alert={title:'Note reminder',body:note.title||'Your note is due',noteId:note.id,timestamp:Date.parse(event.version),tag:'orbit-note-'+event.id};
    }else if(event.kind==='message'){
     const messageKey=String(event.source_id).split(':')[0];
     const {data:message,error}=await db.from('messages').select('id,room,sender_id,username,type,created_at,deleted_at').eq('id',messageKey).single();

@@ -31,6 +31,7 @@ async function initServiceWorker() {
 function handleUrlDeepLinkParams() {
     const params = new URLSearchParams(window.location.search);
     const noteId=params.get('noteId');if(noteId){orbitOpenNoteLink(noteId);return;}
+    if (window.OrbitDevice) void window.OrbitDevice('pendingNoteReminder',{}).then(id => {if (id) orbitOpenNoteLink(id);}).catch(() => {});
     const openRoom = params.get('openRoom');
     const focusMsg = params.get('focusMsg');
     const msgTime = params.get('msgTime');
@@ -606,11 +607,18 @@ async function signOut() {
     if (confirm('Sign out of Orbit?')) {
         window.OrbitIntroduction?.finish();
         const signedOutId=currentUser?.id;
+        if (typeof OrbitNotes !== 'undefined' && !(await OrbitNotes.save())) {
+            showToast('Save your open note before signing out.','error');
+            return;
+        }
         if (typeof disableOrbitBackgroundPush === 'function') {
             const disconnected = await disableOrbitBackgroundPush();
             if (!disconnected) { showToast('Reconnect so Orbit can turn off notifications before signing out.', 'error'); return; }
         }
-        if(typeof OrbitNotes!=='undefined')OrbitNotes.stop();
+        if (typeof OrbitNotes !== 'undefined') {
+            await OrbitNotes.clearNativeReminders();
+            OrbitNotes.stop();
+        }
         stopOrbitWeather();closeViewOnceViewer();
         if(typeof disposeOrbitTyping==='function')disposeOrbitTyping();
         await stopOrbitChatServices();
